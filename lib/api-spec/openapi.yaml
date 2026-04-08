@@ -3,20 +3,23 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Travel Companion API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: children
+    description: Children management
+  - name: preferences
+    description: Travel preferences management
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +27,120 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /children:
+    get:
+      operationId: listChildren
+      tags: [children]
+      summary: List all children
+      responses:
+        "200":
+          description: List of children
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Child"
+    post:
+      operationId: createChild
+      tags: [children]
+      summary: Add a child
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChildBody"
+      responses:
+        "201":
+          description: Created child
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Child"
+
+  /children/{id}:
+    put:
+      operationId: updateChild
+      tags: [children]
+      summary: Update a child
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChildBody"
+      responses:
+        "200":
+          description: Updated child
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Child"
+    delete:
+      operationId: deleteChild
+      tags: [children]
+      summary: Delete a child
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /preferences:
+    get:
+      operationId: getPreferences
+      tags: [preferences]
+      summary: Get travel preferences
+      responses:
+        "200":
+          description: Travel preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPreferences"
+    put:
+      operationId: upsertPreferences
+      tags: [preferences]
+      summary: Save travel preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPreferencesBody"
+      responses:
+        "200":
+          description: Saved preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelPreferences"
+
+  /summary:
+    get:
+      operationId: getTravelSummary
+      tags: [children]
+      summary: Get full travel summary including ages at today
+      responses:
+        "200":
+          description: Travel summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TravelSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +151,116 @@ components:
       required:
         - status
 
+    Child:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        birthdate:
+          type: string
+          format: date
+        ageYears:
+          type: integer
+        ageMonths:
+          type: integer
+        ageDisplay:
+          type: string
+      required:
+        - id
+        - name
+        - birthdate
+        - ageYears
+        - ageMonths
+        - ageDisplay
+
+    CreateChildBody:
+      type: object
+      properties:
+        name:
+          type: string
+        birthdate:
+          type: string
+          format: date
+      required:
+        - name
+        - birthdate
+
+    TravelPreferences:
+      type: object
+      properties:
+        id:
+          type: integer
+        seatPreference:
+          type: string
+          nullable: true
+        mealPreference:
+          type: string
+          nullable: true
+        frequentFlyerNumbers:
+          type: string
+          nullable: true
+        passportNotes:
+          type: string
+          nullable: true
+        accessibilityNeeds:
+          type: string
+          nullable: true
+        hotelPreferences:
+          type: string
+          nullable: true
+        travelInsuranceNotes:
+          type: string
+          nullable: true
+        additionalNotes:
+          type: string
+          nullable: true
+      required:
+        - id
+
+    UpsertPreferencesBody:
+      type: object
+      properties:
+        seatPreference:
+          type: string
+          nullable: true
+        mealPreference:
+          type: string
+          nullable: true
+        frequentFlyerNumbers:
+          type: string
+          nullable: true
+        passportNotes:
+          type: string
+          nullable: true
+        accessibilityNeeds:
+          type: string
+          nullable: true
+        hotelPreferences:
+          type: string
+          nullable: true
+        travelInsuranceNotes:
+          type: string
+          nullable: true
+        additionalNotes:
+          type: string
+          nullable: true
+
+    TravelSummary:
+      type: object
+      properties:
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/Child"
+        preferences:
+          $ref: "#/components/schemas/TravelPreferences"
+        totalTravelers:
+          type: integer
+        hasPreferences:
+          type: boolean
+      required:
+        - children
+        - totalTravelers
+        - hasPreferences
