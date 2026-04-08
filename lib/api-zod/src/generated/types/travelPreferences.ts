@@ -17,4 +17,9 @@ export interface TravelPreferences {
   travelInsuranceNotes?: string | null;
   additionalNotes?: string | null;
   travelStyles?: string[] | null;
+  travelStyleTags?: string[] | null;
+  luxuryIndexMin?: number | null;
+  luxuryIndexMax?: number | null;
+  priceValueWeight?: number | null;
+  notes?: string | null;
 }

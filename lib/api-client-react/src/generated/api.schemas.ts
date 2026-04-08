@@ -11,16 +11,22 @@ export interface HealthStatus {
 
 export interface Child {
   id: number;
+  userId?: string | null;
   name: string;
   birthdate: string;
   ageYears: number;
   ageMonths: number;
   ageDisplay: string;
+  foodPreferences?: string[] | null;
+  activityPreferences?: string[] | null;
 }
 
 export interface CreateChildBody {
+  userId?: string | null;
   name: string;
   birthdate: string;
+  foodPreferences?: string[] | null;
+  activityPreferences?: string[] | null;
 }
 
 export interface TravelPreferences {
@@ -34,6 +40,11 @@ export interface TravelPreferences {
   travelInsuranceNotes?: string | null;
   additionalNotes?: string | null;
   travelStyles?: string[] | null;
+  travelStyleTags?: string[] | null;
+  luxuryIndexMin?: number | null;
+  luxuryIndexMax?: number | null;
+  priceValueWeight?: number | null;
+  notes?: string | null;
 }
 
 export interface UpsertPreferencesBody {
@@ -46,6 +57,11 @@ export interface UpsertPreferencesBody {
   travelInsuranceNotes?: string | null;
   additionalNotes?: string | null;
   travelStyles?: string[] | null;
+  travelStyleTags?: string[] | null;
+  luxuryIndexMin?: number | null;
+  luxuryIndexMax?: number | null;
+  priceValueWeight?: number | null;
+  notes?: string | null;
 }
 
 export interface TravelSummary {
@@ -53,4 +69,34 @@ export interface TravelSummary {
   preferences?: TravelPreferences;
   totalTravelers: number;
   hasPreferences: boolean;
+}
+
+export type ScoreReviewBodySource =
+  (typeof ScoreReviewBodySource)[keyof typeof ScoreReviewBodySource];
+
+export const ScoreReviewBodySource = {
+  tripadvisor: "tripadvisor",
+  google: "google",
+} as const;
+
+export interface ScoreReviewBody {
+  propertyId: string;
+  source: ScoreReviewBodySource;
+  reviewText: string;
+}
+
+export type ReviewScoreRawClaudeResponse = { [key: string]: unknown } | null;
+
+export interface ReviewScore {
+  propertyId: string;
+  source: string;
+  reviewHash: string;
+  reviewText: string;
+  tags?: string[] | null;
+  luxuryValueScore?: number | null;
+  foodieScore?: number | null;
+  ecoScore?: number | null;
+  adventurousMenuScore?: number | null;
+  rawClaudeResponse?: ReviewScoreRawClaudeResponse;
+  cachedAt: string;
 }

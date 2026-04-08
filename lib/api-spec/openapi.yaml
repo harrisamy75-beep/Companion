@@ -14,6 +14,8 @@ tags:
     description: Children management
   - name: preferences
     description: Travel preferences management
+  - name: reviews
+    description: Review scoring
 paths:
   /healthz:
     get:
@@ -141,6 +143,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/TravelSummary"
 
+  /reviews/score:
+    post:
+      operationId: scoreReview
+      tags: [reviews]
+      summary: Score a property review using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoreReviewBody"
+      responses:
+        "200":
+          description: Scored review (from cache or freshly computed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewScore"
+
 components:
   schemas:
     HealthStatus:
@@ -156,6 +177,9 @@ components:
       properties:
         id:
           type: integer
+        userId:
+          type: string
+          nullable: true
         name:
           type: string
         birthdate:
@@ -167,6 +191,16 @@ components:
           type: integer
         ageDisplay:
           type: string
+        foodPreferences:
+          type: array
+          items:
+            type: string
+          nullable: true
+        activityPreferences:
+          type: array
+          items:
+            type: string
+          nullable: true
       required:
         - id
         - name
@@ -178,11 +212,24 @@ components:
     CreateChildBody:
       type: object
       properties:
+        userId:
+          type: string
+          nullable: true
         name:
           type: string
         birthdate:
           type: string
           format: date
+        foodPreferences:
+          type: array
+          items:
+            type: string
+          nullable: true
+        activityPreferences:
+          type: array
+          items:
+            type: string
+          nullable: true
       required:
         - name
         - birthdate
@@ -221,6 +268,23 @@ components:
           items:
             type: string
           nullable: true
+        travelStyleTags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        luxuryIndexMin:
+          type: integer
+          nullable: true
+        luxuryIndexMax:
+          type: integer
+          nullable: true
+        priceValueWeight:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+          nullable: true
       required:
         - id
 
@@ -256,6 +320,23 @@ components:
           items:
             type: string
           nullable: true
+        travelStyleTags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        luxuryIndexMin:
+          type: integer
+          nullable: true
+        luxuryIndexMax:
+          type: integer
+          nullable: true
+        priceValueWeight:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+          nullable: true
 
     TravelSummary:
       type: object
@@ -274,3 +355,59 @@ components:
         - children
         - totalTravelers
         - hasPreferences
+
+    ScoreReviewBody:
+      type: object
+      properties:
+        propertyId:
+          type: string
+        source:
+          type: string
+          enum: [tripadvisor, google]
+        reviewText:
+          type: string
+      required:
+        - propertyId
+        - source
+        - reviewText
+
+    ReviewScore:
+      type: object
+      properties:
+        propertyId:
+          type: string
+        source:
+          type: string
+        reviewHash:
+          type: string
+        reviewText:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        luxuryValueScore:
+          type: integer
+          nullable: true
+        foodieScore:
+          type: integer
+          nullable: true
+        ecoScore:
+          type: integer
+          nullable: true
+        adventurousMenuScore:
+          type: integer
+          nullable: true
+        rawClaudeResponse:
+          type: object
+          nullable: true
+        cachedAt:
+          type: string
+          format: date-time
+      required:
+        - propertyId
+        - source
+        - reviewHash
+        - reviewText
+        - cachedAt

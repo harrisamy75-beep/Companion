@@ -19,11 +19,14 @@ export const HealthCheckResponse = zod.object({
  */
 export const ListChildrenResponseItem = zod.object({
   id: zod.number(),
+  userId: zod.string().nullish(),
   name: zod.string(),
   birthdate: zod.coerce.date(),
   ageYears: zod.number(),
   ageMonths: zod.number(),
   ageDisplay: zod.string(),
+  foodPreferences: zod.array(zod.string()).nullish(),
+  activityPreferences: zod.array(zod.string()).nullish(),
 });
 export const ListChildrenResponse = zod.array(ListChildrenResponseItem);
 
@@ -31,8 +34,11 @@ export const ListChildrenResponse = zod.array(ListChildrenResponseItem);
  * @summary Add a child
  */
 export const CreateChildBody = zod.object({
+  userId: zod.string().nullish(),
   name: zod.string(),
   birthdate: zod.coerce.date(),
+  foodPreferences: zod.array(zod.string()).nullish(),
+  activityPreferences: zod.array(zod.string()).nullish(),
 });
 
 /**
@@ -43,17 +49,23 @@ export const UpdateChildParams = zod.object({
 });
 
 export const UpdateChildBody = zod.object({
+  userId: zod.string().nullish(),
   name: zod.string(),
   birthdate: zod.coerce.date(),
+  foodPreferences: zod.array(zod.string()).nullish(),
+  activityPreferences: zod.array(zod.string()).nullish(),
 });
 
 export const UpdateChildResponse = zod.object({
   id: zod.number(),
+  userId: zod.string().nullish(),
   name: zod.string(),
   birthdate: zod.coerce.date(),
   ageYears: zod.number(),
   ageMonths: zod.number(),
   ageDisplay: zod.string(),
+  foodPreferences: zod.array(zod.string()).nullish(),
+  activityPreferences: zod.array(zod.string()).nullish(),
 });
 
 /**
@@ -77,6 +89,11 @@ export const GetPreferencesResponse = zod.object({
   travelInsuranceNotes: zod.string().nullish(),
   additionalNotes: zod.string().nullish(),
   travelStyles: zod.array(zod.string()).nullish(),
+  travelStyleTags: zod.array(zod.string()).nullish(),
+  luxuryIndexMin: zod.number().nullish(),
+  luxuryIndexMax: zod.number().nullish(),
+  priceValueWeight: zod.number().nullish(),
+  notes: zod.string().nullish(),
 });
 
 /**
@@ -92,6 +109,11 @@ export const UpsertPreferencesBody = zod.object({
   travelInsuranceNotes: zod.string().nullish(),
   additionalNotes: zod.string().nullish(),
   travelStyles: zod.array(zod.string()).nullish(),
+  travelStyleTags: zod.array(zod.string()).nullish(),
+  luxuryIndexMin: zod.number().nullish(),
+  luxuryIndexMax: zod.number().nullish(),
+  priceValueWeight: zod.number().nullish(),
+  notes: zod.string().nullish(),
 });
 
 export const UpsertPreferencesResponse = zod.object({
@@ -105,6 +127,11 @@ export const UpsertPreferencesResponse = zod.object({
   travelInsuranceNotes: zod.string().nullish(),
   additionalNotes: zod.string().nullish(),
   travelStyles: zod.array(zod.string()).nullish(),
+  travelStyleTags: zod.array(zod.string()).nullish(),
+  luxuryIndexMin: zod.number().nullish(),
+  luxuryIndexMax: zod.number().nullish(),
+  priceValueWeight: zod.number().nullish(),
+  notes: zod.string().nullish(),
 });
 
 /**
@@ -114,11 +141,14 @@ export const GetTravelSummaryResponse = zod.object({
   children: zod.array(
     zod.object({
       id: zod.number(),
+      userId: zod.string().nullish(),
       name: zod.string(),
       birthdate: zod.coerce.date(),
       ageYears: zod.number(),
       ageMonths: zod.number(),
       ageDisplay: zod.string(),
+      foodPreferences: zod.array(zod.string()).nullish(),
+      activityPreferences: zod.array(zod.string()).nullish(),
     }),
   ),
   preferences: zod
@@ -133,8 +163,36 @@ export const GetTravelSummaryResponse = zod.object({
       travelInsuranceNotes: zod.string().nullish(),
       additionalNotes: zod.string().nullish(),
       travelStyles: zod.array(zod.string()).nullish(),
+      travelStyleTags: zod.array(zod.string()).nullish(),
+      luxuryIndexMin: zod.number().nullish(),
+      luxuryIndexMax: zod.number().nullish(),
+      priceValueWeight: zod.number().nullish(),
+      notes: zod.string().nullish(),
     })
     .optional(),
   totalTravelers: zod.number(),
   hasPreferences: zod.boolean(),
+});
+
+/**
+ * @summary Score a property review using AI
+ */
+export const ScoreReviewBody = zod.object({
+  propertyId: zod.string(),
+  source: zod.enum(["tripadvisor", "google"]),
+  reviewText: zod.string(),
+});
+
+export const ScoreReviewResponse = zod.object({
+  propertyId: zod.string(),
+  source: zod.string(),
+  reviewHash: zod.string(),
+  reviewText: zod.string(),
+  tags: zod.array(zod.string()).nullish(),
+  luxuryValueScore: zod.number().nullish(),
+  foodieScore: zod.number().nullish(),
+  ecoScore: zod.number().nullish(),
+  adventurousMenuScore: zod.number().nullish(),
+  rawClaudeResponse: zod.object({}).passthrough().nullish(),
+  cachedAt: zod.coerce.date(),
 });

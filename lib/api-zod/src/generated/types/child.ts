@@ -8,9 +8,12 @@
 
 export interface Child {
   id: number;
+  userId?: string | null;
   name: string;
   birthdate: Date;
   ageYears: number;
   ageMonths: number;
   ageDisplay: string;
+  foodPreferences?: string[] | null;
+  activityPreferences?: string[] | null;
 }

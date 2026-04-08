@@ -7,6 +7,9 @@
  */
 
 export interface CreateChildBody {
+  userId?: string | null;
   name: string;
   birthdate: Date;
+  foodPreferences?: string[] | null;
+  activityPreferences?: string[] | null;
 }

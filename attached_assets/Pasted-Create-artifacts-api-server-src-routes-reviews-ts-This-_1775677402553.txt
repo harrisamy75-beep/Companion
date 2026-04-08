@@ -1,0 +1,29 @@
+Create artifacts/api-server/src/routes/reviews.ts
+
+This route handles review ingestion and AI scoring.
+
+POST /reviews/score
+Body: { property_id: string, source: string, reviews: string[] }
+For each review string, call the Anthropic Claude API (model claude-sonnet-4-20250514) with this system prompt:
+
+"You are a travel review classifier. Given a hotel or restaurant review, return only valid JSON with these fields:
+{
+  tags: string[],  // from: luxury_value, overpriced, tourist_trap, foodie, adventurous_menu, kids_menu_only, eco_certified, vegetarian_friendly, hiking_nearby, family_friendly, romantic, business, pretentious, worth_every_penny, hidden_gem
+  luxury_value_score: number,  // 1-10. High = excellent quality for the price (think Rosewood, Palm House). Low = either overpriced or budget.
+  foodie_score: number,  // 1-10. High = locally sourced, creative menu, not a kids menu, chef-driven.
+  eco_score: number,  // 1-10. High = sustainability practices, nature access, eco certifications.
+  adventurous_menu_score: number,  // 1-10. High = unusual ingredients, global cuisine, willing to deviate from safe options.
+  sentiment: 'positive' | 'neutral' | 'negative',
+  one_line_summary: string  // max 12 words, plain English
+}
+Return only the JSON object. No explanation, no markdown."
+
+Store each result in the review_scores table. Return the array of scored reviews.
+
+GET /reviews/match?property_id=X&user_id=Y
+Fetch all cached review_scores for property_id. Fetch user preferences for user_id. Compute a weighted match_score:
+  match_score = (luxury_value_score * price_value_weight/10) + (foodie_score * foodie_weight) + (eco_score * eco_weight) + (adventurous_menu_score * adventurous_weight)
+where weights come from the user's travel_style_tags (if tag present, weight = 1.0; else 0.2).
+Return: { match_score: number (0-100), top_reviews: Review[], tag_summary: string[] }
+
+Add rate limiting: max 50 Claude API calls per hour per user_id using an in-memory counter (or Redis if already wired up).

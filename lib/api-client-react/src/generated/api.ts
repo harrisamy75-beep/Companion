@@ -20,6 +20,8 @@ import type {
   Child,
   CreateChildBody,
   HealthStatus,
+  ReviewScore,
+  ScoreReviewBody,
   TravelPreferences,
   TravelSummary,
   UpsertPreferencesBody,
@@ -674,3 +676,89 @@ export function useGetTravelSummary<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Score a property review using AI
+ */
+export const getScoreReviewUrl = () => {
+  return `/api/reviews/score`;
+};
+
+export const scoreReview = async (
+  scoreReviewBody: ScoreReviewBody,
+  options?: RequestInit,
+): Promise<ReviewScore> => {
+  return customFetch<ReviewScore>(getScoreReviewUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(scoreReviewBody),
+  });
+};
+
+export const getScoreReviewMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scoreReview>>,
+    TError,
+    { data: BodyType<ScoreReviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scoreReview>>,
+  TError,
+  { data: BodyType<ScoreReviewBody> },
+  TContext
+> => {
+  const mutationKey = ["scoreReview"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scoreReview>>,
+    { data: BodyType<ScoreReviewBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return scoreReview(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScoreReviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scoreReview>>
+>;
+export type ScoreReviewMutationBody = BodyType<ScoreReviewBody>;
+export type ScoreReviewMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Score a property review using AI
+ */
+export const useScoreReview = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scoreReview>>,
+    TError,
+    { data: BodyType<ScoreReviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof scoreReview>>,
+  TError,
+  { data: BodyType<ScoreReviewBody> },
+  TContext
+> => {
+  return useMutation(getScoreReviewMutationOptions(options));
+};
