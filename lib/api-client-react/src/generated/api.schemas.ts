@@ -33,6 +33,7 @@ export interface TravelPreferences {
   hotelPreferences?: string | null;
   travelInsuranceNotes?: string | null;
   additionalNotes?: string | null;
+  travelStyles?: string[] | null;
 }
 
 export interface UpsertPreferencesBody {
@@ -44,6 +45,7 @@ export interface UpsertPreferencesBody {
   hotelPreferences?: string | null;
   travelInsuranceNotes?: string | null;
   additionalNotes?: string | null;
+  travelStyles?: string[] | null;
 }
 
 export interface TravelSummary {

@@ -15,4 +15,5 @@ export interface UpsertPreferencesBody {
   hotelPreferences?: string | null;
   travelInsuranceNotes?: string | null;
   additionalNotes?: string | null;
+  travelStyles?: string[] | null;
 }

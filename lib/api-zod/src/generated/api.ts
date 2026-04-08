@@ -76,6 +76,7 @@ export const GetPreferencesResponse = zod.object({
   hotelPreferences: zod.string().nullish(),
   travelInsuranceNotes: zod.string().nullish(),
   additionalNotes: zod.string().nullish(),
+  travelStyles: zod.array(zod.string()).nullish(),
 });
 
 /**
@@ -90,6 +91,7 @@ export const UpsertPreferencesBody = zod.object({
   hotelPreferences: zod.string().nullish(),
   travelInsuranceNotes: zod.string().nullish(),
   additionalNotes: zod.string().nullish(),
+  travelStyles: zod.array(zod.string()).nullish(),
 });
 
 export const UpsertPreferencesResponse = zod.object({
@@ -102,6 +104,7 @@ export const UpsertPreferencesResponse = zod.object({
   hotelPreferences: zod.string().nullish(),
   travelInsuranceNotes: zod.string().nullish(),
   additionalNotes: zod.string().nullish(),
+  travelStyles: zod.array(zod.string()).nullish(),
 });
 
 /**
@@ -129,6 +132,7 @@ export const GetTravelSummaryResponse = zod.object({
       hotelPreferences: zod.string().nullish(),
       travelInsuranceNotes: zod.string().nullish(),
       additionalNotes: zod.string().nullish(),
+      travelStyles: zod.array(zod.string()).nullish(),
     })
     .optional(),
   totalTravelers: zod.number(),

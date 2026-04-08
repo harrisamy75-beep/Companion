@@ -12,6 +12,7 @@ export const preferencesTable = pgTable("travel_preferences", {
   hotelPreferences: text("hotel_preferences"),
   travelInsuranceNotes: text("travel_insurance_notes"),
   additionalNotes: text("additional_notes"),
+  travelStyles: text("travel_styles").array(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -16,4 +16,5 @@ export interface TravelPreferences {
   hotelPreferences?: string | null;
   travelInsuranceNotes?: string | null;
   additionalNotes?: string | null;
+  travelStyles?: string[] | null;
 }

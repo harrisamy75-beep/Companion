@@ -216,6 +216,11 @@ components:
         additionalNotes:
           type: string
           nullable: true
+        travelStyles:
+          type: array
+          items:
+            type: string
+          nullable: true
       required:
         - id
 
@@ -245,6 +250,11 @@ components:
           nullable: true
         additionalNotes:
           type: string
+          nullable: true
+        travelStyles:
+          type: array
+          items:
+            type: string
           nullable: true
 
     TravelSummary:
