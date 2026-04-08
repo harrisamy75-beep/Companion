@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ScoreReviewBodySource =
-  (typeof ScoreReviewBodySource)[keyof typeof ScoreReviewBodySource];
+export type ScoreReviewsBodySource =
+  (typeof ScoreReviewsBodySource)[keyof typeof ScoreReviewsBodySource];
 
-export const ScoreReviewBodySource = {
+export const ScoreReviewsBodySource = {
   tripadvisor: "tripadvisor",
   google: "google",
 } as const;

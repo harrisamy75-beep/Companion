@@ -15,7 +15,7 @@ tags:
   - name: preferences
     description: Travel preferences management
   - name: reviews
-    description: Review scoring
+    description: Review scoring and matching
 paths:
   /healthz:
     get:
@@ -145,22 +145,50 @@ paths:
 
   /reviews/score:
     post:
-      operationId: scoreReview
+      operationId: scoreReviews
       tags: [reviews]
-      summary: Score a property review using AI
+      summary: Score one or more property reviews using AI
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ScoreReviewBody"
+              $ref: "#/components/schemas/ScoreReviewsBody"
       responses:
         "200":
-          description: Scored review (from cache or freshly computed)
+          description: Array of scored reviews (from cache or freshly computed)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReviewScore"
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReviewScore"
+        "429":
+          description: Rate limit exceeded
+
+  /reviews/match:
+    get:
+      operationId: matchReviews
+      tags: [reviews]
+      summary: Compute a weighted match score for a property against user preferences
+      parameters:
+        - name: property_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Match result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchResult"
 
 components:
   schemas:
@@ -356,7 +384,7 @@ components:
         - totalTravelers
         - hasPreferences
 
-    ScoreReviewBody:
+    ScoreReviewsBody:
       type: object
       properties:
         propertyId:
@@ -364,12 +392,15 @@ components:
         source:
           type: string
           enum: [tripadvisor, google]
-        reviewText:
-          type: string
+        reviews:
+          type: array
+          items:
+            type: string
+          minItems: 1
       required:
         - propertyId
         - source
-        - reviewText
+        - reviews
 
     ReviewScore:
       type: object
@@ -399,6 +430,12 @@ components:
         adventurousMenuScore:
           type: integer
           nullable: true
+        sentiment:
+          type: string
+          nullable: true
+        oneLineSummary:
+          type: string
+          nullable: true
         rawClaudeResponse:
           type: object
           nullable: true
@@ -411,3 +448,21 @@ components:
         - reviewHash
         - reviewText
         - cachedAt
+
+    MatchResult:
+      type: object
+      properties:
+        matchScore:
+          type: number
+        topReviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewScore"
+        tagSummary:
+          type: array
+          items:
+            type: string
+      required:
+        - matchScore
+        - topReviews
+        - tagSummary

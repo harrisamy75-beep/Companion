@@ -20,8 +20,10 @@ import type {
   Child,
   CreateChildBody,
   HealthStatus,
+  MatchResult,
+  MatchReviewsParams,
   ReviewScore,
-  ScoreReviewBody,
+  ScoreReviewsBody,
   TravelPreferences,
   TravelSummary,
   UpsertPreferencesBody,
@@ -678,42 +680,42 @@ export function useGetTravelSummary<
 }
 
 /**
- * @summary Score a property review using AI
+ * @summary Score one or more property reviews using AI
  */
-export const getScoreReviewUrl = () => {
+export const getScoreReviewsUrl = () => {
   return `/api/reviews/score`;
 };
 
-export const scoreReview = async (
-  scoreReviewBody: ScoreReviewBody,
+export const scoreReviews = async (
+  scoreReviewsBody: ScoreReviewsBody,
   options?: RequestInit,
-): Promise<ReviewScore> => {
-  return customFetch<ReviewScore>(getScoreReviewUrl(), {
+): Promise<ReviewScore[]> => {
+  return customFetch<ReviewScore[]>(getScoreReviewsUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(scoreReviewBody),
+    body: JSON.stringify(scoreReviewsBody),
   });
 };
 
-export const getScoreReviewMutationOptions = <
-  TError = ErrorType<unknown>,
+export const getScoreReviewsMutationOptions = <
+  TError = ErrorType<void>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof scoreReview>>,
+    Awaited<ReturnType<typeof scoreReviews>>,
     TError,
-    { data: BodyType<ScoreReviewBody> },
+    { data: BodyType<ScoreReviewsBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof scoreReview>>,
+  Awaited<ReturnType<typeof scoreReviews>>,
   TError,
-  { data: BodyType<ScoreReviewBody> },
+  { data: BodyType<ScoreReviewsBody> },
   TContext
 > => {
-  const mutationKey = ["scoreReview"];
+  const mutationKey = ["scoreReviews"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -723,42 +725,136 @@ export const getScoreReviewMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof scoreReview>>,
-    { data: BodyType<ScoreReviewBody> }
+    Awaited<ReturnType<typeof scoreReviews>>,
+    { data: BodyType<ScoreReviewsBody> }
   > = (props) => {
     const { data } = props ?? {};
 
-    return scoreReview(data, requestOptions);
+    return scoreReviews(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type ScoreReviewMutationResult = NonNullable<
-  Awaited<ReturnType<typeof scoreReview>>
+export type ScoreReviewsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scoreReviews>>
 >;
-export type ScoreReviewMutationBody = BodyType<ScoreReviewBody>;
-export type ScoreReviewMutationError = ErrorType<unknown>;
+export type ScoreReviewsMutationBody = BodyType<ScoreReviewsBody>;
+export type ScoreReviewsMutationError = ErrorType<void>;
 
 /**
- * @summary Score a property review using AI
+ * @summary Score one or more property reviews using AI
  */
-export const useScoreReview = <
-  TError = ErrorType<unknown>,
+export const useScoreReviews = <
+  TError = ErrorType<void>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof scoreReview>>,
+    Awaited<ReturnType<typeof scoreReviews>>,
     TError,
-    { data: BodyType<ScoreReviewBody> },
+    { data: BodyType<ScoreReviewsBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
-  Awaited<ReturnType<typeof scoreReview>>,
+  Awaited<ReturnType<typeof scoreReviews>>,
   TError,
-  { data: BodyType<ScoreReviewBody> },
+  { data: BodyType<ScoreReviewsBody> },
   TContext
 > => {
-  return useMutation(getScoreReviewMutationOptions(options));
+  return useMutation(getScoreReviewsMutationOptions(options));
 };
+
+/**
+ * @summary Compute a weighted match score for a property against user preferences
+ */
+export const getMatchReviewsUrl = (params: MatchReviewsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/reviews/match?${stringifiedParams}`
+    : `/api/reviews/match`;
+};
+
+export const matchReviews = async (
+  params: MatchReviewsParams,
+  options?: RequestInit,
+): Promise<MatchResult> => {
+  return customFetch<MatchResult>(getMatchReviewsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getMatchReviewsQueryKey = (params?: MatchReviewsParams) => {
+  return [`/api/reviews/match`, ...(params ? [params] : [])] as const;
+};
+
+export const getMatchReviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof matchReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  params: MatchReviewsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof matchReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getMatchReviewsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof matchReviews>>> = ({
+    signal,
+  }) => matchReviews(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof matchReviews>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type MatchReviewsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof matchReviews>>
+>;
+export type MatchReviewsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Compute a weighted match score for a property against user preferences
+ */
+
+export function useMatchReviews<
+  TData = Awaited<ReturnType<typeof matchReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  params: MatchReviewsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof matchReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getMatchReviewsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

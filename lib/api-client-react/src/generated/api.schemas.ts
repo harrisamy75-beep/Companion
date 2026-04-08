@@ -71,18 +71,19 @@ export interface TravelSummary {
   hasPreferences: boolean;
 }
 
-export type ScoreReviewBodySource =
-  (typeof ScoreReviewBodySource)[keyof typeof ScoreReviewBodySource];
+export type ScoreReviewsBodySource =
+  (typeof ScoreReviewsBodySource)[keyof typeof ScoreReviewsBodySource];
 
-export const ScoreReviewBodySource = {
+export const ScoreReviewsBodySource = {
   tripadvisor: "tripadvisor",
   google: "google",
 } as const;
 
-export interface ScoreReviewBody {
+export interface ScoreReviewsBody {
   propertyId: string;
-  source: ScoreReviewBodySource;
-  reviewText: string;
+  source: ScoreReviewsBodySource;
+  /** @minItems 1 */
+  reviews: string[];
 }
 
 export type ReviewScoreRawClaudeResponse = { [key: string]: unknown } | null;
@@ -97,6 +98,19 @@ export interface ReviewScore {
   foodieScore?: number | null;
   ecoScore?: number | null;
   adventurousMenuScore?: number | null;
+  sentiment?: string | null;
+  oneLineSummary?: string | null;
   rawClaudeResponse?: ReviewScoreRawClaudeResponse;
   cachedAt: string;
 }
+
+export interface MatchResult {
+  matchScore: number;
+  topReviews: ReviewScore[];
+  tagSummary: string[];
+}
+
+export type MatchReviewsParams = {
+  property_id: string;
+  user_id?: string;
+};

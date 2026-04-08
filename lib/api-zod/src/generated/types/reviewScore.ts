@@ -17,6 +17,8 @@ export interface ReviewScore {
   foodieScore?: number | null;
   ecoScore?: number | null;
   adventurousMenuScore?: number | null;
+  sentiment?: string | null;
+  oneLineSummary?: string | null;
   rawClaudeResponse?: ReviewScoreRawClaudeResponse;
   cachedAt: Date;
 }

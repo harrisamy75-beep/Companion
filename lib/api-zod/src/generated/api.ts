@@ -175,15 +175,16 @@ export const GetTravelSummaryResponse = zod.object({
 });
 
 /**
- * @summary Score a property review using AI
+ * @summary Score one or more property reviews using AI
  */
-export const ScoreReviewBody = zod.object({
+
+export const ScoreReviewsBody = zod.object({
   propertyId: zod.string(),
   source: zod.enum(["tripadvisor", "google"]),
-  reviewText: zod.string(),
+  reviews: zod.array(zod.string()).min(1),
 });
 
-export const ScoreReviewResponse = zod.object({
+export const ScoreReviewsResponseItem = zod.object({
   propertyId: zod.string(),
   source: zod.string(),
   reviewHash: zod.string(),
@@ -193,6 +194,39 @@ export const ScoreReviewResponse = zod.object({
   foodieScore: zod.number().nullish(),
   ecoScore: zod.number().nullish(),
   adventurousMenuScore: zod.number().nullish(),
+  sentiment: zod.string().nullish(),
+  oneLineSummary: zod.string().nullish(),
   rawClaudeResponse: zod.object({}).passthrough().nullish(),
   cachedAt: zod.coerce.date(),
+});
+export const ScoreReviewsResponse = zod.array(ScoreReviewsResponseItem);
+
+/**
+ * @summary Compute a weighted match score for a property against user preferences
+ */
+export const MatchReviewsQueryParams = zod.object({
+  property_id: zod.coerce.string(),
+  user_id: zod.coerce.string().optional(),
+});
+
+export const MatchReviewsResponse = zod.object({
+  matchScore: zod.number(),
+  topReviews: zod.array(
+    zod.object({
+      propertyId: zod.string(),
+      source: zod.string(),
+      reviewHash: zod.string(),
+      reviewText: zod.string(),
+      tags: zod.array(zod.string()).nullish(),
+      luxuryValueScore: zod.number().nullish(),
+      foodieScore: zod.number().nullish(),
+      ecoScore: zod.number().nullish(),
+      adventurousMenuScore: zod.number().nullish(),
+      sentiment: zod.string().nullish(),
+      oneLineSummary: zod.string().nullish(),
+      rawClaudeResponse: zod.object({}).passthrough().nullish(),
+      cachedAt: zod.coerce.date(),
+    }),
+  ),
+  tagSummary: zod.array(zod.string()),
 });

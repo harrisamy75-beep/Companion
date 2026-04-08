@@ -14,6 +14,8 @@ export const reviewScoresTable = pgTable(
     foodieScore: integer("foodie_score"),
     ecoScore: integer("eco_score"),
     adventurousMenuScore: integer("adventurous_menu_score"),
+    sentiment: text("sentiment"),
+    oneLineSummary: text("one_line_summary"),
     rawClaudeResponse: jsonb("raw_claude_response"),
     cachedAt: timestamp("cached_at", { withTimezone: true }).notNull().defaultNow(),
   },
