@@ -110,6 +110,52 @@ export interface MatchResult {
   tagSummary: string[];
 }
 
+export interface ExtendedChildSummary {
+  name: string;
+  ageYears: number;
+  ageMonths: number;
+  foodPreferences?: string[] | null;
+  activityPreferences?: string[] | null;
+}
+
+export interface FamilySummary {
+  children: ExtendedChildSummary[];
+  travelerCount: number;
+}
+
+export interface PreferencesSummary {
+  travelStyleTags: string[];
+  luxuryIndexMin: number;
+  luxuryIndexMax: number;
+  priceValueWeight: number;
+  notes?: string | null;
+}
+
+export interface AutoFillPayload {
+  adults: number;
+  children: number;
+  childAges: number[];
+}
+
+export interface WeightVector {
+  luxuryValue: number;
+  foodie: number;
+  eco: number;
+  adventurousMenu: number;
+}
+
+export interface ReviewProfile {
+  weightVector: WeightVector;
+  description: string;
+}
+
+export interface ExtendedTravelSummary {
+  family: FamilySummary;
+  preferences: PreferencesSummary;
+  autoFillPayload: AutoFillPayload;
+  reviewProfile: ReviewProfile;
+}
+
 export type MatchReviewsParams = {
   property_id: string;
   user_id?: string;

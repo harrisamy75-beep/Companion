@@ -19,6 +19,7 @@ import type {
 import type {
   Child,
   CreateChildBody,
+  ExtendedTravelSummary,
   HealthStatus,
   MatchResult,
   MatchReviewsParams,
@@ -671,6 +672,94 @@ export function useGetTravelSummary<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetTravelSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Rich summary for browser extension — includes auto-fill payload and review profile
+ */
+export const getGetExtendedSummaryUrl = (userId: string) => {
+  return `/api/summary/${userId}`;
+};
+
+export const getExtendedSummary = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<ExtendedTravelSummary> => {
+  return customFetch<ExtendedTravelSummary>(getGetExtendedSummaryUrl(userId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetExtendedSummaryQueryKey = (userId: string) => {
+  return [`/api/summary/${userId}`] as const;
+};
+
+export const getGetExtendedSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getExtendedSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getExtendedSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetExtendedSummaryQueryKey(userId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getExtendedSummary>>
+  > = ({ signal }) => getExtendedSummary(userId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!userId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getExtendedSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetExtendedSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getExtendedSummary>>
+>;
+export type GetExtendedSummaryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Rich summary for browser extension — includes auto-fill payload and review profile
+ */
+
+export function useGetExtendedSummary<
+  TData = Awaited<ReturnType<typeof getExtendedSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getExtendedSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetExtendedSummaryQueryOptions(userId, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

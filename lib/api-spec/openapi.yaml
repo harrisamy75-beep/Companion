@@ -143,6 +143,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/TravelSummary"
 
+  /summary/{userId}:
+    get:
+      operationId: getExtendedSummary
+      tags: [children]
+      summary: Rich summary for browser extension — includes auto-fill payload and review profile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Extended travel summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtendedTravelSummary"
+
   /reviews/score:
     post:
       operationId: scoreReviews
@@ -466,3 +485,123 @@ components:
         - matchScore
         - topReviews
         - tagSummary
+
+    ExtendedChildSummary:
+      type: object
+      properties:
+        name:
+          type: string
+        ageYears:
+          type: integer
+        ageMonths:
+          type: integer
+        foodPreferences:
+          type: array
+          items:
+            type: string
+          nullable: true
+        activityPreferences:
+          type: array
+          items:
+            type: string
+          nullable: true
+      required:
+        - name
+        - ageYears
+        - ageMonths
+
+    FamilySummary:
+      type: object
+      properties:
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtendedChildSummary"
+        travelerCount:
+          type: integer
+      required:
+        - children
+        - travelerCount
+
+    PreferencesSummary:
+      type: object
+      properties:
+        travelStyleTags:
+          type: array
+          items:
+            type: string
+        luxuryIndexMin:
+          type: integer
+        luxuryIndexMax:
+          type: integer
+        priceValueWeight:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+      required:
+        - travelStyleTags
+        - luxuryIndexMin
+        - luxuryIndexMax
+        - priceValueWeight
+
+    AutoFillPayload:
+      type: object
+      properties:
+        adults:
+          type: integer
+        children:
+          type: integer
+        childAges:
+          type: array
+          items:
+            type: integer
+      required:
+        - adults
+        - children
+        - childAges
+
+    WeightVector:
+      type: object
+      properties:
+        luxuryValue:
+          type: number
+        foodie:
+          type: number
+        eco:
+          type: number
+        adventurousMenu:
+          type: number
+      required:
+        - luxuryValue
+        - foodie
+        - eco
+        - adventurousMenu
+
+    ReviewProfile:
+      type: object
+      properties:
+        weightVector:
+          $ref: "#/components/schemas/WeightVector"
+        description:
+          type: string
+      required:
+        - weightVector
+        - description
+
+    ExtendedTravelSummary:
+      type: object
+      properties:
+        family:
+          $ref: "#/components/schemas/FamilySummary"
+        preferences:
+          $ref: "#/components/schemas/PreferencesSummary"
+        autoFillPayload:
+          $ref: "#/components/schemas/AutoFillPayload"
+        reviewProfile:
+          $ref: "#/components/schemas/ReviewProfile"
+      required:
+        - family
+        - preferences
+        - autoFillPayload
+        - reviewProfile

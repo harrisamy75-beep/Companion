@@ -1,0 +1,32 @@
+Create a new folder artifacts/browser-extension/ with this structure:
+
+manifest.json — Chrome Manifest V3
+{
+  "manifest_version": 3,
+  "name": "TripProfile",
+  "version": "0.1.0",
+  "description": "Auto-fills your family profile on travel sites and filters reviews by relevance",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["https://*.expedia.com/*", "https://*.booking.com/*", "https://*.hotels.com/*", "https://www.google.com/travel/*", "https://*.airbnb.com/*"],
+  "action": { "default_popup": "popup.html" },
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{ "matches": ["https://*.expedia.com/*","https://*.booking.com/*","https://*.hotels.com/*","https://www.google.com/travel/*"], "js": ["content.js"] }]
+}
+
+background.js
+On install, fetch GET /summary/:user_id from your API (hardcode user_id for now, add auth later) and store result in chrome.storage.local under key "tripprofile".
+Refresh storage every 30 minutes.
+
+content.js
+On DOMContentLoaded:
+1. Read tripprofile from chrome.storage.local
+2. Run site detection: check window.location.hostname
+3. For each supported site, run the matching auto-fill function:
+   - Expedia: find input[data-stid="open-hotel-guest-picker"], click it, then find child age dropdowns and fill from child_ages array
+   - Booking.com: find .sb-group__input--adults and .sb-group__input--children inputs, set values via input events
+   - Google Hotels: find [data-label="Travelers"] button, click, fill adult/child counts
+4. After fill, show a small injected toast div: "TripProfile filled — 2 adults, 3 kids" (auto-dismiss after 3s)
+5. On hotel/property pages: scan visible review text (querySelectorAll('[data-review-text], .review-text, .reviewText')), POST to /reviews/score, then inject a match badge next to each review showing the score and top 2 tags.
+
+popup.html + popup.js
+Simple popup showing current profile summary from storage: family count, top travel style tags, last synced time. One button: "Re-sync profile" that triggers background.js fetch. Link to open the full dashboard (your existing index.tsx).

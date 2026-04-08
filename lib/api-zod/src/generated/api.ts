@@ -175,6 +175,49 @@ export const GetTravelSummaryResponse = zod.object({
 });
 
 /**
+ * @summary Rich summary for browser extension — includes auto-fill payload and review profile
+ */
+export const GetExtendedSummaryParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const GetExtendedSummaryResponse = zod.object({
+  family: zod.object({
+    children: zod.array(
+      zod.object({
+        name: zod.string(),
+        ageYears: zod.number(),
+        ageMonths: zod.number(),
+        foodPreferences: zod.array(zod.string()).nullish(),
+        activityPreferences: zod.array(zod.string()).nullish(),
+      }),
+    ),
+    travelerCount: zod.number(),
+  }),
+  preferences: zod.object({
+    travelStyleTags: zod.array(zod.string()),
+    luxuryIndexMin: zod.number(),
+    luxuryIndexMax: zod.number(),
+    priceValueWeight: zod.number(),
+    notes: zod.string().nullish(),
+  }),
+  autoFillPayload: zod.object({
+    adults: zod.number(),
+    children: zod.number(),
+    childAges: zod.array(zod.number()),
+  }),
+  reviewProfile: zod.object({
+    weightVector: zod.object({
+      luxuryValue: zod.number(),
+      foodie: zod.number(),
+      eco: zod.number(),
+      adventurousMenu: zod.number(),
+    }),
+    description: zod.string(),
+  }),
+});
+
+/**
  * @summary Score one or more property reviews using AI
  */
 

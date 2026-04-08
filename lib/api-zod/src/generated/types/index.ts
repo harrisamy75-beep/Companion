@@ -6,11 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./autoFillPayload";
 export * from "./child";
 export * from "./createChildBody";
+export * from "./extendedChildSummary";
+export * from "./extendedTravelSummary";
+export * from "./familySummary";
 export * from "./healthStatus";
 export * from "./matchResult";
 export * from "./matchReviewsParams";
+export * from "./preferencesSummary";
+export * from "./reviewProfile";
 export * from "./reviewScore";
 export * from "./reviewScoreRawClaudeResponse";
 export * from "./scoreReviewsBody";
@@ -18,3 +24,4 @@ export * from "./scoreReviewsBodySource";
 export * from "./travelPreferences";
 export * from "./travelSummary";
 export * from "./upsertPreferencesBody";
+export * from "./weightVector";
