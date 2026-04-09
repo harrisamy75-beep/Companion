@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, travelersTable, preferencesTable } from "@workspace/db";
+import { tripProfilesTable } from "@workspace/db";
 import { computeAge } from "./travelers";
 
 const router: IRouter = Router();
@@ -55,21 +56,31 @@ function buildReviewProfile(
   return { weightVector, description };
 }
 
-// GET /summary — frontend dashboard endpoint
+// GET /summary — frontend dashboard endpoint (optional ?profile_id= filter)
 router.get("/summary", async (req, res): Promise<void> => {
   const userId: string = (req as any).userId;
-  const [travelersRows, prefRows] = await Promise.all([
-    db
+  const profileId = req.query.profile_id ? parseInt(req.query.profile_id as string, 10) : null;
+
+  let travelerIdSet: Set<number> | null = null;
+  if (profileId && !isNaN(profileId)) {
+    const [profile] = await db
       .select()
-      .from(travelersTable)
-      .where(eq(travelersTable.userId, userId))
-      .orderBy(travelersTable.createdAt),
-    db
-      .select()
-      .from(preferencesTable)
-      .where(eq(preferencesTable.userId, userId))
-      .limit(1),
+      .from(tripProfilesTable)
+      .where(and(eq(tripProfilesTable.id, profileId), eq(tripProfilesTable.userId, userId)));
+    if (profile) {
+      travelerIdSet = new Set<number>((profile.travelerIds as number[]) ?? []);
+    }
+  }
+
+  const [allTravelers, prefRows] = await Promise.all([
+    db.select().from(travelersTable).where(eq(travelersTable.userId, userId)).orderBy(travelersTable.createdAt),
+    db.select().from(preferencesTable).where(eq(preferencesTable.userId, userId)).limit(1),
   ]);
+
+  const travelersRows = travelerIdSet
+    ? allTravelers.filter((t) => travelerIdSet!.has(t.id))
+    : allTravelers;
+
   const preferences = prefRows.length > 0 ? prefRows[0] : null;
   const hasPreferences = preferences !== null && preferences.id !== 0;
   const children = travelersRows.filter((t) => t.travelerType === "child");

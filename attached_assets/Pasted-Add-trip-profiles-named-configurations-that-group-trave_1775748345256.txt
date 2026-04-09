@@ -1,0 +1,57 @@
+Add trip profiles — named configurations that group travelers together, 
+so the same people can be arranged into different parties 
+(e.g. "Harris Family" vs "Amy & Greg" vs "Girls Trip").
+
+Step 1 — new table in lib/db/src/schema/trip_profiles.ts:
+
+import { pgTable, text, serial, timestamp, jsonb } from "drizzle-orm/pg-core";
+
+export const tripProfilesTable = pgTable("trip_profiles", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),               // "Harris Family", "Just Amy & Greg"
+  travelerIds: jsonb("traveler_ids").$type<number[]>().default([]),
+  emoji: text("emoji").default("✈️"),         // user picks an icon
+  isDefault: text("is_default").default("false"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+Export it from lib/db/src/schema/index.ts.
+
+Step 2 — new route artifacts/api-server/src/routes/trip-profiles.ts:
+
+GET /trip-profiles — list all profiles for userId
+POST /trip-profiles — create new profile
+  body: { name, travelerIds: number[], emoji?, isDefault? }
+PUT /trip-profiles/:id — update name, travelerIds, emoji, isDefault
+DELETE /trip-profiles/:id — delete
+POST /trip-profiles/:id/duplicate — clone a profile with name "Copy of X"
+
+GET /trip-profiles/:id/summary — same shape as GET /summary/:userId 
+  but filtered to only the travelerIds in this profile.
+  This is what the browser extension will use when a specific profile is active.
+
+Register in routes/index.ts.
+
+Step 3 — update GET /summary to accept an optional ?profile_id= query param.
+If provided, filter travelers to only those in that profile's travelerIds list.
+The auto_fill_payload should reflect only the selected profile's travelers.
+
+Step 4 — update the frontend travelers.tsx page:
+
+At the top of the page, add a "Trip Profiles" section above the traveler cards.
+Show each profile as a pill/card with its emoji and name.
+Clicking a profile highlights it and filters the view to show only those travelers.
+Add a "New profile" button that opens a modal:
+  - Name field (text input)
+  - Emoji picker (just a text input with placeholder "✈️")
+  - Checkbox list of all travelers to include
+  - "Duplicate existing profile" option — dropdown of current profiles, 
+    copies their travelerIds then lets you rename and adjust
+
+The active profile should be stored in localStorage as "activeProfileId".
+The duplicate button on each existing profile card creates a copy via 
+POST /trip-profiles/:id/duplicate and immediately opens it for editing.
+
+Step 5 — run drizzle-kit push to create the trip_profiles table.

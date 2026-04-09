@@ -1,0 +1,53 @@
+Redesign the UI to feel like a premium travel product — think Airbnb or 
+Tripadvisor quality, not a dev tool. Keep all functionality identical, 
+only change visual styling.
+
+Step 1 — update index.css / tailwind config:
+- Font: import "Playfair Display" from Google Fonts for headings (h1, h2), 
+  keep system sans for body
+- Background: warm off-white #F9F7F4 (not pure white, not gray)
+- Primary color: deep navy #1B3A5C
+- Accent: warm gold #C9972B
+- Cards: white, subtle border #E8E4DC, border-radius 16px, 
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06)
+
+Step 2 — redesign layout.tsx sidebar:
+- Background: #1B3A5C (deep navy)
+- App name "Companion" in Playfair Display, white, with the plane icon in gold
+- Nav items: white text, gold left border + light navy bg when active
+- Sidebar feels like a boutique hotel app, not a SaaS dashboard
+
+Step 3 — redesign the traveler cards in travelers.tsx:
+- Remove the dense tag cloud. Replace with two clean rows:
+  "Eats:" and "Does:" using small pill tags, max 4 visible + "+N more" overflow
+- Avatar circle: navy bg, white initials, 48px
+- Name in Playfair Display 18px, relationship as small muted text underneath
+- Adult / Child badge: gold text on pale gold bg (#FDF3DC), small, top-right of card
+- Card hover: very subtle lift (transform: translateY(-1px), shadow increase)
+
+Step 4 — redesign the Add Traveler form panel:
+- Give it a clean header with a thin gold top border accent
+- The Adult/Child toggle: styled as two pill buttons, navy when selected
+- Form fields: label above, input below, 12px gap, 
+  placeholder text lighter (#999), border #E8E4DC
+- Section headers (Food preferences, Activity preferences): 
+  small caps, gold color, letter-spacing
+
+Step 5 — redesign the Trip Profiles section (top of travelers page):
+- Profile cards as horizontal scrollable chips, not a list
+- Active profile: navy bg, white text, gold dot indicator
+- Inactive: white bg, navy text, subtle border
+- "+ New profile" chip at the end with a dashed border
+
+Step 6 — page header:
+- "Travel Party" in Playfair Display, large (36px), dark navy
+- Subtitle smaller, muted warm gray
+- Add a thin decorative gold rule (2px, 60px wide) under the heading
+
+Step 7 — update the Dashboard (home.tsx) with the same design tokens:
+- Summary stat cards: warm white bg, gold icon accent, navy numbers
+- Party description in Playfair Display
+
+Keep all Tailwind utility classes where possible but override with 
+inline styles or a custom CSS layer where Tailwind can't reach the 
+specific values above.

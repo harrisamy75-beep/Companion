@@ -43,15 +43,30 @@ Load-unpacked Chrome extension — no build step required.
 **To load**: Chrome → Extensions → Load unpacked → select `artifacts/browser-extension/`
 **API_BASE** in `background.js` and `content.js` must be updated to the deployed API URL before publishing to Chrome Web Store.
 
+## Auth
+Simple session-based auth via `express-session`. First visit prompts for a name (stored as `session.userId`). All data is scoped to this `userId`. "Switch profile" clears the session. Swap in real OAuth (Google, Apple) later without changing any data routes.
+
 ## Database Schema
-- `children` — stores child name and birthdate; ages computed dynamically on every fetch
-- `travel_preferences` — singleton row storing all travel preferences
+- `travelers` — each traveler (adult or child) with birthDate, food/activity prefs, accessibility needs
+- `travel_preferences` — singleton row per userId storing travel style preferences
 - `review_scores` — cached AI-scored reviews with composite PK (property_id, source, review_hash)
+- `sessions` — express-session store for server-side sessions
+- `users` — user records (unused with simple auth, reserved for future OAuth)
+- `trip_profiles` — named groupings of travelers per userId (e.g. "Harris Family", "Girls Trip")
 
 ## API Endpoints
-- `GET /summary` — original summary for frontend dashboard
-- `GET /summary/:userId` — rich payload for browser extension (family, preferences, autoFillPayload, reviewProfile)
+- `GET /summary` — frontend dashboard summary (optional `?profile_id=` to filter by profile)
+- `GET /summary/:userId` — rich payload for browser extension
+- `GET /trip-profiles` — list all profiles
+- `POST /trip-profiles` — create profile `{name, emoji, travelerIds}`
+- `PUT /trip-profiles/:id` — update profile
+- `DELETE /trip-profiles/:id` — delete profile
+- `POST /trip-profiles/:id/duplicate` — clone a profile as "Copy of X"
+- `GET /trip-profiles/:id/summary` — profile-scoped rich payload for browser extension
 - `POST /reviews/score` — score review texts via Claude (cache-first, 50 calls/hr rate limit)
 - `GET /reviews/match` — compute weighted match score for a property against user preferences
+- `GET /auth/me` — returns `{userId}` for current session
+- `POST /auth/login` — set session userId `{userId: string}`
+- `POST /auth/logout` — destroy session
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

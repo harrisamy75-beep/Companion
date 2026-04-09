@@ -5,6 +5,7 @@ import travelersRouter from "./travelers";
 import preferencesRouter from "./preferences";
 import summaryRouter from "./summary";
 import reviewsRouter from "./reviews";
+import tripProfilesRouter from "./trip-profiles";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(travelersRouter);
 router.use(preferencesRouter);
 router.use(summaryRouter);
 router.use(reviewsRouter);
+router.use(tripProfilesRouter);
 
 export default router;
