@@ -89,23 +89,32 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
           Companion
         </h1>
 
-        {/* Subheading */}
-        <p
-          className="font-playfair"
-          style={{
-            fontStyle: "italic",
-            fontWeight: 400,
-            fontSize: "20px",
-            color: "#8C8279",
-            marginTop: "12px",
-            lineHeight: 1.4,
-          }}
-        >
-          Your travel profile, perfected.
-        </p>
+        {/* Three-line value prop */}
+        <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          {[
+            "Save your family's ages, preferences & loyalty numbers.",
+            "Auto-fill every travel booking form in one click.",
+            "See only the reviews that matter to your style of travel.",
+          ].map((line) => (
+            <p
+              key={line}
+              className="font-playfair"
+              style={{
+                fontStyle: "italic",
+                fontWeight: 400,
+                fontSize: "18px",
+                color: "#8C8279",
+                lineHeight: 1.45,
+                margin: 0,
+              }}
+            >
+              {line}
+            </p>
+          ))}
+        </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ marginTop: "60px", width: "100%" }}>
+        <form onSubmit={handleSubmit} style={{ marginTop: "48px", width: "100%" }}>
           <label
             className="eyebrow"
             style={{ display: "block", textAlign: "left", marginBottom: "6px" }}
@@ -129,6 +138,19 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
           >
             {busy ? "Setting up…" : "Get started"}
           </button>
+          <p
+            style={{
+              fontFamily: "'Raleway', sans-serif",
+              fontWeight: 300,
+              fontSize: "11px",
+              color: "#8C8279",
+              textAlign: "center",
+              marginTop: "16px",
+              letterSpacing: "0.03em",
+            }}
+          >
+            No account needed · Your data stays private
+          </p>
         </form>
       </div>
     </div>

@@ -5,6 +5,8 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+const SIDEBAR_W = 260;
+
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
   { href: "/travelers", label: "Travelers" },
@@ -50,13 +52,13 @@ export function Layout({ children }: LayoutProps) {
         )}
       </div>
 
-      {/* Sidebar */}
+      {/* Sidebar — fixed, 260px wide */}
       <aside
-        className="hidden md:flex flex-col fixed h-full z-10"
-        style={{ background: "#1C1C1C", width: "220px" }}
+        className="hidden md:flex flex-col fixed top-0 left-0 h-full z-10"
+        style={{ background: "#1C1C1C", width: `${SIDEBAR_W}px` }}
       >
         {/* Wordmark */}
-        <div style={{ padding: "36px 32px 0" }}>
+        <div style={{ padding: "36px 36px 0" }}>
           <span
             className="font-playfair"
             style={{ fontStyle: "italic", fontWeight: 700, fontSize: "24px", color: "white", display: "block" }}
@@ -76,7 +78,7 @@ export function Layout({ children }: LayoutProps) {
                 href={href}
                 style={{
                   display: "block",
-                  padding: "10px 32px",
+                  padding: "11px 36px",
                   fontFamily: "'Raleway', sans-serif",
                   fontWeight: 500,
                   fontSize: "11px",
@@ -85,7 +87,7 @@ export function Layout({ children }: LayoutProps) {
                   color: isActive ? "white" : "rgba(255,255,255,0.5)",
                   textDecoration: "none",
                   borderLeft: isActive ? "2px solid #6B2737" : "2px solid transparent",
-                  paddingLeft: "30px",
+                  paddingLeft: isActive ? "34px" : "36px",
                   transition: "color 0.15s, border-color 0.15s",
                 }}
               >
@@ -95,8 +97,8 @@ export function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        {/* Footer tagline */}
-        <div style={{ padding: "0 32px 36px", marginTop: "auto" }}>
+        {/* Footer */}
+        <div style={{ padding: "0 36px 36px", marginTop: "auto" }}>
           <div style={{ height: "1px", background: "rgba(255,255,255,0.12)", marginBottom: "20px" }} />
           {logout && (
             <button
@@ -136,18 +138,27 @@ export function Layout({ children }: LayoutProps) {
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main Content — offset by exact sidebar width on md+ */}
       <main
-        className="flex-1"
         style={{
+          flex: 1,
           marginLeft: 0,
-          padding: "48px 56px",
-          maxWidth: "900px",
-          width: "100%",
+          paddingTop: "48px",
           paddingBottom: "80px",
+          paddingLeft: "48px",
+          paddingRight: "56px",
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
-        <style>{`@media (min-width: 768px) { main { margin-left: 220px; } }`}</style>
+        <style>{`
+          @media (min-width: 768px) {
+            main { margin-left: ${SIDEBAR_W}px !important; max-width: calc(100% - ${SIDEBAR_W}px); }
+          }
+          @media (max-width: 767px) {
+            main { padding-left: 20px !important; padding-right: 20px !important; padding-top: 24px !important; }
+          }
+        `}</style>
         {children}
       </main>
 
