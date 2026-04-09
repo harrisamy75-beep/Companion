@@ -1,4 +1,5 @@
 const API_BASE = "https://workspace.agrifluencer.repl.co/api";
+const DASHBOARD_URL = "https://workspace.agrifluencer.repl.co/";
 const USER_ID = "user_1";
 const STORAGE_KEY = "tripprofile";
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
@@ -6,8 +7,14 @@ const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 async function fetchAndStore() {
   try {
     const response = await fetch(`${API_BASE}/summary/${USER_ID}`, {
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
     });
+    if (response.status === 401) {
+      console.warn("[TripProfile] Not authenticated — opening dashboard to log in");
+      chrome.tabs.create({ url: DASHBOARD_URL });
+      return;
+    }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     await chrome.storage.local.set({

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, travelersTable } from "@workspace/db";
 import {
   CreateTravelerBody,
@@ -61,75 +61,94 @@ export function formatTraveler(row: typeof travelersTable.$inferSelect) {
 }
 
 // GET /travelers
-router.get("/travelers", async (_req, res): Promise<void> => {
+router.get("/travelers", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
   const rows = await db
     .select()
     .from(travelersTable)
+    .where(eq(travelersTable.userId, req.user.id))
     .orderBy(travelersTable.createdAt);
   res.json(rows.map(formatTraveler));
 });
 
 // POST /travelers
 router.post("/travelers", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
   const parsed = CreateTravelerBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-
   const [row] = await db
     .insert(travelersTable)
-    .values(parsed.data)
+    .values({ ...parsed.data, userId: req.user.id })
     .returning();
   res.status(201).json(formatTraveler(row));
 });
 
 // PUT /travelers/:id
 router.put("/travelers/:id", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
   const params = UpdateTravelerParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
-
   const parsed = CreateTravelerBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-
   const [row] = await db
     .update(travelersTable)
     .set({ ...parsed.data, updatedAt: new Date() })
-    .where(eq(travelersTable.id, params.data.id))
+    .where(
+      and(
+        eq(travelersTable.id, params.data.id),
+        eq(travelersTable.userId, req.user.id)
+      )
+    )
     .returning();
-
   if (!row) {
     res.status(404).json({ error: "Traveler not found" });
     return;
   }
-
   res.json(formatTraveler(row));
 });
 
 // DELETE /travelers/:id
 router.delete("/travelers/:id", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
   const params = UpdateTravelerParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
-
   const [row] = await db
     .delete(travelersTable)
-    .where(eq(travelersTable.id, params.data.id))
+    .where(
+      and(
+        eq(travelersTable.id, params.data.id),
+        eq(travelersTable.userId, req.user.id)
+      )
+    )
     .returning();
-
   if (!row) {
     res.status(404).json({ error: "Traveler not found" });
     return;
   }
-
   res.sendStatus(204);
 });
 

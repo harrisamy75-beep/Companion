@@ -5,14 +5,6 @@ import { computeAge } from "./travelers";
 
 const router: IRouter = Router();
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function tagWeight(tags: string[], tag: string): number {
-  return tags.includes(tag) ? 1.0 : 0.2;
-}
-
 function buildPartyDescription(adultCount: number, childCount: number): string {
   if (adultCount === 0 && childCount === 0) return "No travelers yet";
   const parts: string[] = [];
@@ -31,7 +23,6 @@ function buildReviewProfile(
 ) {
   const luxuryValue = priceValueWeight / 10;
 
-  // Union of style tags + inferred traveler preferences
   const isVegetarian = allFood.some((p) =>
     ["vegetarian", "vegan", "plant-based"].includes(p.toLowerCase())
   );
@@ -54,7 +45,6 @@ function buildReviewProfile(
   if (foodie === 1.0) parts.push("foodie");
   if (eco === 1.0) parts.push("eco-minded");
   if (adventurousMenu === 1.0) parts.push("adventurous menu");
-
   if (styleTags.includes("kids_menu_only")) parts.push("kids menu required");
   if (styleTags.includes("family_friendly")) parts.push("family friendly");
   if (styleTags.includes("romantic")) parts.push("romantic");
@@ -65,19 +55,28 @@ function buildReviewProfile(
   return { weightVector, description };
 }
 
-// ---------------------------------------------------------------------------
-// GET /summary — original endpoint (kept for frontend compatibility)
-// ---------------------------------------------------------------------------
-router.get("/summary", async (_req, res): Promise<void> => {
+// GET /summary — frontend dashboard endpoint (requires auth)
+router.get("/summary", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const userId = req.user.id;
   const [travelersRows, prefRows] = await Promise.all([
-    db.select().from(travelersTable).orderBy(travelersTable.createdAt),
-    db.select().from(preferencesTable).limit(1),
+    db
+      .select()
+      .from(travelersTable)
+      .where(eq(travelersTable.userId, userId))
+      .orderBy(travelersTable.createdAt),
+    db
+      .select()
+      .from(preferencesTable)
+      .where(eq(preferencesTable.userId, userId))
+      .limit(1),
   ]);
-
   const preferences = prefRows.length > 0 ? prefRows[0] : null;
   const hasPreferences = preferences !== null && preferences.id !== 0;
   const children = travelersRows.filter((t) => t.travelerType === "child");
-
   res.json({
     travelers: travelersRows,
     children,
@@ -87,13 +86,24 @@ router.get("/summary", async (_req, res): Promise<void> => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /summary/:userId — rich payload for browser extension
-// ---------------------------------------------------------------------------
+// GET /summary/:userId — rich payload for browser extension (requires auth)
 router.get("/summary/:userId", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const userId = req.user.id;
   const [travelersRows, prefRows] = await Promise.all([
-    db.select().from(travelersTable).orderBy(travelersTable.createdAt),
-    db.select().from(preferencesTable).limit(1),
+    db
+      .select()
+      .from(travelersTable)
+      .where(eq(travelersTable.userId, userId))
+      .orderBy(travelersTable.createdAt),
+    db
+      .select()
+      .from(preferencesTable)
+      .where(eq(preferencesTable.userId, userId))
+      .limit(1),
   ]);
 
   const prefs = prefRows[0] ?? null;
@@ -120,14 +130,11 @@ router.get("/summary/:userId", async (req, res): Promise<void> => {
     };
   };
 
-  const adultSummaries = adults.map(toSummaryItem);
-  const childSummaries = children.map(toSummaryItem);
-
   const partyDescription = buildPartyDescription(adults.length, children.length);
 
   const family = {
-    adults: adultSummaries,
-    children: childSummaries,
+    adults: adults.map(toSummaryItem),
+    children: children.map(toSummaryItem),
     travelerCount: travelersRows.length,
     partyDescription,
   };
@@ -140,7 +147,6 @@ router.get("/summary/:userId", async (req, res): Promise<void> => {
     notes: prefs?.notes ?? null,
   };
 
-  // Auto-fill payload
   const childAges = children
     .filter((c) => c.birthDate)
     .map((c) => computeAge(c.birthDate!).ageYears);
@@ -152,7 +158,6 @@ router.get("/summary/:userId", async (req, res): Promise<void> => {
     partyDescription,
   };
 
-  // Merge all travelers' food + activity preferences for weight vector
   const allFood = travelersRows.flatMap(
     (t) => (t.foodPreferences as string[] | null) ?? []
   );

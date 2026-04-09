@@ -1,0 +1,60 @@
+Add Replit Auth to protect all API routes and tie traveler/preference data to the logged-in user.
+
+Step 1 — install dependencies:
+npm install @replit/repl-auth express-session
+
+Step 2 — update artifacts/api-server/src/app.ts:
+Import and add session middleware before the routes:
+
+import session from "express-session";
+import { auth, getRequestUser } from "@replit/repl-auth";
+
+app.use(session({
+  secret: process.env.SESSION_SECRET ?? "dev-secret-change-me",
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false }
+}));
+app.use(auth);
+
+Add a middleware that runs on every /api route except /api/health:
+app.use("/api", (req, res, next) => {
+  if (req.path === "/health") return next();
+  const user = getRequestUser(req);
+  if (!user) { res.status(401).json({ error: "Not authenticated" }); return; }
+  (req as any).userId = user.id;
+  next();
+});
+
+Step 3 — update artifacts/api-server/src/routes/travelers.ts:
+Replace all db queries that currently ignore userId with ones filtered by req.userId.
+
+GET /travelers: add .where(eq(travelersTable.userId, req.userId))
+POST /travelers: add userId: req.userId to the insert values
+PUT /travelers/:id: add AND eq(travelersTable.userId, req.userId) to the where clause
+DELETE /travelers/:id: same — add userId check to where clause
+
+Step 4 — update artifacts/api-server/src/routes/preferences.ts:
+The preferences table needs a userId column. Add it:
+In lib/db/src/schema/preferences.ts add: userId: text("user_id")
+Then in the route:
+GET /preferences: filter by req.userId
+PUT /preferences: use req.userId in the upsert lookup and insert
+
+Step 5 — update artifacts/api-server/src/routes/summary.ts:
+All db queries should filter by req.userId instead of fetching all rows.
+
+Step 6 — update artifacts/api-server/src/routes/reviews.ts:
+Replace the (req.query.user_id as string) ?? "anonymous" line with req.userId from the session.
+
+Step 7 — add SESSION_SECRET to Replit Secrets (the padlock icon in the sidebar):
+Key: SESSION_SECRET
+Value: generate a random 32-character string
+
+Step 8 — run drizzle-kit push to add the userId column to travel_preferences.
+
+Step 9 — update the browser extension background.js:
+The fetch to /api/summary/:userId should now pass credentials:
+fetch(`${API_BASE}/summary/${userId}`, { credentials: "include" })
+
+And add a login check — if the response is 401, open the dashboard URL so the user can log in first.

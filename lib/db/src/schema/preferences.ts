@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 
 export const preferencesTable = pgTable("travel_preferences", {
   id: serial("id").primaryKey(),
+  userId: text("user_id"),
   seatPreference: text("seat_preference"),
   mealPreference: text("meal_preference"),
   frequentFlyerNumbers: text("frequent_flyer_numbers"),

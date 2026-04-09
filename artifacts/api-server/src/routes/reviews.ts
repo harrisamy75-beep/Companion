@@ -164,7 +164,11 @@ router.post("/reviews/score", async (req, res): Promise<void> => {
   }
 
   const { propertyId, source, reviews } = parsed.data;
-  const userId = (req.query.user_id as string) ?? "anonymous";
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const userId = req.user.id;
 
   const results = [];
 
@@ -232,6 +236,10 @@ router.post("/reviews/score", async (req, res): Promise<void> => {
 // GET /reviews/match?property_id=X&user_id=Y
 // ---------------------------------------------------------------------------
 router.get("/reviews/match", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
   const params = MatchReviewsQueryParams.safeParse(req.query);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

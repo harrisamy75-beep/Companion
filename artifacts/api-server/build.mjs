@@ -30,6 +30,7 @@ async function buildAll() {
     external: [
       "*.node",
       "@anthropic-ai/sdk",
+      "openid-client",
       "sharp",
       "better-sqlite3",
       "sqlite3",
