@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { createHash } from "crypto";
 import { eq, and } from "drizzle-orm";
+import Anthropic from "anthropic";
 import { db, reviewScoresTable, preferencesTable } from "@workspace/db";
 import { ScoreReviewsBody, MatchReviewsQueryParams } from "@workspace/api-zod";
 
@@ -10,7 +11,7 @@ const router: IRouter = Router();
 // In-memory rate limiter: max 50 Claude calls per hour per user_id
 // ---------------------------------------------------------------------------
 const RATE_LIMIT = 50;
-const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const RATE_WINDOW_MS = 60 * 60 * 1000;
 
 interface RateEntry {
   count: number;
@@ -84,59 +85,6 @@ interface ScoredResult {
   raw: object;
 }
 
-async function scoreWithClaude(reviewText: string, log: any): Promise<ScoredResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-
-  if (!apiKey) {
-    log.warn("ANTHROPIC_API_KEY not set — returning neutral scores");
-    return neutral();
-  }
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 512,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: reviewText }],
-      }),
-    });
-
-    if (!response.ok) {
-      log.error({ status: response.status }, "Anthropic API error");
-      return neutral();
-    }
-
-    const data = (await response.json()) as any;
-    const text: string = data?.content?.[0]?.text ?? "{}";
-    const parsed = JSON.parse(text);
-
-    return {
-      luxuryValueScore: clamp(parsed.luxury_value_score),
-      foodieScore: clamp(parsed.foodie_score),
-      ecoScore: clamp(parsed.eco_score),
-      adventurousMenuScore: clamp(parsed.adventurous_menu_score),
-      sentiment: ["positive", "neutral", "negative"].includes(parsed.sentiment)
-        ? parsed.sentiment
-        : "neutral",
-      oneLineSummary: typeof parsed.one_line_summary === "string"
-        ? parsed.one_line_summary.slice(0, 120)
-        : "",
-      tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-      raw: parsed,
-    };
-  } catch (err) {
-    log.error({ err }, "Failed to score review with Claude");
-    return neutral();
-  }
-}
-
 function neutral(): ScoredResult {
   return {
     luxuryValueScore: 5,
@@ -148,6 +96,59 @@ function neutral(): ScoredResult {
     tags: [],
     raw: {},
   };
+}
+
+function buildClient(): Anthropic | null {
+  // Prefer the user's own key; fall back to Replit AI integration proxy
+  const apiKey =
+    process.env.ANTHROPIC_API_KEY ??
+    process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+  const baseURL = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+
+  if (!apiKey) return null;
+
+  return new Anthropic({ apiKey, ...(baseURL ? { baseURL } : {}) });
+}
+
+async function scoreWithClaude(reviewText: string, log: any): Promise<ScoredResult> {
+  const client = buildClient();
+
+  if (!client) {
+    log.warn("No Anthropic credentials available — returning neutral scores");
+    return neutral();
+  }
+
+  try {
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 512,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: reviewText }],
+    });
+
+    const text =
+      message.content[0].type === "text" ? message.content[0].text : "{}";
+    const parsed = JSON.parse(text);
+
+    return {
+      luxuryValueScore: clamp(parsed.luxury_value_score),
+      foodieScore: clamp(parsed.foodie_score),
+      ecoScore: clamp(parsed.eco_score),
+      adventurousMenuScore: clamp(parsed.adventurous_menu_score),
+      sentiment: ["positive", "neutral", "negative"].includes(parsed.sentiment)
+        ? parsed.sentiment
+        : "neutral",
+      oneLineSummary:
+        typeof parsed.one_line_summary === "string"
+          ? parsed.one_line_summary.slice(0, 120)
+          : "",
+      tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+      raw: parsed,
+    };
+  } catch (err) {
+    log.error({ err }, "Failed to score review with Claude");
+    return neutral();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +169,6 @@ router.post("/reviews/score", async (req, res): Promise<void> => {
   for (const reviewText of reviews) {
     const reviewHash = hashText(reviewText);
 
-    // Check cache first
     const cached = await db
       .select()
       .from(reviewScoresTable)
@@ -187,7 +187,6 @@ router.post("/reviews/score", async (req, res): Promise<void> => {
       continue;
     }
 
-    // Rate limit applies only to actual Claude calls
     const rateCheck = checkRateLimit(userId);
     if (!rateCheck.allowed) {
       res.status(429).json({
@@ -197,7 +196,10 @@ router.post("/reviews/score", async (req, res): Promise<void> => {
       return;
     }
 
-    req.log.info({ propertyId, source, remaining: rateCheck.remaining }, "Calling Claude");
+    req.log.info(
+      { propertyId, source, remaining: rateCheck.remaining },
+      "Calling Claude"
+    );
     const scores = await scoreWithClaude(reviewText, req.log);
 
     const [inserted] = await db
@@ -236,7 +238,6 @@ router.get("/reviews/match", async (req, res): Promise<void> => {
 
   const { property_id: propertyId } = params.data;
 
-  // Fetch cached review scores for this property
   const reviews = await db
     .select()
     .from(reviewScoresTable)
@@ -247,7 +248,6 @@ router.get("/reviews/match", async (req, res): Promise<void> => {
     return;
   }
 
-  // Fetch user preferences (single-user for now)
   const prefRows = await db.select().from(preferencesTable).limit(1);
   const prefs = prefRows[0] ?? null;
 
@@ -256,16 +256,12 @@ router.get("/reviews/match", async (req, res): Promise<void> => {
     : [];
   const priceValueWeight = prefs?.priceValueWeight ?? 8;
 
-  // Tag weights: 1.0 if user has the tag, else 0.2
   const foodieWeight = styleTags.includes("foodie") ? 1.0 : 0.2;
   const ecoWeight = styleTags.includes("eco") ? 1.0 : 0.2;
   const adventurousWeight = styleTags.includes("adventurous_menu") ? 1.0 : 0.2;
 
-  // Max possible raw score (all weights 1.0, all scores 10, priceValueWeight 10):
-  // 10*(10/10) + 10*1.0 + 10*1.0 + 10*1.0 = 40
   const MAX_RAW = 40;
 
-  // Score each review and take the average
   const rawScores = reviews.map((r) => {
     const lux = (r.luxuryValueScore ?? 5) * (priceValueWeight / 10);
     const food = (r.foodieScore ?? 5) * foodieWeight;
@@ -277,14 +273,12 @@ router.get("/reviews/match", async (req, res): Promise<void> => {
   const avgRaw = rawScores.reduce((a, b) => a + b, 0) / rawScores.length;
   const matchScore = Math.round((avgRaw / MAX_RAW) * 100);
 
-  // Top reviews sorted by their individual match score (descending)
   const scored = reviews
     .map((r, i) => ({ review: r, score: rawScores[i] }))
     .sort((a, b) => b.score - a.score);
 
   const topReviews = scored.slice(0, 5).map((s) => s.review);
 
-  // Aggregate tags across all reviews
   const tagCounts = new Map<string, number>();
   for (const r of reviews) {
     for (const tag of (r.tags as string[] | null) ?? []) {
