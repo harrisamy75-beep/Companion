@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "TripProfile",
+  "version": "0.1.0",
+  "description": "Auto-fills your family profile on travel sites and filters reviews by relevance",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": [
+    "https://*.expedia.com/*",
+    "https://*.booking.com/*",
+    "https://*.hotels.com/*",
+    "https://www.google.com/travel/*",
+    "https://*.airbnb.com/*"
+  ],
+  "action": { "default_popup": "popup.html" },
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.expedia.com/*",
+        "https://*.booking.com/*",
+        "https://*.hotels.com/*",
+        "https://www.google.com/travel/*"
+      ],
+      "js": ["content.js"]
+    }
+  ]
+}

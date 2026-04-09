@@ -33,8 +33,25 @@ Travel Companion app for parents traveling with kids.
 - **Kids** (`/children`) — add/edit/delete children, auto-calculates age from birthdate
 - **Preferences** (`/preferences`) — save travel preferences (seat, meal, frequent flyer, passport, hotel, insurance, etc.)
 
+### browser-extension (Chrome Manifest V3, dir: artifacts/browser-extension/)
+Load-unpacked Chrome extension — no build step required.
+- **manifest.json** — MV3 manifest; host permissions for Expedia, Booking.com, Hotels.com, Google Travel, Airbnb
+- **background.js** — service worker; fetches `GET /summary/:user_id` on install, caches in `chrome.storage.local`, refreshes every 30 min via `chrome.alarms`
+- **content.js** — injected into travel sites; reads cached profile, auto-fills adult/child counts + ages for each supported site, shows toast confirmation, scans review text and injects AI-scored match badges via `POST /reviews/score`
+- **popup.html / popup.js** — extension popup; shows family count, children names/ages, travel style tags, auto-fill preview, last sync time; "Re-sync profile" button; link to full dashboard
+
+**To load**: Chrome → Extensions → Load unpacked → select `artifacts/browser-extension/`
+**API_BASE** in `background.js` and `content.js` must be updated to the deployed API URL before publishing to Chrome Web Store.
+
 ## Database Schema
 - `children` — stores child name and birthdate; ages computed dynamically on every fetch
 - `travel_preferences` — singleton row storing all travel preferences
+- `review_scores` — cached AI-scored reviews with composite PK (property_id, source, review_hash)
+
+## API Endpoints
+- `GET /summary` — original summary for frontend dashboard
+- `GET /summary/:userId` — rich payload for browser extension (family, preferences, autoFillPayload, reviewProfile)
+- `POST /reviews/score` — score review texts via Claude (cache-first, 50 calls/hr rate limit)
+- `GET /reviews/match` — compute weighted match score for a property against user preferences
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
