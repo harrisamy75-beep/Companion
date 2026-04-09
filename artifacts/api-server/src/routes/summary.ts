@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray } from "drizzle-orm";
-import { db, travelersTable, preferencesTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
+import { db, travelersTable, preferencesTable, favoritePropertiesTable, loyaltyProgramsTable } from "@workspace/db";
 import { tripProfilesTable } from "@workspace/db";
 import { computeAge } from "./travelers";
 
@@ -175,7 +175,27 @@ router.get("/summary/:userId", async (req, res): Promise<void> => {
     allActivity
   );
 
-  res.json({ family, preferences, autoFillPayload, reviewProfile });
+  const [loyaltyRows, propertyRows] = await Promise.all([
+    db.select().from(loyaltyProgramsTable).where(eq(loyaltyProgramsTable.userId, userId)),
+    db.select().from(favoritePropertiesTable).where(eq(favoritePropertiesTable.userId, userId)),
+  ]);
+
+  const loyaltyPrograms = loyaltyRows.map((r) => ({
+    brand: r.brand,
+    programName: r.programName,
+    tier: r.tier ?? null,
+    membershipNumber: r.membershipNumber ?? null,
+  }));
+
+  const lovedBrands = propertyRows
+    .filter((r) => r.tier === "loved" && r.brand)
+    .map((r) => r.brand as string);
+
+  const avoidBrands = propertyRows
+    .filter((r) => r.tier === "avoid" && r.brand)
+    .map((r) => r.brand as string);
+
+  res.json({ family, preferences, autoFillPayload, reviewProfile, loyaltyPrograms, lovedBrands, avoidBrands });
 });
 
 export default router;

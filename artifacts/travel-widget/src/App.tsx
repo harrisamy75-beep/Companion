@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import TravelersPage from "@/pages/travelers";
 import PreferencesPage from "@/pages/preferences";
+import StaysPage from "@/pages/stays";
 import { useState, useEffect, useCallback } from "react";
 import { LogoutContext } from "@/lib/logout-context";
 
@@ -139,6 +140,7 @@ function AppRoutes() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/travelers" component={TravelersPage} />
+      <Route path="/stays" component={StaysPage} />
       <Route path="/preferences" component={PreferencesPage} />
       <Route component={NotFound} />
     </Switch>

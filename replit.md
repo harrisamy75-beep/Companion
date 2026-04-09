@@ -53,6 +53,8 @@ Simple session-based auth via `express-session`. First visit prompts for a name 
 - `sessions` — express-session store for server-side sessions
 - `users` — user records (unused with simple auth, reserved for future OAuth)
 - `trip_profiles` — named groupings of travelers per userId (e.g. "Harris Family", "Girls Trip")
+- `favorite_properties` — saved hotels/resorts/villas/restaurants with tier (loved/liked/avoid), tags, notes
+- `loyalty_programs` — hotel loyalty program memberships with membership numbers and status tiers
 
 ## API Endpoints
 - `GET /summary` — frontend dashboard summary (optional `?profile_id=` to filter by profile)
@@ -68,5 +70,27 @@ Simple session-based auth via `express-session`. First visit prompts for a name 
 - `GET /auth/me` — returns `{userId}` for current session
 - `POST /auth/login` — set session userId `{userId: string}`
 - `POST /auth/logout` — destroy session
+- `GET /properties` — list favourite properties (loved first)
+- `POST /properties` — add a property
+- `PUT /properties/:id` — edit property
+- `DELETE /properties/:id` — remove property
+- `GET /properties/brands` — deduplicated brand list (used for review scoring context)
+- `GET /loyalty` — list loyalty programs
+- `POST /loyalty` — add program
+- `PUT /loyalty/:id` — edit program
+- `DELETE /loyalty/:id` — remove program
+- `GET /loyalty/programs` — static list of 12 suggested programs for quick-add
+
+## Frontend Pages
+- `/` — Dashboard (summary cards)
+- `/travelers` — Travel party management + trip profiles
+- `/stays` — Favourite properties + loyalty programs
+- `/preferences` — Travel preferences and style
+
+## Browser Extension Summary
+`GET /summary/:userId` now also returns:
+- `loyaltyPrograms` — for auto-filling membership numbers on booking sites
+- `lovedBrands` — for boosting luxury_value_score in review matching
+- `avoidBrands` — for showing warning badge on blacklisted properties
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

@@ -8,6 +8,7 @@ interface LayoutProps {
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
   { href: "/travelers", label: "Travelers" },
+  { href: "/stays", label: "Stays" },
   { href: "/preferences", label: "Preferences" },
 ];
 
