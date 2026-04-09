@@ -1,124 +1,183 @@
 import { Link, useLocation } from "wouter";
-import { Plane, Users, Home, Settings, LogOut } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useLogout } from "@/lib/logout-context";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
+const NAV_ITEMS = [
+  { href: "/", label: "Dashboard" },
+  { href: "/travelers", label: "Travelers" },
+  { href: "/preferences", label: "Preferences" },
+];
+
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const logout = useLogout();
 
-  const navItems = [
-    { href: "/", icon: Home, label: "Dashboard" },
-    { href: "/travelers", icon: Users, label: "Travelers" },
-    { href: "/preferences", icon: Settings, label: "Preferences" },
-  ];
-
   return (
-    <div className="min-h-[100dvh] flex flex-col md:flex-row w-full bg-background">
+    <div className="min-h-[100dvh] flex flex-col md:flex-row w-full" style={{ background: "#FAFAF8" }}>
+
       {/* Mobile Header */}
       <div
-        className="md:hidden flex items-center justify-between p-4 sticky top-0 z-10"
-        style={{ background: "#1B3A5C" }}
+        className="md:hidden flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+        style={{ background: "#1C1C1C" }}
       >
-        <div className="flex items-center gap-2.5">
-          <Plane className="w-5 h-5" style={{ color: "#C9972B" }} />
-          <span className="font-playfair text-lg font-semibold text-white tracking-wide">
-            Companion
-          </span>
-        </div>
+        <span
+          className="font-playfair"
+          style={{ fontStyle: "italic", fontWeight: 700, fontSize: "22px", color: "white" }}
+        >
+          Companion
+        </span>
         {logout && (
           <button
             onClick={logout}
-            className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            style={{
+              fontFamily: "'Raleway', sans-serif",
+              fontWeight: 400,
+              fontSize: "11px",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.45)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+            }}
           >
-            <LogOut className="w-4 h-4" />
+            Switch
           </button>
         )}
       </div>
 
       {/* Sidebar */}
       <aside
-        className="hidden md:flex w-64 flex-col fixed h-full z-10"
-        style={{ background: "#1B3A5C" }}
+        className="hidden md:flex flex-col fixed h-full z-10"
+        style={{ background: "#1C1C1C", width: "220px" }}
       >
-        {/* Logo */}
-        <div className="px-7 py-7 flex items-center gap-3">
-          <Plane className="w-7 h-7 shrink-0" style={{ color: "#C9972B" }} />
-          <span className="font-playfair text-xl font-semibold text-white tracking-wide">
+        {/* Wordmark */}
+        <div style={{ padding: "36px 32px 0" }}>
+          <span
+            className="font-playfair"
+            style={{ fontStyle: "italic", fontWeight: 700, fontSize: "24px", color: "white", display: "block" }}
+          >
             Companion
           </span>
+          <div style={{ marginTop: "20px", height: "1px", background: "rgba(255,255,255,0.12)" }} />
         </div>
 
-        {/* Divider */}
-        <div className="mx-6 mb-4 h-px" style={{ background: "rgba(255,255,255,0.10)" }} />
-
         {/* Nav */}
-        <nav className="flex-1 px-4 space-y-1">
-          {navItems.map((item) => {
-            const isActive = location === item.href;
+        <nav style={{ flex: 1, padding: "28px 0 0" }}>
+          {NAV_ITEMS.map(({ href, label }) => {
+            const isActive = location === href;
             return (
               <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 relative",
-                  isActive
-                    ? "text-white"
-                    : "text-white/60 hover:text-white hover:bg-white/8"
-                )}
-                style={isActive ? {
-                  background: "rgba(255,255,255,0.10)",
-                  borderLeft: "3px solid #C9972B",
-                  paddingLeft: "13px",
-                } : {}}
+                key={href}
+                href={href}
+                style={{
+                  display: "block",
+                  padding: "10px 32px",
+                  fontFamily: "'Raleway', sans-serif",
+                  fontWeight: 500,
+                  fontSize: "11px",
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase" as const,
+                  color: isActive ? "white" : "rgba(255,255,255,0.5)",
+                  textDecoration: "none",
+                  borderLeft: isActive ? "2px solid #6B2737" : "2px solid transparent",
+                  paddingLeft: "30px",
+                  transition: "color 0.15s, border-color 0.15s",
+                }}
               >
-                <item.icon className="w-4 h-4 shrink-0" />
-                {item.label}
+                {label}
               </Link>
             );
           })}
         </nav>
 
-        {/* Footer */}
-        {logout && (
-          <div className="px-4 pb-8 mt-auto">
-            <div className="h-px mx-2 mb-4" style={{ background: "rgba(255,255,255,0.10)" }} />
+        {/* Footer tagline */}
+        <div style={{ padding: "0 32px 36px", marginTop: "auto" }}>
+          <div style={{ height: "1px", background: "rgba(255,255,255,0.12)", marginBottom: "20px" }} />
+          {logout && (
             <button
               onClick={logout}
-              className="flex items-center gap-2.5 w-full px-4 py-2.5 rounded-xl text-sm text-white/50 hover:text-white hover:bg-white/8 transition-colors"
+              style={{
+                fontFamily: "'Raleway', sans-serif",
+                fontWeight: 300,
+                fontStyle: "italic" as const,
+                fontSize: "11px",
+                color: "rgba(255,255,255,0.35)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                display: "block",
+                marginBottom: "12px",
+                transition: "color 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}
             >
-              <LogOut className="w-4 h-4" />
-              Switch profile
+              switch profile
             </button>
-          </div>
-        )}
+          )}
+          <span
+            style={{
+              fontFamily: "'Raleway', sans-serif",
+              fontWeight: 300,
+              fontStyle: "italic" as const,
+              fontSize: "11px",
+              color: "rgba(255,255,255,0.28)",
+              display: "block",
+            }}
+          >
+            crafted for discerning travelers
+          </span>
+        </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-5 md:p-10 max-w-5xl mx-auto w-full pb-24 md:pb-12">
+      <main
+        className="flex-1"
+        style={{
+          marginLeft: 0,
+          padding: "48px 56px",
+          maxWidth: "900px",
+          width: "100%",
+          paddingBottom: "80px",
+        }}
+      >
+        <style>{`@media (min-width: 768px) { main { margin-left: 220px; } }`}</style>
         {children}
       </main>
 
       {/* Mobile Bottom Nav */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 flex justify-around p-2 pb-safe z-20 border-t"
-        style={{ background: "#1B3A5C", borderColor: "rgba(255,255,255,0.12)" }}
+        className="md:hidden fixed bottom-0 left-0 right-0 flex justify-around z-20 border-t"
+        style={{ background: "#1C1C1C", borderColor: "rgba(255,255,255,0.10)", padding: "10px 0 14px" }}
       >
-        {navItems.map((item) => {
-          const isActive = location === item.href;
+        {NAV_ITEMS.map(({ href, label }) => {
+          const isActive = location === href;
           return (
             <Link
-              key={item.href}
-              href={item.href}
-              className="flex flex-col items-center justify-center w-full py-2 gap-1 rounded-lg transition-colors"
-              style={{ color: isActive ? "#C9972B" : "rgba(255,255,255,0.55)" }}
+              key={href}
+              href={href}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flex: 1,
+                fontFamily: "'Raleway', sans-serif",
+                fontWeight: 600,
+                fontSize: "9px",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase" as const,
+                textDecoration: "none",
+                color: isActive ? "white" : "rgba(255,255,255,0.4)",
+                borderBottom: isActive ? "2px solid #6B2737" : "2px solid transparent",
+                paddingBottom: "4px",
+              }}
             >
-              <item.icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              {label}
             </Link>
           );
         })}

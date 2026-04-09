@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Raleway:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -6,227 +6,219 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+  --color-border: var(--color-border-token);
+  --color-input: var(--color-border-token);
+  --color-ring: var(--color-wine);
 
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-card-border: hsl(var(--card-border));
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-text);
+  --color-card-border: var(--color-border-token);
 
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-popover-border: hsl(var(--popover-border));
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-text);
+  --color-popover-border: var(--color-border-token);
 
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-primary-border: var(--primary-border);
+  --color-primary: var(--color-wine);
+  --color-primary-foreground: #ffffff;
+  --color-primary-border: var(--color-wine);
 
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-secondary-border: var(--secondary-border);
+  --color-secondary: var(--color-cream);
+  --color-secondary-foreground: var(--color-text);
+  --color-secondary-border: var(--color-border-token);
 
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-muted-border: var(--muted-border);
+  --color-muted: var(--color-cream);
+  --color-muted-foreground: var(--color-muted-token);
 
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-accent-border: var(--accent-border);
+  --color-accent: var(--color-gold);
+  --color-accent-foreground: #ffffff;
+  --color-accent-border: var(--color-gold);
 
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-destructive-border: var(--destructive-border);
+  --color-destructive: #c0392b;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-border: #c0392b;
 
-  --color-gold: #C9972B;
-  --color-navy: #1B3A5C;
+  --font-sans: 'Raleway', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-mono: Menlo, monospace;
 
-  --font-sans: var(--app-font-sans);
-  --font-serif: var(--app-font-serif);
-  --font-mono: var(--app-font-mono);
-
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 4px;
 }
 
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
-  --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
+  /* T+L palette */
+  --color-bg:           #FAFAF8;
+  --color-surface:      #FFFFFF;
+  --color-deep:         #1C1C1C;
+  --color-wine:         #6B2737;
+  --color-gold:         #B8963E;
+  --color-cream:        #F5F0E6;
+  --color-text:         #1C1C1C;
+  --color-muted-token:  #8C8279;
+  --color-border-token: #E5E0D8;
+  --color-sidebar:      #1C1C1C;
 
-  /* Premium travel palette */
-  --background: 38 14% 96%;        /* #F9F7F4 warm off-white */
-  --foreground: 211 55% 14%;       /* near-navy dark */
+  --button-outline: rgba(0,0,0,.10);
+  --badge-outline: rgba(0,0,0,.05);
+  --elevate-1: rgba(0,0,0,.02);
+  --elevate-2: rgba(0,0,0,.05);
 
+  /* Legacy hsl tokens mapped to flat values so shadcn components still work */
+  --background: 60 6% 98%;
+  --foreground: 0 0% 11%;
   --card: 0 0% 100%;
-  --card-foreground: 211 55% 14%;
-  --card-border: 38 15% 89%;       /* #E8E4DC */
-
+  --card-foreground: 0 0% 11%;
+  --card-border: 35 14% 89%;
   --popover: 0 0% 100%;
-  --popover-foreground: 211 55% 14%;
-  --popover-border: 38 15% 89%;
-
-  --primary: 211 55% 23%;          /* #1B3A5C deep navy */
+  --popover-foreground: 0 0% 11%;
+  --popover-border: 35 14% 89%;
+  --primary: 346 43% 30%;
   --primary-foreground: 0 0% 100%;
-
-  --secondary: 38 20% 93%;
-  --secondary-foreground: 211 55% 23%;
-
-  --muted: 38 15% 92%;
-  --muted-foreground: 215 12% 48%;
-
-  --accent: 38 65% 48%;            /* #C9972B warm gold */
+  --primary-border: hsl(346 43% 30%);
+  --secondary: 38 33% 93%;
+  --secondary-foreground: 0 0% 11%;
+  --secondary-border: hsl(38 33% 93%);
+  --muted: 38 33% 93%;
+  --muted-foreground: 22 6% 53%;
+  --muted-border: hsl(38 33% 93%);
+  --accent: 38 52% 48%;
   --accent-foreground: 0 0% 100%;
-
-  --destructive: 0 84% 60%;
+  --accent-border: hsl(38 52% 48%);
+  --destructive: 4 63% 46%;
   --destructive-foreground: 0 0% 100%;
-
-  --border: 38 15% 89%;
-  --input: 38 15% 89%;
-  --ring: 211 55% 23%;
-
-  --app-font-sans: 'Inter', system-ui, sans-serif;
+  --destructive-border: hsl(4 63% 46%);
+  --border: 35 14% 89%;
+  --input: 35 14% 89%;
+  --ring: 346 43% 30%;
+  --radius: 2px;
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --app-font-sans: 'Raleway', system-ui, sans-serif;
   --app-font-serif: 'Playfair Display', Georgia, serif;
   --app-font-mono: Menlo, monospace;
-
-  --radius: 1rem;
-
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow: 0 1px 4px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.10);
-
-  --primary-border: hsl(var(--primary));
-  --secondary-border: hsl(var(--secondary));
-  --muted-border: hsl(var(--muted));
-  --accent-border: hsl(var(--accent));
-  --destructive-border: hsl(var(--destructive));
-}
-
-.dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
-  --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
-
-  --background: 215 28% 14%;
-  --foreground: 38 14% 96%;
-
-  --card: 215 28% 17%;
-  --card-foreground: 38 14% 96%;
-  --card-border: 215 28% 22%;
-
-  --popover: 215 28% 17%;
-  --popover-foreground: 38 14% 96%;
-  --popover-border: 215 28% 22%;
-
-  --primary: 211 55% 50%;
-  --primary-foreground: 0 0% 100%;
-
-  --secondary: 215 20% 25%;
-  --secondary-foreground: 38 14% 96%;
-
-  --muted: 215 20% 22%;
-  --muted-foreground: 215 15% 65%;
-
-  --accent: 38 65% 48%;
-  --accent-foreground: 0 0% 100%;
-
-  --destructive: 0 62% 30%;
-  --destructive-foreground: 0 0% 100%;
-
-  --border: 215 28% 25%;
-  --input: 215 28% 25%;
-  --ring: 211 55% 50%;
+  --opaque-button-border-intensity: -8;
 }
 
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Raleway', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Raleway', system-ui, sans-serif;
+    background-color: #FAFAF8;
+    color: #1C1C1C;
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
   }
 
-  h1, h2, h3 {
+  h1, h2, h3, h4 {
     font-family: 'Playfair Display', Georgia, serif;
+    line-height: 1.2;
+  }
+
+  p, input, button, label, span, a, textarea, select {
+    font-family: 'Raleway', system-ui, sans-serif;
   }
 }
 
 @layer utilities {
-  .font-playfair {
-    font-family: 'Playfair Display', Georgia, serif;
-  }
+  /* Typography */
+  .font-playfair { font-family: 'Playfair Display', Georgia, serif; }
+  .font-raleway  { font-family: 'Raleway', system-ui, sans-serif; }
 
-  .gold-rule {
-    display: block;
-    width: 60px;
-    height: 2px;
-    background-color: #C9972B;
-    margin-top: 10px;
-    border-radius: 1px;
-  }
-
-  .card-premium {
-    background: white;
-    border: 1px solid #E8E4DC;
-    border-radius: 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
-  }
-
-  .card-premium:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
-    transform: translateY(-1px);
-  }
-
-  .badge-gold {
-    background-color: #FDF3DC;
-    color: #C9972B;
-    font-size: 11px;
+  /* Eyebrow label — Raleway 600, 10px, ALL CAPS, letter-spacing 0.16em, gold */
+  .eyebrow {
+    font-family: 'Raleway', sans-serif;
     font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 99px;
-    border: 1px solid #f0dcaa;
-    letter-spacing: 0.02em;
-  }
-
-  .badge-gold-adult {
-    background-color: #EEF2F8;
-    color: #1B3A5C;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 99px;
-    border: 1px solid #C5D3E5;
-    letter-spacing: 0.02em;
-  }
-
-  .pref-label {
     font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #C9972B;
+    color: #B8963E;
   }
 
-  .pill-tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 99px;
-    font-size: 11px;
-    font-weight: 500;
-    background: #F9F7F4;
-    border: 1px solid #E8E4DC;
-    color: #4a5568;
+  /* Section divider */
+  .section-rule {
+    display: block;
+    width: 100%;
+    height: 1px;
+    background: #E5E0D8;
   }
+
+  /* Editorial card: white, 1px border, radius 2px, generous padding */
+  .card-editorial {
+    background: white;
+    border: 1px solid #E5E0D8;
+    border-radius: 2px;
+    padding: 32px;
+  }
+
+  /* Bottom-border-only input */
+  .input-underline {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #E5E0D8 !important;
+    border-radius: 0 !important;
+    padding: 8px 0 !important;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 300;
+    font-size: 15px;
+    color: #1C1C1C;
+    outline: none !important;
+    box-shadow: none !important;
+    width: 100%;
+  }
+
+  .input-underline::placeholder {
+    color: #C4BBB0;
+  }
+
+  .input-underline:focus {
+    border-bottom-color: #6B2737 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Wine button — no border-radius */
+  .btn-wine {
+    background: #6B2737;
+    color: white;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-wine:hover:not(:disabled) { background: #8B3347; }
+  .btn-wine:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* Wine link */
+  .link-wine {
+    color: #6B2737;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .link-wine:hover { opacity: 0.75; }
 }

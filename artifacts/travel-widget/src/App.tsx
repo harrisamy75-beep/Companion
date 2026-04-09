@@ -6,7 +6,6 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import TravelersPage from "@/pages/travelers";
 import PreferencesPage from "@/pages/preferences";
-import { Plane } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { LogoutContext } from "@/lib/logout-context";
 
@@ -43,9 +42,7 @@ function useSessionUser() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: name }),
     });
-    if (res.ok) {
-      setAuth({ status: "ready", userId: name });
-    }
+    if (res.ok) setAuth({ status: "ready", userId: name });
   }, []);
 
   const logout = useCallback(async () => {
@@ -71,51 +68,67 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#F9F7F4" }}>
-      <div className="w-full max-w-sm flex flex-col items-center gap-7 text-center">
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <Plane className="w-8 h-8" style={{ color: "#C9972B" }} />
-          <span className="font-playfair text-2xl font-semibold" style={{ color: "#1B3A5C" }}>
-            Travel Companion
-          </span>
-        </div>
+    <div
+      className="min-h-screen flex items-center justify-center px-6"
+      style={{ background: "#F5F0E6" }}
+    >
+      <div className="flex flex-col items-center text-center" style={{ width: 340 }}>
+        {/* Hero wordmark */}
+        <h1
+          className="font-playfair"
+          style={{
+            fontStyle: "italic",
+            fontWeight: 700,
+            fontSize: "56px",
+            lineHeight: 1.05,
+            color: "#1C1C1C",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Companion
+        </h1>
 
-        <div>
-          <p className="text-sm" style={{ color: "#8a8078" }}>
-            Save your family's travel details, auto-fill booking forms, and get AI-powered review matching.
-          </p>
-          <span className="gold-rule mx-auto" style={{ margin: "10px auto 0" }} />
-        </div>
+        {/* Subheading */}
+        <p
+          className="font-playfair"
+          style={{
+            fontStyle: "italic",
+            fontWeight: 400,
+            fontSize: "20px",
+            color: "#8C8279",
+            marginTop: "12px",
+            lineHeight: 1.4,
+          }}
+        >
+          Your travel profile, perfected.
+        </p>
 
-        {/* Card */}
-        <div className="w-full card-premium p-6 text-left space-y-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#C9972B" }}>Your name</p>
-            <p className="text-xs" style={{ color: "#8a8078" }}>
-              Used to keep your profile separate from others on this device.
-            </p>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <input
-              autoFocus
-              type="text"
-              placeholder="e.g. Sarah"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2 placeholder:text-[#bbb]"
-              style={{ borderColor: "#E8E4DC", color: "#1B3A5C", background: "white", focusRingColor: "#1B3A5C" }}
-            />
-            <button
-              type="submit"
-              disabled={busy || !value.trim()}
-              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-50"
-              style={{ background: "#1B3A5C" }}
-            >
-              {busy ? "Setting up…" : "Get started"}
-            </button>
-          </form>
-        </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ marginTop: "60px", width: "100%" }}>
+          <label
+            className="eyebrow"
+            style={{ display: "block", textAlign: "left", marginBottom: "6px" }}
+          >
+            Your name
+          </label>
+          <input
+            autoFocus
+            type="text"
+            placeholder="e.g. Sarah"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="input-underline"
+            style={{ textAlign: "center", fontSize: "16px" }}
+          />
+          <button
+            type="submit"
+            disabled={busy || !value.trim()}
+            className="btn-wine"
+            style={{ width: "100%", height: "48px", marginTop: "28px" }}
+          >
+            {busy ? "Setting up…" : "Get started"}
+          </button>
+        </form>
       </div>
     </div>
   );
@@ -139,11 +152,16 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         {auth.status === "loading" && (
-          <div className="min-h-screen flex items-center justify-center bg-background">
-            <div className="flex flex-col items-center gap-4 text-muted-foreground">
-              <Plane className="w-10 h-10 text-primary animate-pulse" />
-              <p className="text-sm">Loading…</p>
-            </div>
+          <div
+            className="min-h-screen flex items-center justify-center"
+            style={{ background: "#F5F0E6" }}
+          >
+            <p
+              className="font-playfair"
+              style={{ fontStyle: "italic", fontSize: "20px", color: "#8C8279" }}
+            >
+              Loading…
+            </p>
           </div>
         )}
         {auth.status === "needs-name" && <NamePrompt onSubmit={login} />}

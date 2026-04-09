@@ -1,0 +1,104 @@
+Redesign to match Travel + Leisure / Modern Luxury magazine aesthetic —
+warm, photographic, bold typography, feels like a premium lifestyle brand
+not a tech product.
+
+Step 1 — Typography:
+Install these Google Fonts:
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Raleway:wght@300;400;500;600&display=swap');
+
+- Playfair Display: all headings and display text
+- Raleway: all body, nav, labels, UI text
+
+h1, h2, h3, h4 { font-family: 'Playfair Display', serif; }
+body, p, input, button, label, span, a { font-family: 'Raleway', sans-serif; }
+
+Step 2 — Color palette:
+--color-bg: #FAFAF8
+--color-surface: #FFFFFF
+--color-deep: #1C1C1C          /* near black, richer than navy */
+--color-wine: #6B2737          /* T+L signature — deep burgundy */
+--color-gold: #B8963E          /* warm antique gold */
+--color-cream: #F5F0E6         /* warm cream for section backgrounds */
+--color-text: #1C1C1C
+--color-muted: #8C8279         /* warm medium gray */
+--color-border: #E5E0D8
+--color-sidebar: #1C1C1C       /* near black sidebar */
+
+Step 3 — Sidebar:
+- Background: #1C1C1C
+- "Companion" wordmark: Playfair Display italic, 24px, white
+- Thin 1px rule below in rgba(255,255,255,0.12)
+- Nav labels: Raleway 500, 11px, letter-spacing 0.14em, ALL CAPS
+- Active item: wine red left border (2px #6B2737) + white text
+- Inactive: rgba(255,255,255,0.5)
+- No icons in nav
+- Sidebar bottom: Raleway 300 italic, 12px, rgba(255,255,255,0.35):
+  "crafted for discerning travelers"
+
+Step 4 — Login screen:
+- Full parchment background #F5F0E6
+- Hero area: "Companion" in Playfair Display italic bold, 56px, #1C1C1C
+- Subheading in Playfair Display italic 400, 20px, #8C8279:
+  "Your travel profile, perfected."
+- 60px gap then the form
+- Input: bottom border only, 1px #E5E0D8, Raleway 300, 
+  centered, 340px wide, 16px, no background
+- Label: Raleway 600, 10px, ALL CAPS, letter-spacing 0.16em, #B8963E
+- Button: #6B2737 wine red background, white Raleway 600 11px ALL CAPS
+  letter-spacing 0.18em, no border-radius, full 340px width, 48px tall
+- Hover: background #8B3347
+
+Step 5 — Dashboard:
+- Page title: Playfair Display 700, 48px, #1C1C1C
+- Subtitle: Playfair Display italic 400, 17px, #8C8279
+- Thin 1px rule full width below the header, color #E5E0D8, margin 24px 0
+
+- Cards: white bg, 1px solid #E5E0D8, border-radius 2px, padding 32px
+- Card eyebrow (small label above title): Raleway 600, 10px, ALL CAPS,
+  letter-spacing 0.16em, color #B8963E — e.g. "TRAVEL PARTY", "PREFERENCES"
+- Card title: Playfair Display 400, 22px
+- Links: #6B2737 wine color, Raleway 500, no underline, 
+  arrow → on hover only
+
+Step 6 — Traveler cards:
+- No avatar circle — replace with Playfair Display italic initial, 
+  52px, #B8963E gold, left-aligned
+- Name: Playfair Display 700, 22px, #1C1C1C
+- Type + relationship: Raleway 400, 12px, #8C8279, 
+  "Adult · Self" — dot separator, no badge/pill
+- Tags: NOT pills. Two lines of italic Playfair Display 300, 15px, #8C8279:
+  "Eats: healthy, upscale, italian, mediterranean"
+  "Does: spa, beach, water sports, adventure"
+- Card border-left: 3px solid #6B2737 on hover only, transition 200ms
+- No shadow, no lift effect
+
+Step 7 — Add Traveler form:
+- Section label: Raleway 600, 10px, ALL CAPS, letter-spacing 0.16em, 
+  #B8963E gold
+- All inputs: bottom border only, transparent background, 
+  Raleway 300, 15px, #1C1C1C
+- Adult/Child selector: plain text toggle — "ADULT" and "CHILD" in 
+  Raleway 600 11px ALL CAPS, with a 2px bottom border on selected, 
+  color #6B2737. No buttons, no pills.
+- Submit button: wine red #6B2737, white text, no radius, 
+  full width, Raleway 600 ALL CAPS
+
+Step 8 — Trip profiles (top of travelers page):
+- Display as slash-separated text list like a magazine breadcrumb:
+  Harris Family  /  Amy & Greg  /  Girls Trip  /  + New
+- Active profile: Playfair Display italic, #6B2737 wine
+- Inactive: Raleway 400, #8C8279, pointer cursor
+- "/ + New": Raleway 400, #B8963E gold
+
+Step 9 — Tags and preferences page:
+- Replace ALL pill/chip tag components with comma-separated 
+  italic text — no backgrounds, no borders on tags
+- Style tags grouping: gold eyebrow label + italic text value underneath
+- Sliders (luxury index etc): keep functional but style the track 
+  as #E5E0D8 and thumb as #6B2737 wine
+
+Step 10 — Global spacing:
+- Main content padding: 56px horizontal, 48px top
+- Section gaps: 48px between major sections
+- Line height on all body text: 1.8
+- Everything feels like it has room to breathe

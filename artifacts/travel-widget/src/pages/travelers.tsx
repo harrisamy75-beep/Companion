@@ -9,16 +9,9 @@ import {
   getGetTravelSummaryQueryKey,
 } from "@workspace/api-client-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Trash2, UserPlus, Calendar, Edit2, X, Users, User, Plus, Copy, Layers } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const NAVY = "#1B3A5C";
-const GOLD = "#C9972B";
+import { useToast } from "@/hooks/use-toast";
+import { X } from "lucide-react";
 
 type TravelerType = "adult" | "child";
 
@@ -52,284 +45,250 @@ interface ProfileFormState {
 }
 
 const EMPTY_FORM: FormState = {
-  name: "",
-  birthDate: "",
-  travelerType: "adult",
-  relationship: "",
-  foodPreferences: "",
-  activityPreferences: "",
-  accessibilityNeeds: "",
-  notes: "",
+  name: "", birthDate: "", travelerType: "adult",
+  relationship: "", foodPreferences: "", activityPreferences: "",
+  accessibilityNeeds: "", notes: "",
 };
 
-const EMPTY_PROFILE_FORM: ProfileFormState = {
-  name: "",
-  emoji: "✈️",
-  travelerIds: [],
-  duplicateFromId: null,
-};
-
+const EMPTY_PROFILE_FORM: ProfileFormState = { name: "", emoji: "✈️", travelerIds: [], duplicateFromId: null };
 const ACTIVE_PROFILE_KEY = "activeProfileId";
 
 function parseTags(raw: string): string[] {
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-function TagRow({ label, tags }: { label: string; tags: string[] }) {
-  if (tags.length === 0) return null;
-  const visible = tags.slice(0, 4);
-  const overflow = tags.length - 4;
-  return (
-    <div className="flex items-start gap-2 mt-1.5">
-      <span className="pref-label shrink-0 pt-0.5">{label}</span>
-      <div className="flex flex-wrap gap-1">
-        {visible.map((t) => <span key={t} className="pill-tag">{t}</span>)}
-        {overflow > 0 && <span className="pill-tag" style={{ color: GOLD }}>+{overflow} more</span>}
-      </div>
-    </div>
-  );
-}
-
+/* ─── Trip profiles API hook ─── */
 function useTripProfiles() {
   const qc = useQueryClient();
   const KEY = ["trip-profiles"];
-
   const query = useQuery<TripProfile[]>({
     queryKey: KEY,
     queryFn: async () => {
       const res = await fetch("/api/trip-profiles", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load profiles");
+      if (!res.ok) throw new Error("Failed");
       return res.json();
     },
   });
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: KEY });
-
+  const inv = () => qc.invalidateQueries({ queryKey: KEY });
   const create = useMutation({
-    mutationFn: async (data: Omit<ProfileFormState, "duplicateFromId">) => {
-      const res = await fetch("/api/trip-profiles", {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json() as Promise<TripProfile>;
-    },
-    onSuccess: invalidate,
+    mutationFn: async (d: Omit<ProfileFormState, "duplicateFromId">) => {
+      const r = await fetch("/api/trip-profiles", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+      if (!r.ok) throw new Error("Failed"); return r.json() as Promise<TripProfile>;
+    }, onSuccess: inv,
   });
-
   const update = useMutation({
-    mutationFn: async ({ id, ...data }: Partial<ProfileFormState> & { id: number }) => {
-      const res = await fetch(`/api/trip-profiles/${id}`, {
-        method: "PUT", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json() as Promise<TripProfile>;
-    },
-    onSuccess: invalidate,
+    mutationFn: async ({ id, ...d }: Partial<ProfileFormState> & { id: number }) => {
+      const r = await fetch(`/api/trip-profiles/${id}`, { method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+      if (!r.ok) throw new Error("Failed"); return r.json() as Promise<TripProfile>;
+    }, onSuccess: inv,
   });
-
   const remove = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(`/api/trip-profiles/${id}`, { method: "DELETE", credentials: "include" });
-      if (!res.ok) throw new Error("Failed");
-    },
-    onSuccess: invalidate,
+    mutationFn: async (id: number) => { const r = await fetch(`/api/trip-profiles/${id}`, { method: "DELETE", credentials: "include" }); if (!r.ok) throw new Error("Failed"); },
+    onSuccess: inv,
   });
-
   const duplicate = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(`/api/trip-profiles/${id}/duplicate`, { method: "POST", credentials: "include" });
-      if (!res.ok) throw new Error("Failed");
-      return res.json() as Promise<TripProfile>;
-    },
-    onSuccess: invalidate,
+    mutationFn: async (id: number) => { const r = await fetch(`/api/trip-profiles/${id}/duplicate`, { method: "POST", credentials: "include" }); if (!r.ok) throw new Error("Failed"); return r.json() as Promise<TripProfile>; },
+    onSuccess: inv,
   });
-
   return { query, create, update, remove, duplicate };
 }
 
-function ProfileModal({
-  profiles, travelers, editingProfile, onClose, onCreate, onUpdate,
-}: {
-  profiles: TripProfile[];
-  travelers: any[];
+/* ─── Profile modal ─── */
+function ProfileModal({ profiles, travelers, editingProfile, onClose, onCreate, onUpdate }: {
+  profiles: TripProfile[]; travelers: any[];
   editingProfile: TripProfile | null;
   onClose: () => void;
-  onCreate: (form: Omit<ProfileFormState, "duplicateFromId">) => void;
-  onUpdate: (id: number, form: Partial<ProfileFormState>) => void;
+  onCreate: (f: Omit<ProfileFormState, "duplicateFromId">) => void;
+  onUpdate: (id: number, f: Partial<ProfileFormState>) => void;
 }) {
-  const [form, setForm] = useState<ProfileFormState>(() => {
-    if (editingProfile) {
-      return { name: editingProfile.name, emoji: editingProfile.emoji ?? "✈️", travelerIds: (editingProfile.travelerIds as number[]) ?? [], duplicateFromId: null };
-    }
-    return EMPTY_PROFILE_FORM;
-  });
-
-  const setField = <K extends keyof ProfileFormState>(k: K, v: ProfileFormState[K]) =>
-    setForm((f) => ({ ...f, [k]: v }));
-
-  const toggleTraveler = (id: number) =>
-    setForm((f) => ({
-      ...f,
-      travelerIds: f.travelerIds.includes(id) ? f.travelerIds.filter((x) => x !== id) : [...f.travelerIds, id],
-    }));
-
-  const handleDuplicateFrom = (profileId: number) => {
-    const source = profiles.find((p) => p.id === profileId);
-    if (source) setForm((f) => ({ ...f, travelerIds: (source.travelerIds as number[]) ?? [], duplicateFromId: profileId }));
-  };
+  const [form, setForm] = useState<ProfileFormState>(() =>
+    editingProfile
+      ? { name: editingProfile.name, emoji: editingProfile.emoji ?? "✈️", travelerIds: (editingProfile.travelerIds as number[]) ?? [], duplicateFromId: null }
+      : EMPTY_PROFILE_FORM
+  );
+  const set = <K extends keyof ProfileFormState>(k: K, v: ProfileFormState[K]) => setForm(f => ({ ...f, [k]: v }));
+  const toggle = (id: number) => setForm(f => ({ ...f, travelerIds: f.travelerIds.includes(id) ? f.travelerIds.filter(x => x !== id) : [...f.travelerIds, id] }));
+  const handleDupFrom = (pid: number) => { const src = profiles.find(p => p.id === pid); if (src) setForm(f => ({ ...f, travelerIds: (src.travelerIds as number[]) ?? [], duplicateFromId: pid })); };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
-    const payload = { name: form.name.trim(), emoji: form.emoji, travelerIds: form.travelerIds };
-    if (editingProfile) onUpdate(editingProfile.id, payload);
-    else onCreate(payload);
+    const p = { name: form.name.trim(), emoji: form.emoji, travelerIds: form.travelerIds };
+    if (editingProfile) onUpdate(editingProfile.id, p); else onCreate(p);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="h-1 w-full" style={{ background: GOLD }} />
-        <div className="p-6 space-y-5">
-          <div className="flex items-center justify-between">
-            <h2 className="font-playfair text-lg font-semibold" style={{ color: NAVY }}>
-              {editingProfile ? "Edit profile" : "New trip profile"}
-            </h2>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
-            </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "white", border: "1px solid #E5E0D8", borderRadius: "2px", width: "100%", maxWidth: "420px", padding: "32px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
+          <h2 className="font-playfair" style={{ fontSize: "22px", fontWeight: 400, color: "#1C1C1C" }}>
+            {editingProfile ? "Edit profile" : "New trip profile"}
+          </h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279" }}><X size={16} /></button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "flex", gap: "16px" }}>
+            <div style={{ flex: "0 0 60px" }}>
+              <p className="eyebrow" style={{ marginBottom: "6px" }}>Emoji</p>
+              <input className="input-underline" value={form.emoji} onChange={e => set("emoji", e.target.value)} maxLength={4} style={{ textAlign: "center" }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p className="eyebrow" style={{ marginBottom: "6px" }}>Profile name</p>
+              <input autoFocus className="input-underline" placeholder="e.g. Harris Family" value={form.name} onChange={e => set("name", e.target.value)} required />
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex gap-3">
-              <div className="space-y-1.5 w-20 shrink-0">
-                <label className="text-xs font-semibold uppercase tracking-widest" style={{ color: GOLD }}>Emoji</label>
-                <Input value={form.emoji} onChange={(e) => setField("emoji", e.target.value)} className="text-center text-xl px-2" maxLength={4} style={{ borderColor: "#E8E4DC" }} />
-              </div>
-              <div className="space-y-1.5 flex-1">
-                <label className="text-xs font-semibold uppercase tracking-widest" style={{ color: GOLD }}>Profile name</label>
-                <Input autoFocus placeholder='e.g. Harris Family' value={form.name} onChange={(e) => setField("name", e.target.value)} required style={{ borderColor: "#E8E4DC" }} />
-              </div>
+          {!editingProfile && profiles.length > 0 && (
+            <div>
+              <p className="eyebrow" style={{ marginBottom: "6px" }}>Start from existing</p>
+              <select value={form.duplicateFromId ?? ""} onChange={e => { const v = e.target.value; if (v) handleDupFrom(parseInt(v, 10)); else set("duplicateFromId", null); }}
+                className="input-underline" style={{ cursor: "pointer" }}>
+                <option value="">— start fresh —</option>
+                {profiles.map(p => <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>)}
+              </select>
             </div>
+          )}
 
-            {!editingProfile && profiles.length > 0 && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-widest" style={{ color: GOLD }}>Start from existing</label>
-                <select
-                  className="w-full h-9 rounded-xl border px-3 py-1 text-sm bg-white"
-                  style={{ borderColor: "#E8E4DC", color: NAVY }}
-                  value={form.duplicateFromId ?? ""}
-                  onChange={(e) => { const v = e.target.value; if (v) handleDuplicateFrom(parseInt(v, 10)); else setField("duplicateFromId", null); }}
-                >
-                  <option value="">— start fresh —</option>
-                  {profiles.map((p) => <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>)}
-                </select>
+          {travelers.length > 0 && (
+            <div>
+              <p className="eyebrow" style={{ marginBottom: "8px" }}>Travelers to include</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "180px", overflowY: "auto" }}>
+                {travelers.map(t => {
+                  const checked = form.travelerIds.includes(t.id);
+                  return (
+                    <label key={t.id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 0", borderBottom: "1px solid #E5E0D8", cursor: "pointer" }}>
+                      <input type="checkbox" checked={checked} onChange={() => toggle(t.id)} style={{ accentColor: "#6B2737" }} />
+                      <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#1C1C1C", flex: 1 }}>{t.name}</span>
+                      <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#8C8279", textTransform: "capitalize" }}>{t.travelerType}</span>
+                    </label>
+                  );
+                })}
               </div>
-            )}
-
-            {travelers.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-widest" style={{ color: GOLD }}>Travelers to include</label>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {travelers.map((t) => {
-                    const checked = form.travelerIds.includes(t.id);
-                    return (
-                      <label key={t.id} className="flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors"
-                        style={{ borderColor: checked ? NAVY : "#E8E4DC", background: checked ? "#EEF2F8" : "white" }}>
-                        <input type="checkbox" checked={checked} onChange={() => toggleTraveler(t.id)} className="accent-[#1B3A5C]" />
-                        <span className="text-sm font-medium flex-1" style={{ color: NAVY }}>{t.name}</span>
-                        <span className={t.travelerType === "child" ? "badge-gold" : "badge-gold-adult"} style={{ textTransform: "capitalize" }}>{t.travelerType}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-                <p className="text-xs" style={{ color: "#8a8078" }}>{form.travelerIds.length} selected</p>
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-1">
-              <Button type="button" variant="outline" className="flex-1" onClick={onClose} style={{ borderColor: "#E8E4DC" }}>Cancel</Button>
-              <Button type="submit" className="flex-1" disabled={!form.name.trim()} style={{ background: NAVY }}>
-                {editingProfile ? "Save changes" : "Create profile"}
-              </Button>
+              <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#8C8279", marginTop: "8px" }}>{form.travelerIds.length} selected</p>
             </div>
-          </form>
-        </div>
+          )}
+
+          <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+            <button type="button" onClick={onClose}
+              style={{ flex: 1, height: "44px", background: "transparent", border: "1px solid #E5E0D8", cursor: "pointer", fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#8C8279" }}>
+              Cancel
+            </button>
+            <button type="submit" disabled={!form.name.trim()} className="btn-wine"
+              style={{ flex: 1, height: "44px" }}>
+              {editingProfile ? "Save" : "Create"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
 }
 
+/* ─── Individual traveler card ─── */
 function TravelerCard({ traveler, onEdit, onDelete, isEditing }: {
   traveler: any; onEdit: () => void; onDelete: () => void; isEditing: boolean;
 }) {
+  const initial = traveler.name.charAt(0).toUpperCase();
   const isChild = traveler.travelerType === "child";
-  const initials = traveler.name.charAt(0).toUpperCase();
-  const foodPrefs: string[] = traveler.foodPreferences ?? [];
-  const activityPrefs: string[] = traveler.activityPreferences ?? [];
+  const foodTags: string[] = traveler.foodPreferences ?? [];
+  const actTags: string[] = traveler.activityPreferences ?? [];
+  const [hovered, setHovered] = useState(false);
 
   return (
-    <div className={`card-premium p-5 ${isEditing ? "ring-2" : ""}`}
-      style={isEditing ? { outline: "none", boxShadow: `0 0 0 2px ${NAVY}, 0 4px 12px rgba(0,0,0,0.10)` } : undefined}>
-      <div className="flex items-start gap-4">
-        {/* Avatar */}
-        <div
-          className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-semibold text-white shrink-0"
-          style={{ background: NAVY }}
-        >
-          {initials}
-        </div>
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: "24px 0",
+        borderBottom: "1px solid #E5E0D8",
+        borderLeft: hovered || isEditing ? "3px solid #6B2737" : "3px solid transparent",
+        paddingLeft: hovered || isEditing ? "20px" : "0",
+        transition: "border-color 0.2s, padding-left 0.2s",
+        display: "flex",
+        gap: "20px",
+        alignItems: "flex-start",
+      }}
+    >
+      {/* Large italic initial */}
+      <span
+        className="font-playfair"
+        style={{
+          fontStyle: "italic",
+          fontWeight: 400,
+          fontSize: "52px",
+          color: "#B8963E",
+          lineHeight: 1,
+          width: "40px",
+          flexShrink: 0,
+          userSelect: "none",
+        }}
+      >
+        {initial}
+      </span>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <h3 className="font-playfair font-semibold" style={{ fontSize: "18px", color: NAVY, lineHeight: 1.2 }}>
-                {traveler.name}
-              </h3>
-              {traveler.relationship && (
-                <p className="text-xs mt-0.5" style={{ color: "#8a8078" }}>{traveler.relationship}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <span className={isChild ? "badge-gold" : "badge-gold-adult"} style={{ textTransform: "capitalize" }}>
-                {isChild ? "Child" : "Adult"}
-              </span>
-              <button className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-[#EEF2F8] transition-all text-gray-400 hover:text-[#1B3A5C]" onClick={onEdit}>
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
-              <button className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 transition-all text-gray-400 hover:text-red-500" onClick={onDelete}>
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <span
+              className="font-playfair"
+              style={{ fontWeight: 700, fontSize: "22px", color: "#1C1C1C", display: "block" }}
+            >
+              {traveler.name}
+            </span>
+            <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#8C8279" }}>
+              {isChild ? "Child" : "Adult"}
+              {traveler.relationship ? ` · ${traveler.relationship}` : ""}
+              {traveler.ageDisplay ? ` · ${traveler.ageDisplay}` : ""}
+              {traveler.birthDate && !traveler.ageDisplay ? ` · ${traveler.birthDate}` : ""}
+            </span>
           </div>
-
-          {traveler.birthDate && (
-            <p className="text-xs flex items-center gap-1.5 mt-1.5" style={{ color: "#8a8078" }}>
-              <Calendar className="w-3.5 h-3.5" />
-              {traveler.birthDate}
-              {traveler.ageDisplay && (
-                <span className="badge-gold ml-1">{traveler.ageDisplay}</span>
-              )}
-            </p>
-          )}
-
-          <TagRow label="Eats:" tags={foodPrefs} />
-          <TagRow label="Does:" tags={activityPrefs} />
-
-          {traveler.notes && (
-            <p className="text-xs italic mt-1.5 truncate max-w-sm" style={{ color: "#8a8078" }}>{traveler.notes}</p>
+          {(hovered || isEditing) && (
+            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+              <button onClick={onEdit}
+                style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#6B2737", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}>
+                Edit
+              </button>
+              <button onClick={onDelete}
+                style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#8C8279", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}>
+                Remove
+              </button>
+            </div>
           )}
         </div>
+
+        {/* Tags as italic prose */}
+        {foodTags.length > 0 && (
+          <p className="font-playfair" style={{ fontStyle: "italic", fontWeight: 300, fontSize: "15px", color: "#8C8279", marginTop: "10px" }}>
+            Eats: {foodTags.join(", ")}
+          </p>
+        )}
+        {actTags.length > 0 && (
+          <p className="font-playfair" style={{ fontStyle: "italic", fontWeight: 300, fontSize: "15px", color: "#8C8279", marginTop: "2px" }}>
+            Does: {actTags.join(", ")}
+          </p>
+        )}
+        {traveler.notes && (
+          <p style={{ fontFamily: "'Raleway', sans-serif", fontStyle: "italic", fontSize: "13px", color: "#8C8279", marginTop: "6px" }}>
+            {traveler.notes}
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
+/* ─── Form input row ─── */
+function FormRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+      <span className="eyebrow">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+/* ─── Page ─── */
 export default function TravelersPage() {
   const { data: travelers, isLoading } = useListTravelers();
   const createTraveler = useCreateTraveler();
@@ -341,6 +300,7 @@ export default function TravelersPage() {
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [showForm, setShowForm] = useState(false);
   const [activeProfileId, setActiveProfileId] = useState<number | null>(() => {
     const s = localStorage.getItem(ACTIVE_PROFILE_KEY);
     return s ? parseInt(s, 10) : null;
@@ -354,19 +314,25 @@ export default function TravelersPage() {
   }, [activeProfileId]);
 
   const profiles = profilesQuery.data ?? [];
-  const activeProfile = activeProfileId !== null ? profiles.find((p) => p.id === activeProfileId) ?? null : null;
+  const activeProfile = activeProfileId !== null ? profiles.find(p => p.id === activeProfileId) ?? null : null;
   const activeTravelerIds = activeProfile ? new Set<number>((activeProfile.travelerIds as number[]) ?? []) : null;
   const allTravelers = travelers ?? [];
-  const displayedTravelers = activeTravelerIds ? allTravelers.filter((t) => activeTravelerIds.has(t.id)) : allTravelers;
-  const adults = displayedTravelers.filter((t) => t.travelerType === "adult");
-  const children = displayedTravelers.filter((t) => t.travelerType === "child");
+  const displayedTravelers = activeTravelerIds ? allTravelers.filter(t => activeTravelerIds.has(t.id)) : allTravelers;
 
-  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
+  const setField = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
+
   const startEdit = (t: any) => {
     setEditingId(t.id);
-    setForm({ name: t.name, birthDate: t.birthDate ?? "", travelerType: t.travelerType, relationship: t.relationship ?? "", foodPreferences: (t.foodPreferences ?? []).join(", "), activityPreferences: (t.activityPreferences ?? []).join(", "), accessibilityNeeds: t.accessibilityNeeds ?? "", notes: t.notes ?? "" });
+    setShowForm(true);
+    setForm({
+      name: t.name, birthDate: t.birthDate ?? "", travelerType: t.travelerType,
+      relationship: t.relationship ?? "", foodPreferences: (t.foodPreferences ?? []).join(", "),
+      activityPreferences: (t.activityPreferences ?? []).join(", "),
+      accessibilityNeeds: t.accessibilityNeeds ?? "", notes: t.notes ?? "",
+    });
   };
-  const cancelEdit = () => { setEditingId(null); setForm(EMPTY_FORM); };
+
+  const cancelEdit = () => { setEditingId(null); setForm(EMPTY_FORM); setShowForm(false); };
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getListTravelersQueryKey() });
@@ -390,7 +356,7 @@ export default function TravelersPage() {
       });
     } else {
       createTraveler.mutate({ data: buildPayload() }, {
-        onSuccess: () => { setForm(EMPTY_FORM); invalidate(); toast({ title: `${form.travelerType === "child" ? "Child" : "Traveler"} added` }); },
+        onSuccess: () => { setForm(EMPTY_FORM); setShowForm(false); invalidate(); toast({ title: "Traveler added" }); },
         onError: () => toast({ title: "Failed to add", variant: "destructive" }),
       });
     }
@@ -404,290 +370,235 @@ export default function TravelersPage() {
     });
   };
 
-  const handleCreateProfile = (f: Omit<ProfileFormState, "duplicateFromId">) => {
-    createProfile.mutate(f, {
-      onSuccess: (p) => { setShowProfileModal(false); setActiveProfileId(p.id); toast({ title: "Profile created" }); },
-      onError: () => toast({ title: "Failed to create", variant: "destructive" }),
-    });
-  };
-
-  const handleUpdateProfile = (id: number, data: Partial<ProfileFormState>) => {
-    updateProfile.mutate({ id, ...data }, {
-      onSuccess: () => { setEditingProfile(null); toast({ title: "Profile updated" }); },
-      onError: () => toast({ title: "Failed to update", variant: "destructive" }),
-    });
-  };
-
-  const handleDuplicateProfile = (id: number) => {
-    duplicateProfile.mutate(id, {
-      onSuccess: (copy) => { setEditingProfile(copy); toast({ title: "Profile duplicated" }); },
-      onError: () => toast({ title: "Failed to duplicate", variant: "destructive" }),
-    });
-  };
-
-  const handleDeleteProfile = (id: number) => {
-    if (!confirm("Delete this profile?")) return;
-    removeProfile.mutate(id, {
-      onSuccess: () => { if (activeProfileId === id) setActiveProfileId(null); toast({ title: "Profile deleted" }); },
-      onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
-    });
-  };
-
   const isPending = createTraveler.isPending || updateTraveler.isPending;
 
   return (
     <Layout>
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div style={{ display: "flex", flexDirection: "column", gap: "48px" }}>
 
-        {/* Page Header */}
+        {/* Page header */}
         <div>
-          <h1 className="font-playfair tracking-tight" style={{ color: NAVY, fontSize: "36px", fontWeight: 600 }}>
+          <h1 className="font-playfair" style={{ fontWeight: 700, fontSize: "48px", color: "#1C1C1C", letterSpacing: "-0.01em" }}>
             Travel Party
           </h1>
-          <p className="mt-1.5 text-sm" style={{ color: "#8a8078" }}>
-            Everyone in the group — adults and children. Ages auto-fill on booking sites.
+          <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#8C8279", marginTop: "6px" }}>
+            Every person in your group, captured once.
           </p>
-          <span className="gold-rule" />
+          <span className="section-rule" style={{ marginTop: "24px", display: "block" }} />
         </div>
 
-        {/* Trip Profiles */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="pref-label flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5" /> Trip Profiles
-            </span>
-          </div>
+        {/* Trip profiles — slash breadcrumb */}
+        <div>
+          <p className="eyebrow" style={{ marginBottom: "12px" }}>Trip Profiles</p>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0" }}>
 
-          <div className="flex flex-wrap gap-2 items-center">
-            {/* All chip */}
+            {/* "All" */}
             <button
               onClick={() => setActiveProfileId(null)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all"
-              style={activeProfileId === null
-                ? { background: NAVY, color: "white", borderColor: NAVY }
-                : { background: "white", color: NAVY, borderColor: "#E8E4DC" }}
+              style={{
+                fontFamily: activeProfileId === null ? "'Playfair Display', serif" : "'Raleway', sans-serif",
+                fontStyle: activeProfileId === null ? "italic" : "normal",
+                fontWeight: 400,
+                fontSize: activeProfileId === null ? "17px" : "14px",
+                color: activeProfileId === null ? "#6B2737" : "#8C8279",
+                background: "none", border: "none", cursor: "pointer", padding: "0",
+              }}
             >
-              <Users className="w-3.5 h-3.5" />
               All travelers
-              {allTravelers.length > 0 && (
-                <span className="text-xs rounded-full px-1.5 py-0 font-medium"
-                  style={{ background: activeProfileId === null ? "rgba(255,255,255,0.20)" : "#EEF2F8", color: activeProfileId === null ? "white" : NAVY }}>
-                  {allTravelers.length}
-                </span>
-              )}
             </button>
 
             {profilesQuery.isLoading
-              ? [1, 2].map((i) => <Skeleton key={i} className="h-9 w-28 rounded-full" />)
-              : profiles.map((profile) => {
+              ? <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#E5E0D8", margin: "0 10px" }}>…</span>
+              : profiles.map(profile => {
                   const isActive = activeProfileId === profile.id;
-                  const count = ((profile.travelerIds as number[]) ?? []).length;
                   return (
-                    <div key={profile.id} className="inline-flex items-center rounded-full border overflow-hidden transition-all"
-                      style={{ borderColor: isActive ? NAVY : "#E8E4DC" }}>
-                      <button
-                        onClick={() => setActiveProfileId(isActive ? null : profile.id)}
-                        className="flex items-center gap-2 pl-3 pr-2 py-2 text-sm font-medium"
-                        style={{ background: isActive ? NAVY : "white", color: isActive ? "white" : NAVY }}
-                      >
-                        <span>{profile.emoji ?? "✈️"}</span>
-                        <span className="max-w-[110px] truncate">{profile.name}</span>
-                        <span className="text-xs rounded-full px-1.5 py-0 font-medium ml-0.5"
-                          style={{ background: isActive ? "rgba(255,255,255,0.20)" : "#EEF2F8", color: isActive ? "white" : NAVY }}>
-                          {count}
-                        </span>
-                      </button>
-                      <div className="flex items-center h-full pr-1"
-                        style={{ background: isActive ? NAVY : "white" }}>
-                        <button title="Edit" onClick={() => setEditingProfile(profile)} className="p-1 rounded transition-colors"
-                          style={{ color: isActive ? "rgba(255,255,255,0.7)" : "#8a8078" }}>
-                          <Edit2 className="w-3 h-3" />
+                    <span key={profile.id} style={{ display: "inline-flex", alignItems: "center" }}>
+                      <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#E5E0D8", margin: "0 10px" }}>/</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <button
+                          onClick={() => setActiveProfileId(isActive ? null : profile.id)}
+                          style={{
+                            fontFamily: isActive ? "'Playfair Display', serif" : "'Raleway', sans-serif",
+                            fontStyle: isActive ? "italic" : "normal",
+                            fontWeight: 400,
+                            fontSize: isActive ? "17px" : "14px",
+                            color: isActive ? "#6B2737" : "#8C8279",
+                            background: "none", border: "none", cursor: "pointer", padding: "0",
+                          }}
+                        >
+                          {profile.name}
                         </button>
-                        <button title="Duplicate" onClick={() => handleDuplicateProfile(profile.id)} className="p-1 rounded transition-colors"
-                          style={{ color: isActive ? "rgba(255,255,255,0.7)" : "#8a8078" }}>
-                          <Copy className="w-3 h-3" />
+                        {/* inline actions — only visible on hover would require extra state; show always */}
+                        <button
+                          onClick={() => setEditingProfile(profile)}
+                          title="Edit"
+                          style={{ fontFamily: "'Raleway', sans-serif", fontSize: "10px", color: "#C4BBB0", background: "none", border: "none", cursor: "pointer", padding: "0 2px" }}
+                        >
+                          edit
                         </button>
-                        <button title="Delete" onClick={() => handleDeleteProfile(profile.id)} className="p-1 rounded transition-colors"
-                          style={{ color: isActive ? "rgba(255,255,255,0.5)" : "#c0b8b0" }}>
-                          <Trash2 className="w-3 h-3" />
+                        <button
+                          onClick={() => duplicateProfile.mutate(profile.id, { onSuccess: copy => { setEditingProfile(copy); toast({ title: "Duplicated" }); }, onError: () => toast({ title: "Failed", variant: "destructive" }) })}
+                          title="Duplicate"
+                          style={{ fontFamily: "'Raleway', sans-serif", fontSize: "10px", color: "#C4BBB0", background: "none", border: "none", cursor: "pointer", padding: "0 2px" }}
+                        >
+                          dup
                         </button>
-                      </div>
-                    </div>
+                        <button
+                          onClick={() => { if (!confirm("Delete profile?")) return; removeProfile.mutate(profile.id, { onSuccess: () => { if (activeProfileId === profile.id) setActiveProfileId(null); toast({ title: "Deleted" }); }, onError: () => toast({ title: "Failed", variant: "destructive" }) }); }}
+                          title="Delete"
+                          style={{ fontFamily: "'Raleway', sans-serif", fontSize: "10px", color: "#C4BBB0", background: "none", border: "none", cursor: "pointer", padding: "0 2px" }}
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    </span>
                   );
                 })}
 
-            {/* + New chip */}
+            {/* + New */}
+            <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#E5E0D8", margin: "0 10px" }}>/</span>
             <button
               onClick={() => { setEditingProfile(null); setShowProfileModal(true); }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all hover:bg-[#F9F7F4]"
-              style={{ border: `1.5px dashed #C9972B`, color: GOLD, background: "transparent" }}
+              style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "14px", color: "#B8963E", background: "none", border: "none", cursor: "pointer", padding: "0" }}
             >
-              <Plus className="w-3.5 h-3.5" /> New profile
+              + New
             </button>
           </div>
-
-          {activeProfile && (
-            <p className="text-xs" style={{ color: "#8a8078" }}>
-              Viewing <span className="font-medium" style={{ color: NAVY }}>{activeProfile.emoji} {activeProfile.name}</span> — {displayedTravelers.length} traveler{displayedTravelers.length !== 1 ? "s" : ""}
-            </p>
-          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main two-column area */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: "56px", alignItems: "start" }}>
+
           {/* Traveler list */}
-          <div className="lg:col-span-2 space-y-6">
+          <div>
             {isLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28 w-full rounded-2xl" />)}
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                {[1, 2, 3].map(i => <Skeleton key={i} style={{ height: "100px", borderRadius: "2px" }} />)}
               </div>
             ) : displayedTravelers.length > 0 ? (
-              <>
-                {adults.length > 0 && (
-                  <div className="space-y-3">
-                    <h2 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: "#8a8078" }}>
-                      <User className="w-3.5 h-3.5" /> Adults ({adults.length})
-                    </h2>
-                    <div className="space-y-3">
-                      {adults.map((t) => (
-                        <div key={t.id} className="group">
-                          <TravelerCard traveler={t} onEdit={() => startEdit(t)} onDelete={() => handleDelete(t.id)} isEditing={editingId === t.id} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {children.length > 0 && (
-                  <div className="space-y-3">
-                    <h2 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: "#8a8078" }}>
-                      <Users className="w-3.5 h-3.5" /> Children ({children.length})
-                    </h2>
-                    <div className="space-y-3">
-                      {children.map((t) => (
-                        <div key={t.id} className="group">
-                          <TravelerCard traveler={t} onEdit={() => startEdit(t)} onDelete={() => handleDelete(t.id)} isEditing={editingId === t.id} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
+              <div>
+                {displayedTravelers.map(t => (
+                  <TravelerCard key={t.id} traveler={t} onEdit={() => startEdit(t)} onDelete={() => handleDelete(t.id)} isEditing={editingId === t.id} />
+                ))}
+              </div>
             ) : allTravelers.length === 0 ? (
-              <div className="card-premium p-12 text-center" style={{ borderStyle: "dashed" }}>
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#EEF2F8" }}>
-                  <Users className="w-7 h-7" style={{ color: NAVY }} />
-                </div>
-                <p className="font-playfair text-lg font-semibold mb-1" style={{ color: NAVY }}>No travelers yet</p>
-                <p className="text-sm" style={{ color: "#8a8078" }}>
-                  Add everyone in your party — yourself, your partner, kids, travel friends.
+              <div style={{ paddingTop: "20px" }}>
+                <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "20px", color: "#8C8279" }}>
+                  No travelers yet.
+                </p>
+                <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#8C8279", marginTop: "8px" }}>
+                  Add everyone in your party using the form.
                 </p>
               </div>
             ) : (
-              <div className="card-premium p-10 text-center">
-                <p className="text-sm mb-2" style={{ color: "#8a8078" }}>No travelers in this profile.</p>
-                <button className="text-sm font-medium" style={{ color: GOLD }} onClick={() => setEditingProfile(activeProfile)}>
-                  Edit profile to add travelers
+              <div style={{ paddingTop: "20px" }}>
+                <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "20px", color: "#8C8279" }}>
+                  No travelers in this profile.
+                </p>
+                <button
+                  onClick={() => activeProfile && setEditingProfile(activeProfile)}
+                  style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: "#6B2737", background: "none", border: "none", cursor: "pointer", padding: "0", marginTop: "8px" }}
+                >
+                  Edit profile to add travelers →
+                </button>
+              </div>
+            )}
+
+            {/* + Add traveler toggle */}
+            {!showForm && !editingId && (
+              <div style={{ marginTop: "32px" }}>
+                <button
+                  onClick={() => setShowForm(true)}
+                  style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "13px", color: "#6B2737", background: "none", border: "none", cursor: "pointer", padding: "0", letterSpacing: "0.04em" }}
+                >
+                  + Add traveler
                 </button>
               </div>
             )}
           </div>
 
-          {/* Add / Edit Form */}
-          <div className="lg:col-span-1">
-            <div className="card-premium overflow-hidden sticky top-6" style={{ borderRadius: "16px" }}>
-              <div className="h-1 w-full" style={{ background: GOLD }} />
-              <div className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    {editingId !== null
-                      ? <Edit2 className="w-4 h-4" style={{ color: GOLD }} />
-                      : <UserPlus className="w-4 h-4" style={{ color: GOLD }} />}
-                    <h2 className="font-playfair font-semibold" style={{ color: NAVY, fontSize: "16px" }}>
-                      {editingId !== null ? "Edit Traveler" : "Add Traveler"}
-                    </h2>
-                  </div>
-                  {editingId !== null && (
-                    <button onClick={cancelEdit} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                <p className="text-xs mb-5" style={{ color: "#8a8078" }}>
-                  {editingId !== null ? "Update their details below." : "All fields except name are optional."}
-                </p>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Type toggle */}
-                  <div className="space-y-1.5">
-                    <span className="pref-label">Type</span>
-                    <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: "#E8E4DC" }}>
-                      {(["adult", "child"] as TravelerType[]).map((type) => (
-                        <button key={type} type="button" onClick={() => setField("travelerType", type)}
-                          className="flex-1 py-2.5 text-sm font-medium transition-colors"
-                          style={form.travelerType === type
-                            ? { background: NAVY, color: "white" }
-                            : { background: "white", color: "#8a8078" }}>
-                          {type === "adult" ? "Adult" : "Child"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {[
-                    { id: "name", label: "Name", placeholder: form.travelerType === "child" ? "e.g. Emma" : "e.g. Sarah", required: true, type: "text" },
-                    { id: "relationship", label: "Relationship", placeholder: form.travelerType === "child" ? "e.g. child, stepchild" : "e.g. self, partner, friend", type: "text" },
-                    { id: "birthDate", label: form.travelerType === "child" ? "Birthdate" : "Birthdate (optional)", placeholder: "", required: form.travelerType === "child", type: "date" },
-                  ].map(({ id, label, placeholder, required, type }) => (
-                    <div key={id} className="space-y-1.5">
-                      <span className="pref-label">{label}</span>
-                      <Input
-                        id={id} type={type} placeholder={placeholder} required={required}
-                        value={(form as any)[id]} onChange={(e) => setField(id as keyof FormState, e.target.value)}
-                        style={{ borderColor: "#E8E4DC", color: NAVY }}
-                        className="placeholder:text-[#bbb]"
-                      />
-                    </div>
-                  ))}
-
-                  <div className="space-y-1.5">
-                    <span className="pref-label">Food preferences</span>
-                    <Input placeholder="e.g. vegetarian, no gluten" value={form.foodPreferences}
-                      onChange={(e) => setField("foodPreferences", e.target.value)}
-                      style={{ borderColor: "#E8E4DC", color: NAVY }} className="placeholder:text-[#bbb]" />
-                    <p className="text-xs" style={{ color: "#bbb" }}>Comma-separated</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <span className="pref-label">Activity preferences</span>
-                    <Input placeholder="e.g. hiking, spa, beach" value={form.activityPreferences}
-                      onChange={(e) => setField("activityPreferences", e.target.value)}
-                      style={{ borderColor: "#E8E4DC", color: NAVY }} className="placeholder:text-[#bbb]" />
-                    <p className="text-xs" style={{ color: "#bbb" }}>Comma-separated</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <span className="pref-label">Accessibility needs</span>
-                    <Input placeholder="e.g. wheelchair, nut allergy" value={form.accessibilityNeeds}
-                      onChange={(e) => setField("accessibilityNeeds", e.target.value)}
-                      style={{ borderColor: "#E8E4DC", color: NAVY }} className="placeholder:text-[#bbb]" />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <span className="pref-label">Notes</span>
-                    <Textarea placeholder="e.g. Hates tourist traps" value={form.notes}
-                      onChange={(e) => setField("notes", e.target.value)}
-                      rows={2} className="resize-none placeholder:text-[#bbb]"
-                      style={{ borderColor: "#E8E4DC", color: NAVY }} />
-                  </div>
-
-                  <button type="submit" disabled={isPending}
-                    className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-50"
-                    style={{ background: NAVY }}>
-                    {isPending ? "Saving…" : editingId !== null ? "Save Changes" : `Add ${form.travelerType === "child" ? "Child" : "Traveler"}`}
-                  </button>
-                </form>
+          {/* Add / Edit form */}
+          {(showForm || editingId !== null) && (
+            <div style={{ borderLeft: "1px solid #E5E0D8", paddingLeft: "32px", position: "sticky", top: "32px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
+                <h2 className="font-playfair" style={{ fontWeight: 400, fontSize: "22px", color: "#1C1C1C" }}>
+                  {editingId !== null ? "Edit traveler" : "Add traveler"}
+                </h2>
+                <button onClick={cancelEdit} style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279" }}>
+                  <X size={16} />
+                </button>
               </div>
+
+              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                {/* Type selector */}
+                <div>
+                  <p className="eyebrow" style={{ marginBottom: "10px" }}>Type</p>
+                  <div style={{ display: "flex", gap: "24px" }}>
+                    {(["adult", "child"] as TravelerType[]).map(t => (
+                      <button
+                        key={t} type="button" onClick={() => setField("travelerType", t)}
+                        style={{
+                          fontFamily: "'Raleway', sans-serif",
+                          fontWeight: 600,
+                          fontSize: "11px",
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase" as const,
+                          color: form.travelerType === t ? "#6B2737" : "#8C8279",
+                          background: "none", border: "none",
+                          borderBottom: form.travelerType === t ? "2px solid #6B2737" : "2px solid transparent",
+                          paddingBottom: "4px",
+                          cursor: "pointer",
+                          transition: "color 0.15s, border-color 0.15s",
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <FormRow label="Name">
+                  <input className="input-underline" placeholder={form.travelerType === "child" ? "e.g. Emma" : "e.g. Sarah"} value={form.name} onChange={e => setField("name", e.target.value)} required />
+                </FormRow>
+
+                <FormRow label="Relationship">
+                  <input className="input-underline" placeholder={form.travelerType === "child" ? "child, stepchild…" : "self, partner, friend…"} value={form.relationship} onChange={e => setField("relationship", e.target.value)} />
+                </FormRow>
+
+                <FormRow label={form.travelerType === "child" ? "Birthdate" : "Birthdate (optional)"}>
+                  <input className="input-underline" type="date" value={form.birthDate} onChange={e => setField("birthDate", e.target.value)} required={form.travelerType === "child"} />
+                </FormRow>
+
+                <FormRow label="Food preferences">
+                  <input className="input-underline" placeholder="vegetarian, upscale, no gluten…" value={form.foodPreferences} onChange={e => setField("foodPreferences", e.target.value)} />
+                  <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#C4BBB0" }}>Comma-separated</span>
+                </FormRow>
+
+                <FormRow label="Activity preferences">
+                  <input className="input-underline" placeholder="hiking, spa, beach…" value={form.activityPreferences} onChange={e => setField("activityPreferences", e.target.value)} />
+                </FormRow>
+
+                <FormRow label="Accessibility needs">
+                  <input className="input-underline" placeholder="wheelchair, nut allergy…" value={form.accessibilityNeeds} onChange={e => setField("accessibilityNeeds", e.target.value)} />
+                </FormRow>
+
+                <FormRow label="Notes">
+                  <textarea
+                    className="input-underline"
+                    placeholder="Hates tourist traps, loves rooftop bars…"
+                    value={form.notes}
+                    onChange={e => setField("notes", e.target.value)}
+                    rows={2}
+                    style={{ resize: "none" }}
+                  />
+                </FormRow>
+
+                <button type="submit" disabled={isPending} className="btn-wine" style={{ height: "48px", marginTop: "8px" }}>
+                  {isPending ? "Saving…" : editingId !== null ? "Save changes" : `Add ${form.travelerType}`}
+                </button>
+              </form>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -695,7 +606,8 @@ export default function TravelersPage() {
         <ProfileModal
           profiles={profiles} travelers={allTravelers} editingProfile={editingProfile}
           onClose={() => { setShowProfileModal(false); setEditingProfile(null); }}
-          onCreate={handleCreateProfile} onUpdate={handleUpdateProfile}
+          onCreate={f => createProfile.mutate(f, { onSuccess: p => { setShowProfileModal(false); setActiveProfileId(p.id); toast({ title: "Profile created" }); }, onError: () => toast({ title: "Failed", variant: "destructive" }) })}
+          onUpdate={(id, d) => updateProfile.mutate({ id, ...d }, { onSuccess: () => { setEditingProfile(null); toast({ title: "Profile updated" }); }, onError: () => toast({ title: "Failed", variant: "destructive" }) })}
         />
       )}
     </Layout>

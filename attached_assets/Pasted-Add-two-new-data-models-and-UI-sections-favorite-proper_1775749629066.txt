@@ -1,0 +1,138 @@
+Add two new data models and UI sections: favorite properties and 
+hotel loyalty programs.
+
+Step 1 — new table lib/db/src/schema/favorite-properties.ts:
+
+export const favoritePropertiesTable = pgTable("favorite_properties", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  propertyName: text("property_name").notNull(),   // "Rosewood Miramar"
+  brand: text("brand"),                             // "Rosewood"
+  location: text("location"),                       // "Montecito, CA"
+  category: text("category"),                       // "hotel" | "resort" | "villa" | "restaurant"
+  tier: text("tier"),                               // "loved" | "liked" | "avoid"
+  tags: jsonb("tags").$type<string[]>().default([]), // what you loved: "service", "food", "design", "value"
+  notes: text("notes"),                             // "kids loved the beach, ask for ocean suite"
+  visitedAt: text("visited_at"),                    // freeform "Summer 2023"
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+Step 2 — new table lib/db/src/schema/loyalty-programs.ts:
+
+export const loyaltyProgramsTable = pgTable("loyalty_programs", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  programName: text("program_name").notNull(),  // "World of Hyatt"
+  brand: text("brand").notNull(),               // "Hyatt"
+  membershipNumber: text("membership_number"),  // for auto-fill
+  tier: text("tier"),                           // "Member" | "Discoverist" | "Explorist" | "Globalist"
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+Export both from lib/db/src/schema/index.ts.
+
+Step 3 — new route artifacts/api-server/src/routes/properties.ts:
+
+GET /properties — list all for userId, ordered by tier (loved first)
+POST /properties — add one
+PUT /properties/:id — edit
+DELETE /properties/:id — delete
+
+GET /properties/brands — return deduplicated list of brands 
+from favoriteProperties for this user. Used to seed the 
+review scoring context.
+
+Step 4 — new route artifacts/api-server/src/routes/loyalty.ts:
+
+GET /loyalty — list all programs for userId
+POST /loyalty — add one
+PUT /loyalty/:id — edit  
+DELETE /loyalty/:id — delete
+
+Common hotel loyalty programs to suggest as quick-add options 
+(return from GET /loyalty/programs):
+[
+  { brand: "Marriott", program: "Marriott Bonvoy" },
+  { brand: "Hyatt", program: "World of Hyatt" },
+  { brand: "Hilton", program: "Hilton Honors" },
+  { brand: "IHG", program: "IHG One Rewards" },
+  { brand: "Accor", program: "ALL - Accor Live Limitless" },
+  { brand: "Four Seasons", program: "Four Seasons Preferred Partner" },
+  { brand: "Rosewood", program: "Rosewood Sense" },
+  { brand: "Aman", program: "Aman" },
+  { brand: "Belmond", program: "Belmond Bellini Club" },
+  { brand: "Virgin Hotels", program: "The Know" },
+  { brand: "Auberge", program: "Auberge Rewards" },
+  { brand: "Small Luxury Hotels", program: "SLH INVITED" }
+]
+
+Register both routers in routes/index.ts.
+
+Step 5 — update review scoring in routes/reviews.ts:
+
+In the GET /reviews/match endpoint, also fetch the user's 
+favoriteProperties and use them to calibrate the luxury_value_score:
+
+- Pull the brands from favoriteProperties where tier = "loved"
+- Add to the Claude scoring context: if a review mentions any of 
+  those brands or similar positioning, boost luxury_value_score weight
+- Add a new field to the match response: 
+  brand_alignment: boolean — true if the property brand matches 
+  or is comparable to user's loved brands
+
+Update the SYSTEM_PROMPT in scoreWithClaude to accept an optional 
+userContext string that gets appended:
+"User context: This traveler loves [Rosewood, Aman, Palm House]. 
+Score luxury_value_score relative to that tier — 
+a standard Marriott should score 4-5, a Rosewood-tier property 8-9."
+
+Step 6 — update GET /summary/:userId to include:
+loyaltyPrograms: list of { brand, programName, tier, membershipNumber }
+lovedBrands: list of brand strings from favoriteProperties where tier = "loved"
+avoidBrands: list of brand strings where tier = "avoid"
+
+This is what the browser extension uses to:
+a) auto-fill loyalty numbers on booking sites
+b) show a warning badge if a property is on the avoid list
+
+Step 7 — add a new "Stays" page to the frontend:
+
+New file artifacts/travel-widget/src/pages/stays.tsx
+Add route in App.tsx: <Route path="/stays" component={StaysPage} />
+Add to sidebar nav in layout.tsx: "STAYS" between TRAVELERS and PREFERENCES
+
+The page has two sections:
+
+Section A — "Favourite Properties"
+- Same T+L editorial styling as the rest of the app
+- Each property card shows: name in Playfair Display, location in 
+  italic muted, brand tag, tier indicator (a small heart for loved, 
+  minus for avoid), what-you-loved tags as comma-separated italic text,
+  notes in small italic
+- Tier filter tabs at top: All / Loved / Liked / Avoid — 
+  styled as slash-separated text, same as trip profile nav
+
+- Add property form:
+  - Property name (text input)
+  - Brand (text input with datalist suggestions from common luxury brands:
+    Rosewood, Aman, Four Seasons, Ritz-Carlton, St. Regis, Park Hyatt,
+    Auberge, Belmond, 1 Hotels, Six Senses, Soho House, Firmdale,
+    Montage, Pendry, Thompson, Kimpton, Ace Hotel, Graduate)
+  - Location (text)
+  - Category (Hotel / Resort / Villa / Restaurant — text toggle)
+  - Tier (Loved / Liked / Avoid — styled as the T+L text toggle)
+  - What you loved (tag chips: Service, Food, Design, Value, 
+    Location, Spa, Beach, Kids, Vibe, Rooms)
+  - Notes (textarea, bottom-border only)
+  - Visited (freeform text: "Summer 2023")
+
+Section B — "Loyalty Programs"  
+- Displayed as a clean list: brand name bold, program name muted, 
+  tier as small gold text, membership number in monospace muted
+- Quick-add row: show program logos/names from the suggested list,
+  clicking one pre-fills the brand + program name fields
+- Add form: program name, brand, membership number, tier (freeform text)
+- Edit inline on click
+
+Step 8 — run drizzle-kit push to create both new tables.
