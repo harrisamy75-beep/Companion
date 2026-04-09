@@ -20,15 +20,20 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-[100dvh] flex flex-col md:flex-row w-full bg-background">
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-card border-b sticky top-0 z-10">
-        <div className="flex items-center gap-2 text-primary">
-          <Plane className="w-6 h-6" />
-          <span className="font-semibold text-lg tracking-tight">Companion</span>
+      <div
+        className="md:hidden flex items-center justify-between p-4 sticky top-0 z-10"
+        style={{ background: "#1B3A5C" }}
+      >
+        <div className="flex items-center gap-2.5">
+          <Plane className="w-5 h-5" style={{ color: "#C9972B" }} />
+          <span className="font-playfair text-lg font-semibold text-white tracking-wide">
+            Companion
+          </span>
         </div>
         {logout && (
           <button
             onClick={logout}
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -36,12 +41,23 @@ export function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col bg-card border-r fixed h-full z-10">
-        <div className="p-6 flex items-center gap-3 text-primary">
-          <Plane className="w-8 h-8" />
-          <span className="font-semibold text-xl tracking-tight">Companion</span>
+      <aside
+        className="hidden md:flex w-64 flex-col fixed h-full z-10"
+        style={{ background: "#1B3A5C" }}
+      >
+        {/* Logo */}
+        <div className="px-7 py-7 flex items-center gap-3">
+          <Plane className="w-7 h-7 shrink-0" style={{ color: "#C9972B" }} />
+          <span className="font-playfair text-xl font-semibold text-white tracking-wide">
+            Companion
+          </span>
         </div>
-        <nav className="flex-1 px-4 py-4 space-y-2">
+
+        {/* Divider */}
+        <div className="mx-6 mb-4 h-px" style={{ background: "rgba(255,255,255,0.10)" }} />
+
+        {/* Nav */}
+        <nav className="flex-1 px-4 space-y-1">
           {navItems.map((item) => {
             const isActive = location === item.href;
             return (
@@ -49,23 +65,31 @@ export function Layout({ children }: LayoutProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                  "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 relative",
                   isActive
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    ? "text-white"
+                    : "text-white/60 hover:text-white hover:bg-white/8"
                 )}
+                style={isActive ? {
+                  background: "rgba(255,255,255,0.10)",
+                  borderLeft: "3px solid #C9972B",
+                  paddingLeft: "13px",
+                } : {}}
               >
-                <item.icon className="w-5 h-5" />
+                <item.icon className="w-4 h-4 shrink-0" />
                 {item.label}
               </Link>
             );
           })}
         </nav>
+
+        {/* Footer */}
         {logout && (
-          <div className="px-4 pb-6 border-t pt-4">
+          <div className="px-4 pb-8 mt-auto">
+            <div className="h-px mx-2 mb-4" style={{ background: "rgba(255,255,255,0.10)" }} />
             <button
               onClick={logout}
-              className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors text-sm"
+              className="flex items-center gap-2.5 w-full px-4 py-2.5 rounded-xl text-sm text-white/50 hover:text-white hover:bg-white/8 transition-colors"
             >
               <LogOut className="w-4 h-4" />
               Switch profile
@@ -75,22 +99,23 @@ export function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-4 md:p-8 lg:p-12 max-w-5xl mx-auto w-full pb-24 md:pb-12">
+      <main className="flex-1 md:ml-64 p-5 md:p-10 max-w-5xl mx-auto w-full pb-24 md:pb-12">
         {children}
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t flex justify-around p-2 pb-safe z-20">
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 flex justify-around p-2 pb-safe z-20 border-t"
+        style={{ background: "#1B3A5C", borderColor: "rgba(255,255,255,0.12)" }}
+      >
         {navItems.map((item) => {
           const isActive = location === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
-                "flex flex-col items-center justify-center w-full py-2 gap-1 rounded-lg",
-                isActive ? "text-primary" : "text-muted-foreground"
-              )}
+              className="flex flex-col items-center justify-center w-full py-2 gap-1 rounded-lg transition-colors"
+              style={{ color: isActive ? "#C9972B" : "rgba(255,255,255,0.55)" }}
             >
               <item.icon className="w-5 h-5" />
               <span className="text-[10px] font-medium">{item.label}</span>

@@ -71,38 +71,51 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm flex flex-col items-center gap-6 text-center">
-        <div className="flex items-center gap-3 text-primary">
-          <Plane className="w-9 h-9" />
-          <span className="text-2xl font-semibold tracking-tight">Travel Companion</span>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#F9F7F4" }}>
+      <div className="w-full max-w-sm flex flex-col items-center gap-7 text-center">
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <Plane className="w-8 h-8" style={{ color: "#C9972B" }} />
+          <span className="font-playfair text-2xl font-semibold" style={{ color: "#1B3A5C" }}>
+            Travel Companion
+          </span>
         </div>
-        <p className="text-muted-foreground text-sm">
-          Save your family's travel details, auto-fill booking forms, and get AI-powered review matching.
-        </p>
-        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3">
-          <label className="text-left text-sm font-medium text-foreground">
-            Your name
-            <span className="block text-xs text-muted-foreground font-normal mt-0.5">
+
+        <div>
+          <p className="text-sm" style={{ color: "#8a8078" }}>
+            Save your family's travel details, auto-fill booking forms, and get AI-powered review matching.
+          </p>
+          <span className="gold-rule mx-auto" style={{ margin: "10px auto 0" }} />
+        </div>
+
+        {/* Card */}
+        <div className="w-full card-premium p-6 text-left space-y-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#C9972B" }}>Your name</p>
+            <p className="text-xs" style={{ color: "#8a8078" }}>
               Used to keep your profile separate from others on this device.
-            </span>
-          </label>
-          <input
-            autoFocus
-            type="text"
-            placeholder="e.g. Sarah"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary text-base"
-          />
-          <button
-            type="submit"
-            disabled={busy || !value.trim()}
-            className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold text-base hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            {busy ? "Setting up…" : "Get started"}
-          </button>
-        </form>
+            </p>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input
+              autoFocus
+              type="text"
+              placeholder="e.g. Sarah"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2 placeholder:text-[#bbb]"
+              style={{ borderColor: "#E8E4DC", color: "#1B3A5C", background: "white", focusRingColor: "#1B3A5C" }}
+            />
+            <button
+              type="submit"
+              disabled={busy || !value.trim()}
+              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+              style={{ background: "#1B3A5C" }}
+            >
+              {busy ? "Setting up…" : "Get started"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
