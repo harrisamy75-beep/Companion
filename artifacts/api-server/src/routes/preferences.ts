@@ -6,14 +6,11 @@ import { UpsertPreferencesBody } from "@workspace/api-zod";
 const router: IRouter = Router();
 
 router.get("/preferences", async (req, res): Promise<void> => {
-  if (!req.isAuthenticated()) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
+  const userId: string = (req as any).userId;
   const rows = await db
     .select()
     .from(preferencesTable)
-    .where(eq(preferencesTable.userId, req.user.id))
+    .where(eq(preferencesTable.userId, userId))
     .limit(1);
   if (rows.length === 0) {
     res.json({ id: 0 });
@@ -23,10 +20,7 @@ router.get("/preferences", async (req, res): Promise<void> => {
 });
 
 router.put("/preferences", async (req, res): Promise<void> => {
-  if (!req.isAuthenticated()) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
+  const userId: string = (req as any).userId;
   const parsed = UpsertPreferencesBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -35,13 +29,13 @@ router.put("/preferences", async (req, res): Promise<void> => {
   const existing = await db
     .select()
     .from(preferencesTable)
-    .where(eq(preferencesTable.userId, req.user.id))
+    .where(eq(preferencesTable.userId, userId))
     .limit(1);
 
   if (existing.length === 0) {
     const [created] = await db
       .insert(preferencesTable)
-      .values({ ...parsed.data, userId: req.user.id })
+      .values({ ...parsed.data, userId })
       .returning();
     res.json(created);
     return;
@@ -50,7 +44,7 @@ router.put("/preferences", async (req, res): Promise<void> => {
   const [updated] = await db
     .update(preferencesTable)
     .set(parsed.data)
-    .where(eq(preferencesTable.userId, req.user.id))
+    .where(eq(preferencesTable.userId, userId))
     .returning();
   res.json(updated);
 });

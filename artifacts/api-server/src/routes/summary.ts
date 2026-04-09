@@ -55,13 +55,9 @@ function buildReviewProfile(
   return { weightVector, description };
 }
 
-// GET /summary — frontend dashboard endpoint (requires auth)
+// GET /summary — frontend dashboard endpoint
 router.get("/summary", async (req, res): Promise<void> => {
-  if (!req.isAuthenticated()) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  const userId = req.user.id;
+  const userId: string = (req as any).userId;
   const [travelersRows, prefRows] = await Promise.all([
     db
       .select()
@@ -86,13 +82,9 @@ router.get("/summary", async (req, res): Promise<void> => {
   });
 });
 
-// GET /summary/:userId — rich payload for browser extension (requires auth)
+// GET /summary/:userId — rich payload for browser extension
 router.get("/summary/:userId", async (req, res): Promise<void> => {
-  if (!req.isAuthenticated()) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  const userId = req.user.id;
+  const userId: string = (req as any).userId;
   const [travelersRows, prefRows] = await Promise.all([
     db
       .select()

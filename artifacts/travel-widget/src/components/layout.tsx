@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Plane, Users, Home, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useLogout } from "@/lib/logout-context";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,7 +9,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
+  const logout = useLogout();
 
   const navItems = [
     { href: "/", icon: Home, label: "Dashboard" },
@@ -25,9 +25,14 @@ export function Layout({ children }: LayoutProps) {
           <Plane className="w-6 h-6" />
           <span className="font-semibold text-lg tracking-tight">Companion</span>
         </div>
-        <button onClick={logout} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-          <LogOut className="w-4 h-4" />
-        </button>
+        {logout && (
+          <button
+            onClick={logout}
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Sidebar */}
@@ -56,20 +61,17 @@ export function Layout({ children }: LayoutProps) {
             );
           })}
         </nav>
-        <div className="px-4 pb-6 border-t pt-4">
-          {user?.firstName && (
-            <p className="text-xs text-muted-foreground mb-2 px-2 truncate">
-              {user.firstName}{user.lastName ? ` ${user.lastName}` : ""}
-            </p>
-          )}
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors text-sm"
-          >
-            <LogOut className="w-4 h-4" />
-            Log out
-          </button>
-        </div>
+        {logout && (
+          <div className="px-4 pb-6 border-t pt-4">
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors text-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              Switch profile
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* Main Content */}

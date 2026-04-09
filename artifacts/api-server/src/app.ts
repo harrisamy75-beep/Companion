@@ -1,10 +1,15 @@
 import express, { type Express } from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
+import session from "express-session";
 import pinoHttp from "pino-http";
-import { authMiddleware } from "./middlewares/authMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
+
+declare module "express-session" {
+  interface SessionData {
+    userId?: string;
+  }
+}
 
 const app: Express = express();
 
@@ -28,10 +33,30 @@ app.use(
   }),
 );
 app.use(cors({ credentials: true, origin: true }));
-app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(authMiddleware);
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET ?? "dev-secret-change-me",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    },
+  }),
+);
+
+app.use("/api", (req, _res, next) => {
+  if (!req.session.userId) {
+    req.session.userId = "default-user";
+  }
+  (req as any).userId = req.session.userId;
+  next();
+});
 
 app.use("/api", router);
 
