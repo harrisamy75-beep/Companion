@@ -37,37 +37,43 @@ export default function Home() {
             <CardHeader className="pb-3 border-b border-border/50 bg-secondary/30">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Users className="w-5 h-5 text-primary" />
-                Children ({summary?.children.length || 0})
+                Travel Party ({summary?.totalTravelers || 0})
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
-              {summary?.children && summary.children.length > 0 ? (
-                <div className="space-y-4">
-                  {summary.children.map((child) => (
-                    <div key={child.id} className="flex justify-between items-center p-3 rounded-lg bg-secondary/50">
+              {summary?.travelers && summary.travelers.length > 0 ? (
+                <div className="space-y-3">
+                  {summary.travelers.slice(0, 4).map((t: any) => (
+                    <div key={t.id} className="flex justify-between items-center p-3 rounded-lg bg-secondary/50">
                       <div>
-                        <p className="font-medium text-foreground">{child.name}</p>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {child.birthdate}
-                        </p>
+                        <p className="font-medium text-foreground">{t.name}</p>
+                        <p className="text-sm text-muted-foreground capitalize">{t.travelerType}{t.relationship ? ` · ${t.relationship}` : ""}</p>
                       </div>
                       <div className="text-right">
-                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">
-                          {child.ageDisplay}
-                        </span>
+                        {t.ageDisplay ? (
+                          <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">
+                            {t.ageDisplay}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-sm font-medium text-muted-foreground">
+                            {t.travelerType}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
-                  <Link href="/children" className="block text-center text-sm text-primary hover:underline mt-2">
-                    Manage children
+                  {summary.travelers.length > 4 && (
+                    <p className="text-xs text-muted-foreground text-center">+{summary.travelers.length - 4} more</p>
+                  )}
+                  <Link href="/travelers" className="block text-center text-sm text-primary hover:underline mt-1">
+                    Manage travel party
                   </Link>
                 </div>
               ) : (
                 <div className="text-center py-6">
-                  <p className="text-muted-foreground mb-4">No children added yet.</p>
-                  <Link href="/children" className="text-primary font-medium hover:underline">
-                    Add a child
+                  <p className="text-muted-foreground mb-4">No travelers added yet.</p>
+                  <Link href="/travelers" className="text-primary font-medium hover:underline">
+                    Add your travel party
                   </Link>
                 </div>
               )}

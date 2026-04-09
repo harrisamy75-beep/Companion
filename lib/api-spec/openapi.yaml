@@ -10,8 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
-  - name: children
-    description: Children management
+  - name: travelers
+    description: Travel party management
   - name: preferences
     description: Travel preferences management
   - name: reviews
@@ -30,43 +30,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
-  /children:
+  /travelers:
     get:
-      operationId: listChildren
-      tags: [children]
-      summary: List all children
+      operationId: listTravelers
+      tags: [travelers]
+      summary: List all travelers in the party
       responses:
         "200":
-          description: List of children
+          description: List of travelers
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Child"
+                  $ref: "#/components/schemas/Traveler"
     post:
-      operationId: createChild
-      tags: [children]
-      summary: Add a child
+      operationId: createTraveler
+      tags: [travelers]
+      summary: Add a traveler
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateChildBody"
+              $ref: "#/components/schemas/CreateTravelerBody"
       responses:
         "201":
-          description: Created child
+          description: Created traveler
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Child"
+                $ref: "#/components/schemas/Traveler"
 
-  /children/{id}:
+  /travelers/{id}:
     put:
-      operationId: updateChild
-      tags: [children]
-      summary: Update a child
+      operationId: updateTraveler
+      tags: [travelers]
+      summary: Update a traveler
       parameters:
         - name: id
           in: path
@@ -78,18 +78,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateChildBody"
+              $ref: "#/components/schemas/CreateTravelerBody"
       responses:
         "200":
-          description: Updated child
+          description: Updated traveler
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Child"
+                $ref: "#/components/schemas/Traveler"
     delete:
-      operationId: deleteChild
-      tags: [children]
-      summary: Delete a child
+      operationId: deleteTraveler
+      tags: [travelers]
+      summary: Delete a traveler
       parameters:
         - name: id
           in: path
@@ -219,7 +219,7 @@ components:
       required:
         - status
 
-    Child:
+    Traveler:
       type: object
       properties:
         id:
@@ -229,34 +229,47 @@ components:
           nullable: true
         name:
           type: string
-        birthdate:
+        birthDate:
           type: string
           format: date
-        ageYears:
-          type: integer
-        ageMonths:
-          type: integer
-        ageDisplay:
+          nullable: true
+        travelerType:
           type: string
+          enum: [adult, child]
+        relationship:
+          type: string
+          nullable: true
         foodPreferences:
           type: array
           items:
             type: string
-          nullable: true
         activityPreferences:
           type: array
           items:
             type: string
+        accessibilityNeeds:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        ageYears:
+          type: integer
+          nullable: true
+        ageMonths:
+          type: integer
+          nullable: true
+        ageDisplay:
+          type: string
           nullable: true
       required:
         - id
         - name
-        - birthdate
-        - ageYears
-        - ageMonths
-        - ageDisplay
+        - travelerType
+        - foodPreferences
+        - activityPreferences
 
-    CreateChildBody:
+    CreateTravelerBody:
       type: object
       properties:
         userId:
@@ -264,9 +277,16 @@ components:
           nullable: true
         name:
           type: string
-        birthdate:
+        birthDate:
           type: string
           format: date
+          nullable: true
+        travelerType:
+          type: string
+          enum: [adult, child]
+        relationship:
+          type: string
+          nullable: true
         foodPreferences:
           type: array
           items:
@@ -277,9 +297,23 @@ components:
           items:
             type: string
           nullable: true
+        accessibilityNeeds:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
       required:
         - name
-        - birthdate
+        - travelerType
+
+    UpdateTravelerParams:
+      type: object
+      properties:
+        id:
+          type: integer
+      required:
+        - id
 
     TravelPreferences:
       type: object
@@ -486,42 +520,56 @@ components:
         - topReviews
         - tagSummary
 
-    ExtendedChildSummary:
+    TravelerSummaryItem:
       type: object
       properties:
         name:
           type: string
+        travelerType:
+          type: string
+        relationship:
+          type: string
+          nullable: true
         ageYears:
           type: integer
+          nullable: true
         ageMonths:
           type: integer
+          nullable: true
         foodPreferences:
           type: array
           items:
             type: string
-          nullable: true
         activityPreferences:
           type: array
           items:
             type: string
-          nullable: true
       required:
         - name
-        - ageYears
-        - ageMonths
+        - travelerType
+        - foodPreferences
+        - activityPreferences
 
     FamilySummary:
       type: object
       properties:
+        adults:
+          type: array
+          items:
+            $ref: "#/components/schemas/TravelerSummaryItem"
         children:
           type: array
           items:
-            $ref: "#/components/schemas/ExtendedChildSummary"
+            $ref: "#/components/schemas/TravelerSummaryItem"
         travelerCount:
           type: integer
+        partyDescription:
+          type: string
       required:
+        - adults
         - children
         - travelerCount
+        - partyDescription
 
     PreferencesSummary:
       type: object
@@ -556,10 +604,13 @@ components:
           type: array
           items:
             type: integer
+        partyDescription:
+          type: string
       required:
         - adults
         - children
         - childAges
+        - partyDescription
 
     WeightVector:
       type: object

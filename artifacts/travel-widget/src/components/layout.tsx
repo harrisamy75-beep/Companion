@@ -11,7 +11,7 @@ export function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { href: "/", icon: Home, label: "Dashboard" },
-    { href: "/children", icon: Users, label: "Kids" },
+    { href: "/travelers", icon: Users, label: "Travelers" },
     { href: "/preferences", icon: Settings, label: "Preferences" },
   ];
 

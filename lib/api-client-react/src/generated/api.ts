@@ -17,8 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
-  Child,
-  CreateChildBody,
+  CreateTravelerBody,
   ExtendedTravelSummary,
   HealthStatus,
   MatchResult,
@@ -27,6 +26,7 @@ import type {
   ScoreReviewsBody,
   TravelPreferences,
   TravelSummary,
+  Traveler,
   UpsertPreferencesBody,
 } from "./api.schemas";
 
@@ -115,29 +115,31 @@ export function useHealthCheck<
 }
 
 /**
- * @summary List all children
+ * @summary List all travelers in the party
  */
-export const getListChildrenUrl = () => {
-  return `/api/children`;
+export const getListTravelersUrl = () => {
+  return `/api/travelers`;
 };
 
-export const listChildren = async (options?: RequestInit): Promise<Child[]> => {
-  return customFetch<Child[]>(getListChildrenUrl(), {
+export const listTravelers = async (
+  options?: RequestInit,
+): Promise<Traveler[]> => {
+  return customFetch<Traveler[]>(getListTravelersUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getListChildrenQueryKey = () => {
-  return [`/api/children`] as const;
+export const getListTravelersQueryKey = () => {
+  return [`/api/travelers`] as const;
 };
 
-export const getListChildrenQueryOptions = <
-  TData = Awaited<ReturnType<typeof listChildren>>,
+export const getListTravelersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTravelers>>,
   TError = ErrorType<unknown>,
 >(options?: {
   query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listChildren>>,
+    Awaited<ReturnType<typeof listTravelers>>,
     TError,
     TData
   >;
@@ -145,40 +147,40 @@ export const getListChildrenQueryOptions = <
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListChildrenQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListTravelersQueryKey();
 
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof listChildren>>> = ({
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTravelers>>> = ({
     signal,
-  }) => listChildren({ signal, ...requestOptions });
+  }) => listTravelers({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof listChildren>>,
+    Awaited<ReturnType<typeof listTravelers>>,
     TError,
     TData
   > & { queryKey: QueryKey };
 };
 
-export type ListChildrenQueryResult = NonNullable<
-  Awaited<ReturnType<typeof listChildren>>
+export type ListTravelersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTravelers>>
 >;
-export type ListChildrenQueryError = ErrorType<unknown>;
+export type ListTravelersQueryError = ErrorType<unknown>;
 
 /**
- * @summary List all children
+ * @summary List all travelers in the party
  */
 
-export function useListChildren<
-  TData = Awaited<ReturnType<typeof listChildren>>,
+export function useListTravelers<
+  TData = Awaited<ReturnType<typeof listTravelers>>,
   TError = ErrorType<unknown>,
 >(options?: {
   query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listChildren>>,
+    Awaited<ReturnType<typeof listTravelers>>,
     TError,
     TData
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListChildrenQueryOptions(options);
+  const queryOptions = getListTravelersQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -188,42 +190,42 @@ export function useListChildren<
 }
 
 /**
- * @summary Add a child
+ * @summary Add a traveler
  */
-export const getCreateChildUrl = () => {
-  return `/api/children`;
+export const getCreateTravelerUrl = () => {
+  return `/api/travelers`;
 };
 
-export const createChild = async (
-  createChildBody: CreateChildBody,
+export const createTraveler = async (
+  createTravelerBody: CreateTravelerBody,
   options?: RequestInit,
-): Promise<Child> => {
-  return customFetch<Child>(getCreateChildUrl(), {
+): Promise<Traveler> => {
+  return customFetch<Traveler>(getCreateTravelerUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(createChildBody),
+    body: JSON.stringify(createTravelerBody),
   });
 };
 
-export const getCreateChildMutationOptions = <
+export const getCreateTravelerMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createChild>>,
+    Awaited<ReturnType<typeof createTraveler>>,
     TError,
-    { data: BodyType<CreateChildBody> },
+    { data: BodyType<CreateTravelerBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof createChild>>,
+  Awaited<ReturnType<typeof createTraveler>>,
   TError,
-  { data: BodyType<CreateChildBody> },
+  { data: BodyType<CreateTravelerBody> },
   TContext
 > => {
-  const mutationKey = ["createChild"];
+  const mutationKey = ["createTraveler"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -233,84 +235,84 @@ export const getCreateChildMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof createChild>>,
-    { data: BodyType<CreateChildBody> }
+    Awaited<ReturnType<typeof createTraveler>>,
+    { data: BodyType<CreateTravelerBody> }
   > = (props) => {
     const { data } = props ?? {};
 
-    return createChild(data, requestOptions);
+    return createTraveler(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type CreateChildMutationResult = NonNullable<
-  Awaited<ReturnType<typeof createChild>>
+export type CreateTravelerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createTraveler>>
 >;
-export type CreateChildMutationBody = BodyType<CreateChildBody>;
-export type CreateChildMutationError = ErrorType<unknown>;
+export type CreateTravelerMutationBody = BodyType<CreateTravelerBody>;
+export type CreateTravelerMutationError = ErrorType<unknown>;
 
 /**
- * @summary Add a child
+ * @summary Add a traveler
  */
-export const useCreateChild = <
+export const useCreateTraveler = <
   TError = ErrorType<unknown>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createChild>>,
+    Awaited<ReturnType<typeof createTraveler>>,
     TError,
-    { data: BodyType<CreateChildBody> },
+    { data: BodyType<CreateTravelerBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
-  Awaited<ReturnType<typeof createChild>>,
+  Awaited<ReturnType<typeof createTraveler>>,
   TError,
-  { data: BodyType<CreateChildBody> },
+  { data: BodyType<CreateTravelerBody> },
   TContext
 > => {
-  return useMutation(getCreateChildMutationOptions(options));
+  return useMutation(getCreateTravelerMutationOptions(options));
 };
 
 /**
- * @summary Update a child
+ * @summary Update a traveler
  */
-export const getUpdateChildUrl = (id: number) => {
-  return `/api/children/${id}`;
+export const getUpdateTravelerUrl = (id: number) => {
+  return `/api/travelers/${id}`;
 };
 
-export const updateChild = async (
+export const updateTraveler = async (
   id: number,
-  createChildBody: CreateChildBody,
+  createTravelerBody: CreateTravelerBody,
   options?: RequestInit,
-): Promise<Child> => {
-  return customFetch<Child>(getUpdateChildUrl(id), {
+): Promise<Traveler> => {
+  return customFetch<Traveler>(getUpdateTravelerUrl(id), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(createChildBody),
+    body: JSON.stringify(createTravelerBody),
   });
 };
 
-export const getUpdateChildMutationOptions = <
+export const getUpdateTravelerMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof updateChild>>,
+    Awaited<ReturnType<typeof updateTraveler>>,
     TError,
-    { id: number; data: BodyType<CreateChildBody> },
+    { id: number; data: BodyType<CreateTravelerBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof updateChild>>,
+  Awaited<ReturnType<typeof updateTraveler>>,
   TError,
-  { id: number; data: BodyType<CreateChildBody> },
+  { id: number; data: BodyType<CreateTravelerBody> },
   TContext
 > => {
-  const mutationKey = ["updateChild"];
+  const mutationKey = ["updateTraveler"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -320,81 +322,81 @@ export const getUpdateChildMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof updateChild>>,
-    { id: number; data: BodyType<CreateChildBody> }
+    Awaited<ReturnType<typeof updateTraveler>>,
+    { id: number; data: BodyType<CreateTravelerBody> }
   > = (props) => {
     const { id, data } = props ?? {};
 
-    return updateChild(id, data, requestOptions);
+    return updateTraveler(id, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type UpdateChildMutationResult = NonNullable<
-  Awaited<ReturnType<typeof updateChild>>
+export type UpdateTravelerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateTraveler>>
 >;
-export type UpdateChildMutationBody = BodyType<CreateChildBody>;
-export type UpdateChildMutationError = ErrorType<unknown>;
+export type UpdateTravelerMutationBody = BodyType<CreateTravelerBody>;
+export type UpdateTravelerMutationError = ErrorType<unknown>;
 
 /**
- * @summary Update a child
+ * @summary Update a traveler
  */
-export const useUpdateChild = <
+export const useUpdateTraveler = <
   TError = ErrorType<unknown>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof updateChild>>,
+    Awaited<ReturnType<typeof updateTraveler>>,
     TError,
-    { id: number; data: BodyType<CreateChildBody> },
+    { id: number; data: BodyType<CreateTravelerBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
-  Awaited<ReturnType<typeof updateChild>>,
+  Awaited<ReturnType<typeof updateTraveler>>,
   TError,
-  { id: number; data: BodyType<CreateChildBody> },
+  { id: number; data: BodyType<CreateTravelerBody> },
   TContext
 > => {
-  return useMutation(getUpdateChildMutationOptions(options));
+  return useMutation(getUpdateTravelerMutationOptions(options));
 };
 
 /**
- * @summary Delete a child
+ * @summary Delete a traveler
  */
-export const getDeleteChildUrl = (id: number) => {
-  return `/api/children/${id}`;
+export const getDeleteTravelerUrl = (id: number) => {
+  return `/api/travelers/${id}`;
 };
 
-export const deleteChild = async (
+export const deleteTraveler = async (
   id: number,
   options?: RequestInit,
 ): Promise<void> => {
-  return customFetch<void>(getDeleteChildUrl(id), {
+  return customFetch<void>(getDeleteTravelerUrl(id), {
     ...options,
     method: "DELETE",
   });
 };
 
-export const getDeleteChildMutationOptions = <
+export const getDeleteTravelerMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof deleteChild>>,
+    Awaited<ReturnType<typeof deleteTraveler>>,
     TError,
     { id: number },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof deleteChild>>,
+  Awaited<ReturnType<typeof deleteTraveler>>,
   TError,
   { id: number },
   TContext
 > => {
-  const mutationKey = ["deleteChild"];
+  const mutationKey = ["deleteTraveler"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -404,44 +406,44 @@ export const getDeleteChildMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof deleteChild>>,
+    Awaited<ReturnType<typeof deleteTraveler>>,
     { id: number }
   > = (props) => {
     const { id } = props ?? {};
 
-    return deleteChild(id, requestOptions);
+    return deleteTraveler(id, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type DeleteChildMutationResult = NonNullable<
-  Awaited<ReturnType<typeof deleteChild>>
+export type DeleteTravelerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteTraveler>>
 >;
 
-export type DeleteChildMutationError = ErrorType<unknown>;
+export type DeleteTravelerMutationError = ErrorType<unknown>;
 
 /**
- * @summary Delete a child
+ * @summary Delete a traveler
  */
-export const useDeleteChild = <
+export const useDeleteTraveler = <
   TError = ErrorType<unknown>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof deleteChild>>,
+    Awaited<ReturnType<typeof deleteTraveler>>,
     TError,
     { id: number },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
-  Awaited<ReturnType<typeof deleteChild>>,
+  Awaited<ReturnType<typeof deleteTraveler>>,
   TError,
   { id: number },
   TContext
 > => {
-  return useMutation(getDeleteChildMutationOptions(options));
+  return useMutation(getDeleteTravelerMutationOptions(options));
 };
 
 /**

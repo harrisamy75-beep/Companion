@@ -9,24 +9,52 @@ export interface HealthStatus {
   status: string;
 }
 
-export interface Child {
+export type TravelerTravelerType =
+  (typeof TravelerTravelerType)[keyof typeof TravelerTravelerType];
+
+export const TravelerTravelerType = {
+  adult: "adult",
+  child: "child",
+} as const;
+
+export interface Traveler {
   id: number;
   userId?: string | null;
   name: string;
-  birthdate: string;
-  ageYears: number;
-  ageMonths: number;
-  ageDisplay: string;
-  foodPreferences?: string[] | null;
-  activityPreferences?: string[] | null;
+  birthDate?: string | null;
+  travelerType: TravelerTravelerType;
+  relationship?: string | null;
+  foodPreferences: string[];
+  activityPreferences: string[];
+  accessibilityNeeds?: string | null;
+  notes?: string | null;
+  ageYears?: number | null;
+  ageMonths?: number | null;
+  ageDisplay?: string | null;
 }
 
-export interface CreateChildBody {
+export type CreateTravelerBodyTravelerType =
+  (typeof CreateTravelerBodyTravelerType)[keyof typeof CreateTravelerBodyTravelerType];
+
+export const CreateTravelerBodyTravelerType = {
+  adult: "adult",
+  child: "child",
+} as const;
+
+export interface CreateTravelerBody {
   userId?: string | null;
   name: string;
-  birthdate: string;
+  birthDate?: string | null;
+  travelerType: CreateTravelerBodyTravelerType;
+  relationship?: string | null;
   foodPreferences?: string[] | null;
   activityPreferences?: string[] | null;
+  accessibilityNeeds?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateTravelerParams {
+  id: number;
 }
 
 export interface TravelPreferences {
@@ -110,17 +138,21 @@ export interface MatchResult {
   tagSummary: string[];
 }
 
-export interface ExtendedChildSummary {
+export interface TravelerSummaryItem {
   name: string;
-  ageYears: number;
-  ageMonths: number;
-  foodPreferences?: string[] | null;
-  activityPreferences?: string[] | null;
+  travelerType: string;
+  relationship?: string | null;
+  ageYears?: number | null;
+  ageMonths?: number | null;
+  foodPreferences: string[];
+  activityPreferences: string[];
 }
 
 export interface FamilySummary {
-  children: ExtendedChildSummary[];
+  adults: TravelerSummaryItem[];
+  children: TravelerSummaryItem[];
   travelerCount: number;
+  partyDescription: string;
 }
 
 export interface PreferencesSummary {
@@ -135,6 +167,7 @@ export interface AutoFillPayload {
   adults: number;
   children: number;
   childAges: number[];
+  partyDescription: string;
 }
 
 export interface WeightVector {

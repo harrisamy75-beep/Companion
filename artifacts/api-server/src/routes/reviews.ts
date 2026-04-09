@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { createHash } from "crypto";
 import { eq, and } from "drizzle-orm";
-import Anthropic from "anthropic";
+import Anthropic from "@anthropic-ai/sdk";
 import { db, reviewScoresTable, preferencesTable } from "@workspace/db";
 import { ScoreReviewsBody, MatchReviewsQueryParams } from "@workspace/api-zod";
 

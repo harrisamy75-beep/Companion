@@ -7,9 +7,8 @@
  */
 
 export * from "./autoFillPayload";
-export * from "./child";
-export * from "./createChildBody";
-export * from "./extendedChildSummary";
+export * from "./createTravelerBody";
+export * from "./createTravelerBodyTravelerType";
 export * from "./extendedTravelSummary";
 export * from "./familySummary";
 export * from "./healthStatus";
@@ -21,7 +20,11 @@ export * from "./reviewScore";
 export * from "./reviewScoreRawClaudeResponse";
 export * from "./scoreReviewsBody";
 export * from "./scoreReviewsBodySource";
+export * from "./traveler";
+export * from "./travelerSummaryItem";
+export * from "./travelerTravelerType";
 export * from "./travelPreferences";
 export * from "./travelSummary";
+export * from "./updateTravelerParams";
 export * from "./upsertPreferencesBody";
 export * from "./weightVector";

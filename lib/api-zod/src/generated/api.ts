@@ -15,63 +15,79 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary List all children
+ * @summary List all travelers in the party
  */
-export const ListChildrenResponseItem = zod.object({
+export const ListTravelersResponseItem = zod.object({
   id: zod.number(),
   userId: zod.string().nullish(),
   name: zod.string(),
-  birthdate: zod.coerce.date(),
-  ageYears: zod.number(),
-  ageMonths: zod.number(),
-  ageDisplay: zod.string(),
-  foodPreferences: zod.array(zod.string()).nullish(),
-  activityPreferences: zod.array(zod.string()).nullish(),
+  birthDate: zod.coerce.date().nullish(),
+  travelerType: zod.enum(["adult", "child"]),
+  relationship: zod.string().nullish(),
+  foodPreferences: zod.array(zod.string()),
+  activityPreferences: zod.array(zod.string()),
+  accessibilityNeeds: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  ageYears: zod.number().nullish(),
+  ageMonths: zod.number().nullish(),
+  ageDisplay: zod.string().nullish(),
 });
-export const ListChildrenResponse = zod.array(ListChildrenResponseItem);
+export const ListTravelersResponse = zod.array(ListTravelersResponseItem);
 
 /**
- * @summary Add a child
+ * @summary Add a traveler
  */
-export const CreateChildBody = zod.object({
+export const CreateTravelerBody = zod.object({
   userId: zod.string().nullish(),
   name: zod.string(),
-  birthdate: zod.coerce.date(),
+  birthDate: zod.coerce.date().nullish(),
+  travelerType: zod.enum(["adult", "child"]),
+  relationship: zod.string().nullish(),
   foodPreferences: zod.array(zod.string()).nullish(),
   activityPreferences: zod.array(zod.string()).nullish(),
+  accessibilityNeeds: zod.string().nullish(),
+  notes: zod.string().nullish(),
 });
 
 /**
- * @summary Update a child
+ * @summary Update a traveler
  */
-export const UpdateChildParams = zod.object({
+export const UpdateTravelerParams = zod.object({
   id: zod.coerce.number(),
 });
 
-export const UpdateChildBody = zod.object({
+export const UpdateTravelerBody = zod.object({
   userId: zod.string().nullish(),
   name: zod.string(),
-  birthdate: zod.coerce.date(),
+  birthDate: zod.coerce.date().nullish(),
+  travelerType: zod.enum(["adult", "child"]),
+  relationship: zod.string().nullish(),
   foodPreferences: zod.array(zod.string()).nullish(),
   activityPreferences: zod.array(zod.string()).nullish(),
+  accessibilityNeeds: zod.string().nullish(),
+  notes: zod.string().nullish(),
 });
 
-export const UpdateChildResponse = zod.object({
+export const UpdateTravelerResponse = zod.object({
   id: zod.number(),
   userId: zod.string().nullish(),
   name: zod.string(),
-  birthdate: zod.coerce.date(),
-  ageYears: zod.number(),
-  ageMonths: zod.number(),
-  ageDisplay: zod.string(),
-  foodPreferences: zod.array(zod.string()).nullish(),
-  activityPreferences: zod.array(zod.string()).nullish(),
+  birthDate: zod.coerce.date().nullish(),
+  travelerType: zod.enum(["adult", "child"]),
+  relationship: zod.string().nullish(),
+  foodPreferences: zod.array(zod.string()),
+  activityPreferences: zod.array(zod.string()),
+  accessibilityNeeds: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  ageYears: zod.number().nullish(),
+  ageMonths: zod.number().nullish(),
+  ageDisplay: zod.string().nullish(),
 });
 
 /**
- * @summary Delete a child
+ * @summary Delete a traveler
  */
-export const DeleteChildParams = zod.object({
+export const DeleteTravelerParams = zod.object({
   id: zod.coerce.number(),
 });
 
@@ -138,19 +154,7 @@ export const UpsertPreferencesResponse = zod.object({
  * @summary Get full travel summary including ages at today
  */
 export const GetTravelSummaryResponse = zod.object({
-  children: zod.array(
-    zod.object({
-      id: zod.number(),
-      userId: zod.string().nullish(),
-      name: zod.string(),
-      birthdate: zod.coerce.date(),
-      ageYears: zod.number(),
-      ageMonths: zod.number(),
-      ageDisplay: zod.string(),
-      foodPreferences: zod.array(zod.string()).nullish(),
-      activityPreferences: zod.array(zod.string()).nullish(),
-    }),
-  ),
+  children: zod.array(zod.unknown()),
   preferences: zod
     .object({
       id: zod.number(),
@@ -183,16 +187,30 @@ export const GetExtendedSummaryParams = zod.object({
 
 export const GetExtendedSummaryResponse = zod.object({
   family: zod.object({
+    adults: zod.array(
+      zod.object({
+        name: zod.string(),
+        travelerType: zod.string(),
+        relationship: zod.string().nullish(),
+        ageYears: zod.number().nullish(),
+        ageMonths: zod.number().nullish(),
+        foodPreferences: zod.array(zod.string()),
+        activityPreferences: zod.array(zod.string()),
+      }),
+    ),
     children: zod.array(
       zod.object({
         name: zod.string(),
-        ageYears: zod.number(),
-        ageMonths: zod.number(),
-        foodPreferences: zod.array(zod.string()).nullish(),
-        activityPreferences: zod.array(zod.string()).nullish(),
+        travelerType: zod.string(),
+        relationship: zod.string().nullish(),
+        ageYears: zod.number().nullish(),
+        ageMonths: zod.number().nullish(),
+        foodPreferences: zod.array(zod.string()),
+        activityPreferences: zod.array(zod.string()),
       }),
     ),
     travelerCount: zod.number(),
+    partyDescription: zod.string(),
   }),
   preferences: zod.object({
     travelStyleTags: zod.array(zod.string()),
@@ -205,6 +223,7 @@ export const GetExtendedSummaryResponse = zod.object({
     adults: zod.number(),
     children: zod.number(),
     childAges: zod.array(zod.number()),
+    partyDescription: zod.string(),
   }),
   reviewProfile: zod.object({
     weightVector: zod.object({

@@ -5,9 +5,11 @@
  * Travel Companion API
  * OpenAPI spec version: 0.1.0
  */
-import type { ExtendedChildSummary } from "./extendedChildSummary";
+import type { TravelerSummaryItem } from "./travelerSummaryItem";
 
 export interface FamilySummary {
-  children: ExtendedChildSummary[];
+  adults: TravelerSummaryItem[];
+  children: TravelerSummaryItem[];
   travelerCount: number;
+  partyDescription: string;
 }

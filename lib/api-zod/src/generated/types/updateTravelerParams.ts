@@ -6,9 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AutoFillPayload {
-  adults: number;
-  children: number;
-  childAges: number[];
-  partyDescription: string;
+export interface UpdateTravelerParams {
+  id: number;
 }
