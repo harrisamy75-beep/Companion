@@ -90,11 +90,11 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
         </h1>
 
         {/* Three-line value prop */}
-        <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
+        <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "18px", alignItems: "center" }}>
           {[
             "Save your family's ages, preferences & loyalty numbers.",
             "Auto-fill every travel booking form in one click.",
-            "See only the reviews that matter to your style of travel.",
+            "See only the reviews that match your travel style.",
           ].map((line) => (
             <p
               key={line}
@@ -102,10 +102,12 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
               style={{
                 fontStyle: "italic",
                 fontWeight: 400,
-                fontSize: "18px",
+                fontSize: "17px",
                 color: "#8C8279",
-                lineHeight: 1.45,
+                lineHeight: 1,
                 margin: 0,
+                padding: 0,
+                whiteSpace: "nowrap",
               }}
             >
               {line}
