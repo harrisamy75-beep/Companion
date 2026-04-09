@@ -99,12 +99,14 @@ function neutral(): ScoredResult {
 }
 
 function buildClient(): Anthropic | null {
-  // Prefer the user's own key; fall back to Replit AI integration proxy
-  const apiKey =
-    process.env.ANTHROPIC_API_KEY ??
-    process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
-  const baseURL = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+  // Prefer the user's own direct key (hits api.anthropic.com directly)
+  if (process.env.ANTHROPIC_API_KEY) {
+    return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
 
+  // Fall back to Replit AI integration proxy
+  const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+  const baseURL = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
   if (!apiKey) return null;
 
   return new Anthropic({ apiKey, ...(baseURL ? { baseURL } : {}) });
