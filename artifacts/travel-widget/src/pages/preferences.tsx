@@ -13,28 +13,95 @@ import { Skeleton } from "@/components/ui/skeleton";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-const TRAVEL_STYLE_GROUPS = [
+const TRAVEL_STYLE_GROUPS: { label: string; styles: { id: string; label: string }[] }[] = [
   {
-    label: "Luxury",
+    label: "LUXURY",
     styles: [
       { id: "luxury-family", label: "Luxury Family" },
       { id: "luxury-chill", label: "Luxury Chill" },
       { id: "luxury-adventure", label: "Luxury Adventure" },
+      { id: "ultra-luxury", label: "Ultra Luxury" },
+      { id: "luxury-wellness", label: "Luxury Wellness" },
+      { id: "boutique-luxury", label: "Boutique Luxury" },
+      { id: "safari-expedition", label: "Safari & Expedition" },
+      { id: "superyacht-charter", label: "Superyacht & Charter" },
+      { id: "private-villa", label: "Private Villa" },
+      { id: "design-hotels", label: "Design Hotels" },
     ],
   },
   {
-    label: "Family",
+    label: "FAMILY",
     styles: [
-      { id: "budget-family", label: "Budget Family" },
+      { id: "luxury-family", label: "Luxury Family" },
+      { id: "active-family", label: "Active Family" },
+      { id: "beach-family", label: "Beach Family" },
       { id: "disney-family", label: "Disney Family" },
+      { id: "budget-family", label: "Budget Family" },
+      { id: "multi-gen-travel", label: "Multi-Gen Travel" },
+      { id: "baby-toddler", label: "Baby & Toddler" },
+      { id: "teen-travel", label: "Teen Travel" },
+      { id: "educational-travel", label: "Educational Travel" },
+      { id: "summer-camp-style", label: "Summer Camp Style" },
     ],
   },
   {
-    label: "Lifestyle",
+    label: "FOOD & DRINK",
     styles: [
-      { id: "lgbtq", label: "LGBTQ+ Travel" },
       { id: "foodie", label: "Foodie" },
-      { id: "beach-club", label: "Beach Club" },
+      { id: "fine-dining", label: "Fine Dining" },
+      { id: "local-authentic", label: "Local & Authentic" },
+      { id: "street-food-explorer", label: "Street Food Explorer" },
+      { id: "farm-to-table", label: "Farm to Table" },
+      { id: "wine-country", label: "Wine Country" },
+      { id: "culinary-classes", label: "Culinary Classes" },
+      { id: "zero-waste-dining", label: "Zero Waste Dining" },
+      { id: "vegetarian-vegan", label: "Vegetarian & Vegan" },
+      { id: "omakase-chefs-table", label: "Omakase & Chef's Table" },
+    ],
+  },
+  {
+    label: "WELLNESS",
+    styles: [
+      { id: "spa-wellness", label: "Spa & Wellness" },
+      { id: "yoga-retreat", label: "Yoga Retreat" },
+      { id: "meditation-mindfulness", label: "Meditation & Mindfulness" },
+      { id: "fitness-bootcamp", label: "Fitness & Bootcamp" },
+      { id: "thermal-hot-springs", label: "Thermal & Hot Springs" },
+      { id: "ayurveda", label: "Ayurveda" },
+      { id: "digital-detox", label: "Digital Detox" },
+      { id: "sleep-tourism", label: "Sleep Tourism" },
+      { id: "mental-health-travel", label: "Mental Health Travel" },
+      { id: "longevity-biohacking", label: "Longevity & Biohacking" },
+    ],
+  },
+  {
+    label: "ADVENTURE & OUTDOORS",
+    styles: [
+      { id: "hiking-trekking", label: "Hiking & Trekking" },
+      { id: "water-sports", label: "Water Sports" },
+      { id: "skiing-snow", label: "Skiing & Snow" },
+      { id: "surf-travel", label: "Surf Travel" },
+      { id: "diving-snorkeling", label: "Diving & Snorkeling" },
+      { id: "cycling-tours", label: "Cycling Tours" },
+      { id: "safari-wildlife", label: "Safari & Wildlife" },
+      { id: "climbing-via-ferrata", label: "Climbing & Via Ferrata" },
+      { id: "river-sea-kayaking", label: "River & Sea Kayaking" },
+      { id: "fly-fishing", label: "Fly Fishing" },
+    ],
+  },
+  {
+    label: "CULTURE & SLOW TRAVEL",
+    styles: [
+      { id: "art-museum", label: "Art & Museum" },
+      { id: "architecture", label: "Architecture" },
+      { id: "heritage-history", label: "Heritage & History" },
+      { id: "literary-travel", label: "Literary Travel" },
+      { id: "language-immersion", label: "Language Immersion" },
+      { id: "slow-travel", label: "Slow Travel" },
+      { id: "village-life", label: "Village Life" },
+      { id: "photography-journeys", label: "Photography Journeys" },
+      { id: "spiritual-travel", label: "Spiritual Travel" },
+      { id: "craft-artisan", label: "Craft & Artisan" },
     ],
   },
 ];
@@ -145,7 +212,7 @@ export default function PreferencesPage() {
             {/* Travel Style */}
             <section>
               <p className="eyebrow" style={{ marginBottom: "20px" }}>Travel Style</p>
-              <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#8C8279", marginBottom: "24px", lineHeight: 1.7 }}>
+              <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#8C8279", marginBottom: "28px", lineHeight: 1.7 }}>
                 Select all that describe how you like to travel.
               </p>
               <Controller
@@ -156,16 +223,18 @@ export default function PreferencesPage() {
                   const toggle = (id: string) =>
                     field.onChange(selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id]);
                   return (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "36px" }}>
                       {TRAVEL_STYLE_GROUPS.map(group => (
                         <div key={group.label}>
-                          <p className="eyebrow" style={{ color: "#8C8279", marginBottom: "14px" }}>{group.label}</p>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "0 28px" }}>
+                          <p className="eyebrow" style={{ color: "#8C8279", marginBottom: "16px", letterSpacing: "0.16em" }}>
+                            {group.label}
+                          </p>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 28px" }}>
                             {group.styles.map(style => {
                               const isSelected = selected.includes(style.id);
                               return (
                                 <button
-                                  key={style.id}
+                                  key={`${group.label}-${style.id}`}
                                   type="button"
                                   onClick={() => toggle(style.id)}
                                   style={{

@@ -8,6 +8,7 @@ import reviewsRouter from "./reviews";
 import tripProfilesRouter from "./trip-profiles";
 import propertiesRouter from "./properties";
 import loyaltyRouter from "./loyalty";
+import placesRouter from "./places";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(reviewsRouter);
 router.use(tripProfilesRouter);
 router.use(propertiesRouter);
 router.use(loyaltyRouter);
+router.use(placesRouter);
 
 export default router;

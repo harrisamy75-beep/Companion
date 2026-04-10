@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Layout } from "@/components/layout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -36,12 +36,26 @@ interface SuggestedProgram {
   program: string;
 }
 
+interface PlaceResult {
+  placeId: string;
+  name: string;
+  location: string;
+  brand: string | null;
+  rating: number | null;
+  priceLevel: number | null;
+}
+
 /* ─── Constants ─── */
 const LUXURY_BRANDS = [
   "Rosewood", "Aman", "Four Seasons", "Ritz-Carlton", "St. Regis",
-  "Park Hyatt", "Auberge", "Belmond", "1 Hotels", "Six Senses",
-  "Soho House", "Firmdale", "Montage", "Pendry", "Thompson",
-  "Kimpton", "Ace Hotel", "Graduate",
+  "Park Hyatt", "Andaz", "Auberge", "Belmond", "Six Senses",
+  "1 Hotels", "Soho House", "Firmdale", "Montage", "Pendry",
+  "Thompson", "Kimpton", "Ace Hotel", "Graduate", "Virgin Hotels",
+  "W Hotels", "Edition", "Bulgari", "Waldorf Astoria", "Conrad",
+  "Canopy", "Curio", "Tribute Portfolio", "Autograph Collection",
+  "JW Marriott", "Le Méridien", "Westin", "Sheraton", "Marriott",
+  "Hilton", "Hyatt Regency", "Grand Hyatt", "Alila",
+  "Nobu Hotels", "citizenM", "Mama Shelter", "25hours",
 ];
 
 const WHAT_YOU_LOVED_OPTIONS = [
@@ -214,13 +228,182 @@ function PropertyCard({ property, onEdit, onDelete }: {
   );
 }
 
+/* ─── Places Autocomplete ─── */
+function priceDots(level: number | null) {
+  if (!level) return null;
+  return "·".repeat(level);
+}
+
+function trimLocation(raw: string): string {
+  const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+  return parts.slice(-2).join(", ");
+}
+
+interface PlacesAutocompleteProps {
+  value: string;
+  onChange: (val: string) => void;
+  onSelect: (result: PlaceResult) => void;
+  placeholder?: string;
+}
+
+function PlacesAutocomplete({ value, onChange, onSelect, placeholder }: PlacesAutocompleteProps) {
+  const [results, setResults] = useState<PlaceResult[]>([]);
+  const [open, setOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const [loading, setLoading] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const search = useCallback(async (q: string) => {
+    if (q.length < 2) { setResults([]); setOpen(false); return; }
+    setLoading(true);
+    try {
+      const r = await fetch(`/api/places/search?q=${encodeURIComponent(q)}`, { credentials: "include" });
+      if (r.ok) {
+        const data: PlaceResult[] = await r.json();
+        setResults(data);
+        setOpen(true);
+        setActiveIdx(-1);
+      } else {
+        setResults([]);
+        setOpen(q.length >= 3);
+      }
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    onChange(v);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => search(v), 300);
+  };
+
+  const handleSelect = (result: PlaceResult | null) => {
+    if (result) {
+      onSelect(result);
+    } else {
+      onChange(value);
+    }
+    setOpen(false);
+    setResults([]);
+    setActiveIdx(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const total = results.length > 0 ? results.length : (value.length >= 3 ? 1 : 0);
+    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, total - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, -1)); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      if (activeIdx >= 0 && activeIdx < results.length) handleSelect(results[activeIdx]);
+      else if (results.length === 0 && value.length >= 3) handleSelect(null);
+      else setOpen(false);
+    } else if (e.key === "Escape") { setOpen(false); setActiveIdx(-1); }
+  };
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const showCustomOption = open && results.length === 0 && value.length >= 3 && !loading;
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <input
+        className="input-underline"
+        required
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder ?? "Rosewood Miramar Beach"}
+        autoComplete="off"
+      />
+      {open && (results.length > 0 || showCustomOption) && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            background: "white",
+            border: "1px solid #E5E0D8",
+            borderRadius: "2px",
+            zIndex: 50,
+            overflow: "hidden",
+          }}
+        >
+          {results.map((r, i) => (
+            <div
+              key={r.placeId}
+              onMouseDown={() => handleSelect(r)}
+              onMouseEnter={() => setActiveIdx(i)}
+              style={{
+                padding: "14px 16px",
+                cursor: "pointer",
+                background: activeIdx === i ? "#F5F0E6" : "white",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: "12px",
+                borderBottom: i < results.length - 1 ? "1px solid #F0EBE3" : "none",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  className="font-playfair"
+                  style={{ fontSize: "15px", color: "#1C1C1C", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                >
+                  {r.name}
+                </div>
+                <div
+                  style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#8C8279", fontStyle: "italic", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                >
+                  {trimLocation(r.location)}
+                </div>
+              </div>
+              {r.priceLevel && (
+                <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#B8963E", flexShrink: 0, marginTop: "2px" }}>
+                  {priceDots(r.priceLevel)}
+                </span>
+              )}
+            </div>
+          ))}
+          {showCustomOption && (
+            <div
+              onMouseDown={() => handleSelect(null)}
+              style={{ padding: "14px 16px", cursor: "pointer", background: activeIdx === 0 ? "#F5F0E6" : "white" }}
+            >
+              <span
+                className="font-playfair"
+                style={{ fontStyle: "italic", fontSize: "14px", color: "#8C8279" }}
+              >
+                Add "{value}" as a custom property
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Property form ─── */
 type PropForm = {
   propertyName: string; brand: string; location: string; category: string;
-  tier: string; tags: string[]; notes: string; visitedAt: string;
+  tier: string; tags: string[]; notes: string; visitedAt: string; placeId: string;
 };
 
-const EMPTY_PROP: PropForm = { propertyName: "", brand: "", location: "", category: "hotel", tier: "liked", tags: [], notes: "", visitedAt: "" };
+const EMPTY_PROP: PropForm = { propertyName: "", brand: "", location: "", category: "hotel", tier: "liked", tags: [], notes: "", visitedAt: "", placeId: "" };
 
 function PropertyForm({ initial, onSubmit, onCancel, loading }: {
   initial?: PropForm; onSubmit: (f: PropForm) => void; onCancel: () => void; loading: boolean;
@@ -229,13 +412,28 @@ function PropertyForm({ initial, onSubmit, onCancel, loading }: {
   const set = <K extends keyof PropForm>(k: K, v: PropForm[K]) => setForm(f => ({ ...f, [k]: v }));
   const toggleTag = (t: string) => setForm(f => ({ ...f, tags: f.tags.includes(t) ? f.tags.filter(x => x !== t) : [...f.tags, t] }));
 
+  const handlePlaceSelect = (result: PlaceResult) => {
+    setForm(f => ({
+      ...f,
+      propertyName: result.name,
+      location: trimLocation(result.location),
+      brand: result.brand ?? f.brand,
+      placeId: result.placeId,
+    }));
+  };
+
   return (
     <form
       onSubmit={e => { e.preventDefault(); onSubmit(form); }}
       style={{ display: "flex", flexDirection: "column", gap: "18px" }}
     >
       <Field label="Property name">
-        <input className="input-underline" required value={form.propertyName} onChange={e => set("propertyName", e.target.value)} placeholder="Rosewood Miramar Beach" />
+        <PlacesAutocomplete
+          value={form.propertyName}
+          onChange={v => set("propertyName", v)}
+          onSelect={handlePlaceSelect}
+          placeholder="Rosewood Miramar Beach"
+        />
       </Field>
 
       <Field label="Brand">
