@@ -1,0 +1,132 @@
+Build a guided onboarding flow that runs the first time a user logs in.
+After they enter their name and click "Get Started", instead of going 
+straight to the dashboard, route them through a 4-step setup wizard.
+
+Store completion state in the session or localStorage key "onboardingComplete".
+If true, skip straight to dashboard on login. If false or missing, show the wizard.
+
+OVERALL STRUCTURE:
+- Full screen, same parchment background #F5F0E6 as login
+- Progress indicator at top: four dots, active dot is wine #6B2737, 
+  inactive are #DDD8CE. No step numbers, no labels — just dots.
+- "Companion" wordmark top-left in Playfair Display italic, small (18px), 
+  links back to start of onboarding (with confirm dialog)
+- "Skip setup" in Raleway 300, 11px, muted, top-right. 
+  Clicking sets onboardingComplete = true and goes to dashboard.
+- Back/Next navigation at bottom:
+  Back: plain text link, Raleway 400, muted
+  Next / Finish: wine red button #6B2737, Raleway 600 ALL CAPS, 
+  no border-radius, 180px wide, 44px tall
+- Each step slides in from right, slides out to left on Next.
+  Reverse on Back. CSS transition only, no libraries.
+- Each step has a large Playfair Display italic step heading (36px)
+  and a short Raleway 300 subtitle underneath (16px, muted)
+
+STEP 1 — "Who's travelling?"
+Heading: "First, tell us about your travel party."
+Subtitle: "Add everyone you typically travel with — you, your partner, kids, whoever."
+
+- Pre-populate a card for the user using the name they just entered 
+  (type: Adult, relationship: Self)
+- Show their card immediately — they don't need to re-add themselves
+- Below it, two large tap targets side by side:
+  Left: "+ Add an adult"  
+  Right: "+ Add a child"
+  Styled as tall cards (120px), dashed 1px border #DDD8CE, 
+  centered Raleway 500 text, hover fills with #F5F0E6
+- Clicking either opens a minimal inline form (same fields as 
+  travelers page but stripped down):
+  Adult: Name, Relationship (partner/friend/parent/other)
+  Child: Name, Birth date (for age calculation)
+  Confirm adds the card to the list inline
+- User can add multiple. Cards show in a clean list.
+- Can skip — "Just me for now" text link beneath the add buttons
+
+STEP 2 — "How do you like to travel?"
+Heading: "Your travel style."
+Subtitle: "Select everything that feels like you. You can always change this."
+
+- Show the full TRAVEL_STYLES categories from the preferences page
+- Same visual treatment: Playfair Display options, gold category labels,
+  underline on selected, wine color
+- Pre-select nothing — let them choose fresh
+- Live counter bottom-right: "4 selected" in Raleway 300 italic muted
+- Minimum 0 required — can proceed without selecting anything
+
+STEP 3 — "Your favourite properties."
+Heading: "Places you've loved."
+Subtitle: "Hotels, resorts, restaurants — anywhere that set the standard for you."
+
+- Show the Add Property form inline (without the modal wrapper)
+- Same autocomplete search field (will work once Google key is added,
+  degrades gracefully until then)
+- After adding a property it appears as a small card below with 
+  the tier heart/star/minus and property name
+- "+ Add another" link appears after first addition
+- "Skip for now" text link — this step is optional
+- At least one entry triggers a subtle encouraging message beneath:
+  "Great — we'll use this to calibrate your review matches."
+  Raleway 300 italic, muted, fade in
+
+STEP 4 — "You're all set."
+Heading: "Your profile is ready."
+Subtitle: "Here's what we know about you so far."
+
+Show a beautiful summary card — white, 1px border, generous padding:
+
+  [Their name] — Adult · Self
+  
+  TRAVEL PARTY
+  [list of added travelers, comma separated, italic]
+  e.g. "Greg (partner), Ella (8), Mia (6)"
+  Or "Just you for now"
+
+  TRAVEL STYLE  
+  [top 5 selected styles as comma-separated italic text]
+  Or "Not set yet"
+
+  FAVOURITE PROPERTIES
+  [property names comma separated]
+  Or "None added yet"
+
+Below the card, two things:
+
+1. A "Your travel personality" block — call GET /api/personality 
+   (new endpoint, see below) which uses Claude to generate a 
+   2-sentence travel personality description based on their selections.
+   Show a subtle loading state ("Crafting your travel profile...") 
+   in Raleway 300 italic while it loads.
+   Display the result in Playfair Display italic 18px, wine color, 
+   centered. This is the moment of delight — make it feel special.
+
+2. The finish button changes to: "Open my dashboard →"
+   Clicking sets onboardingComplete = true in session/localStorage
+   and navigates to /
+
+NEW BACKEND ENDPOINT — artifacts/api-server/src/routes/personality.ts:
+
+GET /api/personality
+
+Fetch the user's travelers, preferences, and favorite properties.
+Call Claude API with this prompt:
+
+system: "You are a luxury travel editor. Write exactly 2 sentences 
+describing this traveler's style. Be specific, evocative, and warm — 
+like a Condé Nast Traveler editor describing a reader. 
+Reference their actual preferences. Never use the word 'luxury' alone — 
+be more specific. Return only the 2 sentences, no quotes, no preamble."
+
+user: `
+Traveler: [name]
+Party: [party description]
+Travel styles: [selected styles joined by comma]
+Favourite properties: [property names and brands]
+Food preferences across party: [all food prefs]
+Activity preferences: [all activity prefs]
+`
+
+Return: { personality: "Two sentence result here." }
+
+Cache the result in the session so it doesn't re-call on refresh.
+
+Register personality router in routes/index.ts.

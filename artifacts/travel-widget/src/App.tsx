@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import TravelersPage from "@/pages/travelers";
 import PreferencesPage from "@/pages/preferences";
 import StaysPage from "@/pages/stays";
+import { OnboardingWizard } from "@/components/onboarding";
 import { useState, useEffect, useCallback } from "react";
 import { LogoutContext } from "@/lib/logout-context";
 
@@ -19,6 +20,10 @@ type AuthState =
 
 function useSessionUser() {
   const [auth, setAuth] = useState<AuthState>({ status: "loading" });
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const needsOnboarding = () =>
+    localStorage.getItem("onboardingComplete") !== "true";
 
   const check = useCallback(async () => {
     try {
@@ -28,6 +33,7 @@ function useSessionUser() {
         setAuth({ status: "needs-name" });
       } else {
         setAuth({ status: "ready", userId: data.userId });
+        setShowOnboarding(needsOnboarding());
       }
     } catch {
       setAuth({ status: "needs-name" });
@@ -43,16 +49,25 @@ function useSessionUser() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: name }),
     });
-    if (res.ok) setAuth({ status: "ready", userId: name });
+    if (res.ok) {
+      setAuth({ status: "ready", userId: name });
+      setShowOnboarding(needsOnboarding());
+    }
   }, []);
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     setAuth({ status: "needs-name" });
+    setShowOnboarding(false);
     queryClient.clear();
   }, []);
 
-  return { auth, login, logout };
+  const completeOnboarding = useCallback(() => {
+    localStorage.setItem("onboardingComplete", "true");
+    setShowOnboarding(false);
+  }, []);
+
+  return { auth, login, logout, showOnboarding, completeOnboarding };
 }
 
 function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> }) {
@@ -172,32 +187,42 @@ function AppRoutes() {
 }
 
 function App() {
-  const { auth, login, logout } = useSessionUser();
+  const { auth, login, logout, showOnboarding, completeOnboarding } = useSessionUser();
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        {/* Loading */}
         {auth.status === "loading" && (
           <div
             className="min-h-screen flex items-center justify-center"
             style={{ background: "#F5F0E6" }}
           >
-            <p
-              className="font-playfair"
-              style={{ fontStyle: "italic", fontSize: "20px", color: "#8C8279" }}
-            >
+            <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "20px", color: "#8C8279" }}>
               Loading…
             </p>
           </div>
         )}
+
+        {/* Login */}
         {auth.status === "needs-name" && <NamePrompt onSubmit={login} />}
-        {auth.status === "ready" && (
+
+        {/* Onboarding wizard */}
+        {auth.status === "ready" && showOnboarding && (
+          <LogoutContext.Provider value={logout}>
+            <OnboardingWizard onComplete={completeOnboarding} />
+          </LogoutContext.Provider>
+        )}
+
+        {/* Main app */}
+        {auth.status === "ready" && !showOnboarding && (
           <LogoutContext.Provider value={logout}>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <AppRoutes />
             </WouterRouter>
           </LogoutContext.Provider>
         )}
+
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
