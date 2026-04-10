@@ -1,0 +1,80 @@
+Add Google Places autocomplete to the property name field on the Stays page.
+When a user types a hotel name, show live suggestions and auto-populate 
+name, brand, and location when they select one.
+
+Step 1 — add GOOGLE_PLACES_API_KEY to Replit Secrets.
+The user will need to get a key from console.cloud.google.com,
+enable "Places API" and "Maps JavaScript API".
+
+Step 2 — new backend route artifacts/api-server/src/routes/places.ts:
+
+GET /places/search?q=searchterm
+Proxies to Google Places Text Search API so we never expose 
+the API key to the frontend:
+
+const response = await fetch(
+  `https://maps.googleapis.com/maps/api/place/textsearch/json` +
+  `?query=${encodeURIComponent(q)}&type=lodging` +
+  `&key=${process.env.GOOGLE_PLACES_API_KEY}`
+);
+const data = await response.json();
+
+Return a cleaned array (max 6 results):
+[{
+  placeId: result.place_id,
+  name: result.name,
+  location: result.formatted_address,  
+  brand: extractBrand(result.name),     // see below
+  rating: result.rating,
+  priceLevel: result.price_level        // 1-4, maps to budget/luxury
+}]
+
+extractBrand(name): check if the hotel name contains a known brand string.
+Check against this list and return the brand if matched, otherwise null:
+["Rosewood", "Aman", "Four Seasons", "Ritz-Carlton", "St. Regis", 
+ "Park Hyatt", "Andaz", "Auberge", "Belmond", "Six Senses", 
+ "1 Hotels", "Soho House", "Firmdale", "Montage", "Pendry", 
+ "Thompson", "Kimpton", "Ace Hotel", "Graduate", "Virgin Hotels",
+ "W Hotels", "Edition", "Bulgari", "Waldorf Astoria", "Conrad",
+ "Canopy", "Curio", "Tribute Portfolio", "Autograph Collection",
+ "JW Marriott", "Le Méridien", "Westin", "Sheraton", "Marriott",
+ "Hilton", "Hyatt Regency", "Grand Hyatt", "Alila", "Thompson",
+ "Nobu Hotels", "citizenM", "Mama Shelter", "25hours"]
+
+Register in routes/index.ts.
+
+Step 3 — update the Add Property form in stays.tsx:
+
+Replace the plain text input for Property Name with an 
+autocomplete combobox:
+
+- User types → debounce 300ms → GET /api/places/search?q=value
+- Show dropdown beneath the input, max 6 results, each showing:
+  - Property name in Playfair Display 15px
+  - Location in Raleway 12px muted italic underneath
+  - Price level indicator: · to ···· in gold, right-aligned
+- Dropdown styling:
+  - White background, 1px border #E5E0D8, border-radius 2px
+  - Each row: 14px padding vertical, 16px horizontal
+  - Hover: background #F5F0E6
+  - No shadow — flat, editorial
+
+- On selection:
+  - Fill Property Name input with result.name
+  - Fill Location input with result.location (city + country only, 
+    strip the full address — split on "," take last 2 parts)
+  - Fill Brand input with result.brand if found, else leave empty
+  - Set a hidden placeId field for future use
+  - Close the dropdown
+
+- If no results found after typing 3+ chars:
+  Show one row: "Add '[typed value]' as a custom property" 
+  in italic muted — clicking it just uses what they typed
+
+- Keyboard navigation: arrow keys move through results, 
+  Enter selects, Escape closes
+
+Step 4 — also add autocomplete to the Brand field:
+Static datalist (no API call needed) with the full brand list above.
+As user types, filter and show matching brands.
+This helps for cases where they typed the property name manually.
