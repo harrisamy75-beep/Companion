@@ -210,7 +210,7 @@ function App() {
         {/* Onboarding wizard */}
         {auth.status === "ready" && showOnboarding && (
           <LogoutContext.Provider value={logout}>
-            <OnboardingWizard onComplete={completeOnboarding} />
+            <OnboardingWizard userId={auth.userId} onComplete={completeOnboarding} />
           </LogoutContext.Provider>
         )}
 
