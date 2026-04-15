@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Heart, Minus, Star } from "lucide-react";
+import { TRAVEL_STYLE_GROUPS } from "@/lib/travel-styles";
 
 /* ─── Types ─── */
 interface TravelerEntry {
@@ -24,82 +25,6 @@ interface PlaceResult {
   brand: string | null;
   priceLevel: number | null;
 }
-
-/* ─── Full Travel Style Groups (mirrors preferences page) ─── */
-const STYLE_GROUPS: { label: string; styles: { id: string; label: string }[] }[] = [
-  { label: "LUXURY", styles: [
-    { id: "luxury-family", label: "Luxury Family" },
-    { id: "luxury-chill", label: "Luxury Chill" },
-    { id: "luxury-adventure", label: "Luxury Adventure" },
-    { id: "ultra-luxury", label: "Ultra Luxury" },
-    { id: "luxury-wellness", label: "Luxury Wellness" },
-    { id: "boutique-luxury", label: "Boutique Luxury" },
-    { id: "safari-expedition", label: "Safari & Expedition" },
-    { id: "superyacht-charter", label: "Superyacht & Charter" },
-    { id: "private-villa", label: "Private Villa" },
-    { id: "design-hotels", label: "Design Hotels" },
-  ]},
-  { label: "FAMILY", styles: [
-    { id: "luxury-family", label: "Luxury Family" },
-    { id: "active-family", label: "Active Family" },
-    { id: "beach-family", label: "Beach Family" },
-    { id: "disney-family", label: "Disney Family" },
-    { id: "budget-family", label: "Budget Family" },
-    { id: "multi-gen-travel", label: "Multi-Gen Travel" },
-    { id: "baby-toddler", label: "Baby & Toddler" },
-    { id: "teen-travel", label: "Teen Travel" },
-    { id: "educational-travel", label: "Educational Travel" },
-    { id: "summer-camp-style", label: "Summer Camp Style" },
-  ]},
-  { label: "FOOD & DRINK", styles: [
-    { id: "foodie", label: "Foodie" },
-    { id: "fine-dining", label: "Fine Dining" },
-    { id: "local-authentic", label: "Local & Authentic" },
-    { id: "street-food-explorer", label: "Street Food Explorer" },
-    { id: "farm-to-table", label: "Farm to Table" },
-    { id: "wine-country", label: "Wine Country" },
-    { id: "culinary-classes", label: "Culinary Classes" },
-    { id: "zero-waste-dining", label: "Zero Waste Dining" },
-    { id: "vegetarian-vegan", label: "Vegetarian & Vegan" },
-    { id: "omakase-chefs-table", label: "Omakase & Chef's Table" },
-  ]},
-  { label: "WELLNESS", styles: [
-    { id: "spa-wellness", label: "Spa & Wellness" },
-    { id: "yoga-retreat", label: "Yoga Retreat" },
-    { id: "meditation-mindfulness", label: "Meditation & Mindfulness" },
-    { id: "fitness-bootcamp", label: "Fitness & Bootcamp" },
-    { id: "thermal-hot-springs", label: "Thermal & Hot Springs" },
-    { id: "ayurveda", label: "Ayurveda" },
-    { id: "digital-detox", label: "Digital Detox" },
-    { id: "sleep-tourism", label: "Sleep Tourism" },
-    { id: "mental-health-travel", label: "Mental Health Travel" },
-    { id: "longevity-biohacking", label: "Longevity & Biohacking" },
-  ]},
-  { label: "ADVENTURE & OUTDOORS", styles: [
-    { id: "hiking-trekking", label: "Hiking & Trekking" },
-    { id: "water-sports", label: "Water Sports" },
-    { id: "skiing-snow", label: "Skiing & Snow" },
-    { id: "surf-travel", label: "Surf Travel" },
-    { id: "diving-snorkeling", label: "Diving & Snorkeling" },
-    { id: "cycling-tours", label: "Cycling Tours" },
-    { id: "safari-wildlife", label: "Safari & Wildlife" },
-    { id: "climbing-via-ferrata", label: "Climbing & Via Ferrata" },
-    { id: "river-sea-kayaking", label: "River & Sea Kayaking" },
-    { id: "fly-fishing", label: "Fly Fishing" },
-  ]},
-  { label: "CULTURE & SLOW TRAVEL", styles: [
-    { id: "art-museum", label: "Art & Museum" },
-    { id: "architecture", label: "Architecture" },
-    { id: "heritage-history", label: "Heritage & History" },
-    { id: "literary-travel", label: "Literary Travel" },
-    { id: "language-immersion", label: "Language Immersion" },
-    { id: "slow-travel", label: "Slow Travel" },
-    { id: "village-life", label: "Village Life" },
-    { id: "photography-journeys", label: "Photography Journeys" },
-    { id: "spiritual-travel", label: "Spiritual Travel" },
-    { id: "craft-artisan", label: "Craft & Artisan" },
-  ]},
-];
 
 const TIER_META = {
   loved: { label: "Loved", icon: <Heart size={12} fill="currentColor" />, color: "#6B2737" },
@@ -337,7 +262,7 @@ function Step2({ styles, setStyles }: { styles: string[]; setStyles: React.Dispa
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
-        {STYLE_GROUPS.map(group => (
+        {TRAVEL_STYLE_GROUPS.map(group => (
           <div key={group.label}>
             <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#B8963E", marginBottom: "14px" }}>
               {group.label}
@@ -561,7 +486,7 @@ function Step4({ userId, travelers, travelStyles, properties }: {
           <SummaryRow label="Travel Party" value={partyDesc} />
           <div style={{ height: "1px", background: "#F0EBE3", marginTop: "16px" }} />
           <SummaryRow label="Travel Style" value={topStyles.length > 0 ? topStyles.map(id => {
-            for (const g of STYLE_GROUPS) { const s = g.styles.find(s => s.id === id); if (s) return s.label; }
+            for (const g of TRAVEL_STYLE_GROUPS) { const s = g.styles.find(s => s.id === id); if (s) return s.label; }
             return id;
           }).join(", ") : "Not set yet"} />
           <div style={{ height: "1px", background: "#F0EBE3", marginTop: "16px" }} />

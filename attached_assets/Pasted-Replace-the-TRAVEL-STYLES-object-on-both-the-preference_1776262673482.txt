@@ -1,0 +1,224 @@
+Replace the TRAVEL_STYLES object on both the preferences page and 
+the onboarding step 2 with this complete expanded version.
+Keep the exact same visual treatment throughout.
+
+const TRAVEL_STYLES = {
+
+  "LUXURY": [
+    "Boutique Luxury",
+    "Ultra Luxury",
+    "Luxury Family",
+    "Luxury Wellness",
+    "Luxury Adventure",
+    "Luxury Chill",
+    "Design Hotels",
+    "Private Villa",
+    "Castle & Estate",
+    "Treehouse & Overwater",
+    "Safari & Expedition",
+    "Superyacht & Charter",
+    "Private Aviation",
+    "Members Club"
+  ],
+
+  "FOOD & DRINK": [
+    "Foodie",
+    "Michelin Star Dining",
+    "Chef's Table & Omakase",
+    "Fine Dining",
+    "Local & Authentic",
+    "Street Food Explorer",
+    "Farm to Table",
+    "Wine Country",
+    "Champagne & Cellar Tours",
+    "Whisky & Distillery",
+    "Craft Beer & Breweries",
+    "Culinary Classes",
+    "Food Market Explorer",
+    "Zero Waste Dining",
+    "Vegetarian & Vegan",
+    "Plant-Based Only",
+    "Halal-Friendly",
+    "Kosher-Friendly",
+    "Gluten-Free Travel",
+    "Allergy-Aware"
+  ],
+
+  "FAMILY": [
+    "Luxury Family",
+    "Active Family",
+    "Beach Family",
+    "Disney & Theme Parks",
+    "Multi-Generational",
+    "Baby & Toddler",
+    "Kids Club & Resort",
+    "Teen Travel",
+    "Educational Travel",
+    "Summer Camp Style",
+    "Ski Family",
+    "Sports Family",
+    "Homeschool Travel"
+  ],
+
+  "PETS": [
+    "Pet Friendly",
+    "Dog Friendly Hotels",
+    "Dog Friendly Beaches",
+    "Pet Spa & Grooming",
+    "Hiking with Dogs",
+    "Pet-Friendly Airlines",
+    "Ranch & Farm Stays",
+    "Horse Riding Travel"
+  ],
+
+  "WELLNESS": [
+    "Spa & Wellness",
+    "Medical Wellness",
+    "Yoga Retreat",
+    "Meditation & Mindfulness",
+    "Fitness & Bootcamp",
+    "Thermal & Hot Springs",
+    "Ayurveda",
+    "Digital Detox",
+    "Sleep Tourism",
+    "Mental Health Travel",
+    "Longevity & Biohacking",
+    "Sober Travel",
+    "Grief & Healing Retreats"
+  ],
+
+  "ADVENTURE & OUTDOORS": [
+    "Hiking & Trekking",
+    "Water Sports",
+    "Skiing & Snow",
+    "Heli-Skiing",
+    "Surf Travel",
+    "Diving & Snorkeling",
+    "Freediving",
+    "Cycling Tours",
+    "Safari & Wildlife",
+    "Climbing & Via Ferrata",
+    "River & Sea Kayaking",
+    "White Water Rafting",
+    "Fly Fishing",
+    "Hunting Travel",
+    "Stargazing & Dark Sky",
+    "Volcano & Geology",
+    "Polar & Arctic",
+    "Desert Expeditions"
+  ],
+
+  "WATER & SAILING": [
+    "Cruise",
+    "Luxury Cruise",
+    "Expedition Cruise",
+    "River Cruise",
+    "Sailing",
+    "Superyacht Charter",
+    "Catamaran",
+    "Bareboat Charter",
+    "Overwater Bungalow",
+    "Island Hopping",
+    "Beach Club",
+    "All Inclusive Resort",
+    "Swim-Up Bar Life"
+  ],
+
+  "CULTURE & SLOW TRAVEL": [
+    "Art & Museum",
+    "Architecture",
+    "History & Heritage",
+    "UNESCO Sites",
+    "Local Immersion",
+    "Slow Travel",
+    "Voluntourism",
+    "Spiritual & Pilgrimage",
+    "Language Immersion",
+    "Rural & Agriturismo",
+    "Residency & Long Stay",
+    "Workation",
+    "Digital Nomad",
+    "Literary Travel",
+    "Film & TV Locations",
+    "Music & Jazz",
+    "Festival & Events",
+    "Fashion & Shopping"
+  ],
+
+  "SOCIAL & IDENTITY": [
+    "LGBTQ+ Travel",
+    "LGBTQ+ Family",
+    "Gay-Friendly Resorts",
+    "Girls Trip",
+    "Bachelorette & Hen",
+    "Couples Getaway",
+    "Honeymoon",
+    "Anniversary Travel",
+    "Solo Female Travel",
+    "Solo Travel",
+    "Group Travel",
+    "Friends Reunion",
+    "Sports Travel",
+    "Fan & Concert Travel",
+    "Influencer & Content"
+  ],
+
+  "ECO & CONSCIOUS": [
+    "Eco Travel",
+    "Carbon Conscious",
+    "Wildlife Conservation",
+    "Regenerative Travel",
+    "Off-Grid",
+    "National Parks",
+    "Plastic-Free Travel",
+    "Community Tourism",
+    "B Corp Hotels",
+    "1% for the Planet",
+    "Zero Footprint"
+  ],
+
+  "ACCESSIBILITY": [
+    "Wheelchair Accessible",
+    "Mobility Aid Friendly",
+    "Sensory-Friendly",
+    "Deaf-Friendly",
+    "Blind & Low Vision",
+    "Chronic Illness Travel",
+    "Autism-Friendly",
+    "Carer & Companion Travel"
+  ],
+
+  "TRANSPORT & STYLE": [
+    "Business Class",
+    "First Class",
+    "Private Aviation",
+    "Train Travel",
+    "Orient Express Style",
+    "Road Trip",
+    "Campervan & RV",
+    "Motorcycle Tour",
+    "Cycling Country to Country",
+    "Rickshaw & Tuk-Tuk",
+    "Helicopter Transfers"
+  ],
+
+  "STAY TYPE": [
+    "Boutique Hotel",
+    "All Inclusive",
+    "Adult Only Resort",
+    "Ryokan & Traditional Inn",
+    "Riad & Medina",
+    "Trulli & Cave Hotel",
+    "Treehouse",
+    "Overwater Bungalow",
+    "Glamping",
+    "Houseboat",
+    "Castle & Chateau",
+    "Monastery Stay",
+    "Ranch & Dude Ranch",
+    "Lighthouse",
+    "Container & Tiny House",
+    "Ice Hotel",
+    "Capsule Hotel"
+  ]
+}
