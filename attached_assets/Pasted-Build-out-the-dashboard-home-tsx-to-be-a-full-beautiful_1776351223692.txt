@@ -1,0 +1,95 @@
+Build out the dashboard (home.tsx) to be a full, beautiful summary 
+of everything the user has set up. It should feel like opening 
+a luxury travel portfolio — not a SaaS app.
+
+LAYOUT:
+- Same parchment background #F5F0E6
+- Page header: "Good morning, [name]." (or afternoon/evening based on time)
+  Playfair Display italic 700, 48px, #1C1C1C
+  Subtitle in Playfair Display italic 300, 18px, #8C8279 — 
+  dynamically generated from their profile:
+  e.g. "Your party of 4 is ready for the next adventure."
+  or "Luxury family traveler · 3 loyalty programs · 6 loved properties."
+- Thin 1px rule full width below header, #E5E0D8, margin 28px 0
+
+SECTION 1 — TRAVEL PARTY (full width card)
+- Eyebrow: "TRAVEL PARTY" gold label
+- Show the active trip profile name in Playfair italic — 
+  e.g. "Harris Family" with a slash-separated switcher inline:
+  Harris Family / Amy & Greg / + New
+  Clicking switches active profile
+- Below: horizontal row of traveler chips for the active profile.
+  Each chip: initial avatar (navy circle, white letter) + first name + age if child
+  e.g. [A] Amy  [G] Greg  [E] Ella, 8  [M] Mia, 6
+  Raleway 400, 13px, inline, gap 20px
+- Auto-fill summary line at bottom of card in Raleway 300 italic muted:
+  "Ready to fill: 2 adults, 2 children (ages 8, 6)"
+  This is exactly what will get injected into booking forms.
+
+SECTION 2 — two columns below, equal width
+
+LEFT COLUMN:
+
+Card A — TRAVEL STYLE
+- Eyebrow: "YOUR STYLE"
+- Show their travel personality sentence (from Claude, cached from onboarding)
+  in Playfair Display italic, 17px, wine #6B2737
+- Below it: top 6 selected styles as comma-separated italic muted text
+  e.g. "Boutique Luxury, Foodie, Michelin Star Dining, Beach Club, 
+  Wellness, Multi-Generational"
+- Link: "Edit preferences →" wine color
+
+Card B — LOYALTY PROGRAMS
+- Eyebrow: "LOYALTY"
+- List each program: brand name in Raleway 500, tier in gold italic small,
+  membership number in monospace muted (truncated: •••• 4521)
+- If none added: italic muted "No programs saved yet" + 
+  "Add loyalty programs →" wine link
+- Max 4 shown, "+ N more" if over 4
+
+RIGHT COLUMN:
+
+Card C — LOVED PROPERTIES
+- Eyebrow: "FAVOURITE STAYS"
+- Show up to 4 loved properties as a clean list:
+  Property name in Playfair Display 16px
+  Location + brand in Raleway 300 12px muted italic underneath
+  Small heart icon in wine, left of name
+- If none: "No properties saved yet" + "Add a property →"
+- "View all stays →" link at bottom
+
+Card D — REVIEW MATCH (the AI feature — make it feel special)
+- Eyebrow: "REVIEW INTELLIGENCE"
+- Background: #1C1C1C dark (this card inverts — white text on dark)
+- Heading: "Paste a hotel URL or name" in Playfair italic, white, 18px
+- Small input field + "Match" button inline
+  Input: hotel name or URL, Raleway 300, white bottom border only
+  Button: wine #6B2737, Raleway 600 ALL CAPS, small
+- On submit: POST /api/reviews/score with a test review, 
+  show the match score as a large number:
+  Score in Playfair Display 64px white e.g. "87"
+  Label underneath: "/ 100 match for your travel style" Raleway 300 small
+- Below score: top 3 matching tags as small wine-colored text
+- Empty state: italic muted white "Try: Rosewood Miramar" as placeholder
+- This card should feel like the hero feature — the thing that 
+  makes someone say 'oh wow'
+
+SECTION 3 — UPCOMING (full width, subtle)
+- Eyebrow: "TRIP PROFILES"
+- Horizontal scrollable row of trip profile cards
+- Each card: profile name in Playfair Display 18px, 
+  traveler count + party description in muted italic below,
+  dashed border, 200px wide, 100px tall
+- Active profile has wine border instead of dashed
+- "+ Create a profile" card at end, dashed, muted
+
+SECTION 4 — QUICK ACTIONS (bottom, minimal)
+Three text links in a row, Raleway 500 12px ALL CAPS 
+letter-spacing 0.12em, separated by thin vertical rules:
+ADD A TRAVELER  |  ADD A PROPERTY  |  EDIT PREFERENCES
+Each links to the relevant page.
+
+DATA:
+Fetch everything in one call: GET /api/summary (already returns 
+travelers, preferences, totalTravelers, hasPreferences)
+Also fetc

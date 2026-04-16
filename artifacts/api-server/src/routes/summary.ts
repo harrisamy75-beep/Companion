@@ -72,9 +72,12 @@ router.get("/summary", async (req, res): Promise<void> => {
     }
   }
 
-  const [allTravelers, prefRows] = await Promise.all([
+  const [allTravelers, prefRows, loyaltyRows, propertyRows, profileRows] = await Promise.all([
     db.select().from(travelersTable).where(eq(travelersTable.userId, userId)).orderBy(travelersTable.createdAt),
     db.select().from(preferencesTable).where(eq(preferencesTable.userId, userId)).limit(1),
+    db.select().from(loyaltyProgramsTable).where(eq(loyaltyProgramsTable.userId, userId)).orderBy(loyaltyProgramsTable.createdAt),
+    db.select().from(favoritePropertiesTable).where(eq(favoritePropertiesTable.userId, userId)).orderBy(favoritePropertiesTable.createdAt),
+    db.select().from(tripProfilesTable).where(eq(tripProfilesTable.userId, userId)).orderBy(tripProfilesTable.createdAt),
   ]);
 
   const travelersRows = travelerIdSet
@@ -84,12 +87,36 @@ router.get("/summary", async (req, res): Promise<void> => {
   const preferences = prefRows.length > 0 ? prefRows[0] : null;
   const hasPreferences = preferences !== null && preferences.id !== 0;
   const children = travelersRows.filter((t) => t.travelerType === "child");
+
   res.json({
+    userName: userId,
     travelers: travelersRows,
     children,
     preferences: preferences ?? { id: 0 },
     totalTravelers: travelersRows.length,
     hasPreferences,
+    loyaltyPrograms: loyaltyRows.map((r) => ({
+      id: r.id,
+      brand: r.brand,
+      programName: r.programName,
+      tier: r.tier ?? null,
+      membershipNumber: r.membershipNumber ?? null,
+    })),
+    favoriteProperties: propertyRows.map((r) => ({
+      id: r.id,
+      propertyName: r.propertyName,
+      brand: r.brand ?? null,
+      location: r.location ?? null,
+      tier: r.tier,
+    })),
+    tripProfiles: profileRows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      travelerIds: (r.travelerIds as number[]) ?? [],
+      emoji: r.emoji ?? "✈️",
+      isDefault: r.isDefault,
+    })),
+    personality: (req as any).session?.personality ?? null,
   });
 });
 
