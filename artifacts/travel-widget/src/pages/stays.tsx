@@ -34,6 +34,13 @@ interface LoyaltyProgram {
 interface SuggestedProgram {
   brand: string;
   program: string;
+  tiers?: string[];
+}
+
+interface SuggestedProgramGroup {
+  tier_type: string;
+  label: string;
+  programs: SuggestedProgram[];
 }
 
 interface PlaceResult {
@@ -114,7 +121,7 @@ function useLoyalty() {
       return r.json();
     },
   });
-  const suggestedQuery = useQuery<SuggestedProgram[]>({
+  const suggestedQuery = useQuery<SuggestedProgramGroup[]>({
     queryKey: ["loyalty-programs-suggested"],
     queryFn: async () => {
       const r = await fetch("/api/loyalty/programs", { credentials: "include" });
@@ -541,26 +548,48 @@ type LoyForm = { programName: string; brand: string; membershipNumber: string; t
 const EMPTY_LOY: LoyForm = { programName: "", brand: "", membershipNumber: "", tier: "", notes: "" };
 
 function LoyaltyForm({ initial, onSubmit, onCancel, loading, suggested }: {
-  initial?: LoyForm; onSubmit: (f: LoyForm) => void; onCancel: () => void; loading: boolean; suggested: SuggestedProgram[];
+  initial?: LoyForm; onSubmit: (f: LoyForm) => void; onCancel: () => void; loading: boolean; suggested: SuggestedProgramGroup[];
 }) {
   const [form, setForm] = useState<LoyForm>(initial ?? EMPTY_LOY);
+  // Re-sync local form when `initial` changes (e.g. user clicks "Add it →" on a smart suggestion
+  // while the form is already mounted, or switches between editing different programs).
+  useEffect(() => {
+    if (initial) setForm(initial);
+  }, [initial]);
   const set = <K extends keyof LoyForm>(k: K, v: LoyForm[K]) => setForm(f => ({ ...f, [k]: v }));
 
-  const prefill = (s: SuggestedProgram) => setForm(f => ({ ...f, brand: s.brand, programName: s.program }));
+  const prefill = (s: SuggestedProgram) =>
+    setForm(f => ({ ...f, brand: s.brand, programName: s.program, tier: "" }));
+
+  // Look up the currently-selected program's tier list (from the grouped data)
+  const selectedTiers: string[] | undefined = (() => {
+    for (const g of suggested) {
+      const match = g.programs.find(p => p.brand === form.brand && p.program === form.programName);
+      if (match) return match.tiers;
+    }
+    return undefined;
+  })();
 
   return (
-    <form onSubmit={e => { e.preventDefault(); onSubmit(form); }} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+    <form onSubmit={e => { e.preventDefault(); onSubmit(form); }} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {!initial && suggested.length > 0 && (
-        <div>
-          <p className="eyebrow" style={{ marginBottom: "10px" }}>Quick-add</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px" }}>
-            {suggested.map(s => (
-              <button key={s.brand} type="button" onClick={() => prefill(s)}
-                style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: form.brand === s.brand ? "#6B2737" : "#8C8279", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: form.brand === s.brand ? "underline" : "none", textDecorationColor: "#6B2737" }}>
-                {s.brand}
-              </button>
-            ))}
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {suggested.map(group => (
+            <div key={group.tier_type}>
+              <p className="eyebrow" style={{ marginBottom: "8px" }}>{group.label}</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px" }}>
+                {group.programs.map(s => {
+                  const isActive = form.brand === s.brand && form.programName === s.program;
+                  return (
+                    <button key={s.brand + s.program} type="button" onClick={() => prefill(s)}
+                      style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: isActive ? "#6B2737" : "#8C8279", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: isActive ? "underline" : "none", textDecorationColor: "#6B2737" }}>
+                      {s.brand}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -574,7 +603,19 @@ function LoyaltyForm({ initial, onSubmit, onCancel, loading, suggested }: {
         <input className="input-underline" value={form.membershipNumber} onChange={e => set("membershipNumber", e.target.value)} placeholder="123456789" />
       </Field>
       <Field label="Status tier">
-        <input className="input-underline" value={form.tier} onChange={e => set("tier", e.target.value)} placeholder="Globalist" />
+        {selectedTiers && selectedTiers.length > 0 ? (
+          <select
+            className="input-underline"
+            value={form.tier}
+            onChange={e => set("tier", e.target.value)}
+            style={{ background: "transparent", appearance: "none", cursor: "pointer" }}
+          >
+            <option value="">— Select tier —</option>
+            {selectedTiers.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        ) : (
+          <input className="input-underline" value={form.tier} onChange={e => set("tier", e.target.value)} placeholder="Globalist" />
+        )}
       </Field>
 
       <div style={{ display: "flex", gap: "12px" }}>
@@ -592,6 +633,29 @@ function LoyaltyForm({ initial, onSubmit, onCancel, loading, suggested }: {
 /* ─── Page ─── */
 const TIER_FILTERS = ["all", "loved", "liked", "avoid"];
 
+type ProgramMatch = SuggestedProgram & { tier_type: string; tier_type_label: string };
+
+function findProgramByBrand(brand: string, groups: SuggestedProgramGroup[]): ProgramMatch | null {
+  if (!brand) return null;
+  const b = brand.trim().toLowerCase();
+  for (const g of groups) {
+    for (const p of g.programs) {
+      const lb = p.brand.toLowerCase();
+      // Match if equal, or property brand contains the loyalty brand (e.g. "Park Hyatt" → "Hyatt"),
+      // or vice versa for shorter property brands.
+      if (b === lb || b.includes(lb) || lb.includes(b)) {
+        return { ...p, tier_type: g.tier_type, tier_type_label: g.label };
+      }
+    }
+  }
+  return null;
+}
+
+function getTierTypeForBrand(brand: string, groups: SuggestedProgramGroup[]): { tier_type: string; label: string } {
+  const m = findProgramByBrand(brand, groups);
+  return m ? { tier_type: m.tier_type, label: m.tier_type_label } : { tier_type: "other", label: "Other" };
+}
+
 export default function StaysPage() {
   const { toast } = useToast();
   const { query: propQ, create: createProp, update: updateProp, remove: removeProp } = useProperties();
@@ -602,25 +666,67 @@ export default function StaysPage() {
   const [editingProp, setEditingProp] = useState<FavoriteProperty | null>(null);
   const [showLoyForm, setShowLoyForm] = useState(false);
   const [editingLoy, setEditingLoy] = useState<LoyaltyProgram | null>(null);
+  const [pendingSuggestion, setPendingSuggestion] = useState<{ propertyBrand: string; match: ProgramMatch } | null>(null);
+  const [prefilledLoy, setPrefilledLoy] = useState<LoyForm | null>(null);
 
   const allProperties = propQ.data ?? [];
   const filteredProperties = tierFilter === "all" ? allProperties : allProperties.filter(p => p.tier === tierFilter);
   const loyaltyPrograms = loyQ.data ?? [];
   const suggested = suggestedQuery.data ?? [];
 
+  // Group user's saved loyalty programs by tier_type, preserving suggested-group order.
+  const groupedLoyalty: { tier_type: string; label: string; programs: LoyaltyProgram[] }[] = (() => {
+    const map = new Map<string, { label: string; programs: LoyaltyProgram[] }>();
+    for (const p of loyaltyPrograms) {
+      const { tier_type, label } = getTierTypeForBrand(p.brand, suggested);
+      if (!map.has(tier_type)) map.set(tier_type, { label, programs: [] });
+      map.get(tier_type)!.programs.push(p);
+    }
+    const order = suggested.map(g => g.tier_type).concat("other");
+    return order
+      .filter(tt => map.has(tt))
+      .map(tt => ({ tier_type: tt, label: map.get(tt)!.label, programs: map.get(tt)!.programs }));
+  })();
+
   /* Handlers — Properties */
   const handleSaveProp = (f: PropForm) => {
+    const checkSuggestion = () => {
+      if (!f.brand) return;
+      const match = findProgramByBrand(f.brand, suggested);
+      if (!match) return;
+      // Skip if user already has any loyalty for this brand.
+      const already = loyaltyPrograms.some(lp => {
+        const lb = lp.brand.toLowerCase();
+        const mb = match.brand.toLowerCase();
+        return lb === mb || lb.includes(mb) || mb.includes(lb);
+      });
+      if (!already) setPendingSuggestion({ propertyBrand: f.brand, match });
+    };
+
     if (editingProp) {
       updateProp.mutate({ id: editingProp.id, ...f, tags: f.tags }, {
-        onSuccess: () => { setEditingProp(null); toast({ title: "Property updated" }); },
+        onSuccess: () => { setEditingProp(null); toast({ title: "Property updated" }); checkSuggestion(); },
         onError: () => toast({ title: "Failed", variant: "destructive" }),
       });
     } else {
       createProp.mutate({ ...f, tags: f.tags }, {
-        onSuccess: () => { setShowPropForm(false); toast({ title: "Property added" }); },
+        onSuccess: () => { setShowPropForm(false); toast({ title: "Property added" }); checkSuggestion(); },
         onError: () => toast({ title: "Failed", variant: "destructive" }),
       });
     }
+  };
+
+  const acceptSuggestion = () => {
+    if (!pendingSuggestion) return;
+    const m = pendingSuggestion.match;
+    setPrefilledLoy({ brand: m.brand, programName: m.program, membershipNumber: "", tier: "", notes: "" });
+    setShowLoyForm(true);
+    setEditingLoy(null);
+    setPendingSuggestion(null);
+    // Smooth scroll to loyalty section
+    setTimeout(() => {
+      document.getElementById("loyalty-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   };
 
   const handleDeleteProp = (id: number) => {
@@ -724,16 +830,56 @@ export default function StaysPage() {
           )}
         </section>
 
+        {/* Smart suggestion banner — appears after a property save matches an unowned loyalty program */}
+        {pendingSuggestion && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "16px",
+              padding: "12px 16px",
+              borderLeft: "2px solid #6B2737",
+              background: "rgba(107, 39, 55, 0.05)",
+              marginTop: "-32px",
+            }}
+          >
+            <p
+              className="font-playfair"
+              style={{ fontStyle: "italic", fontSize: "14px", color: "#1C1C1C", margin: 0, flex: 1 }}
+            >
+              You saved a {pendingSuggestion.propertyBrand} property — add{" "}
+              <span style={{ fontWeight: 600 }}>{pendingSuggestion.match.program}</span>{" "}
+              to your loyalty programs?
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
+              <button
+                onClick={acceptSuggestion}
+                style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "13px", color: "#6B2737", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                Add it →
+              </button>
+              <button
+                onClick={() => setPendingSuggestion(null)}
+                aria-label="Dismiss suggestion"
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279", padding: 0, display: "flex" }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
         <span className="section-rule" />
 
         {/* ── Section B: Loyalty Programs ── */}
-        <section>
+        <section id="loyalty-section">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "24px" }}>
             <h2 className="font-playfair" style={{ fontWeight: 400, fontSize: "28px", color: "#1C1C1C" }}>
               Loyalty Programs
             </h2>
             {!showLoyForm && !editingLoy && (
-              <button onClick={() => setShowLoyForm(true)}
+              <button onClick={() => { setPrefilledLoy(null); setShowLoyForm(true); }}
                 style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "13px", color: "#6B2737", background: "none", border: "none", cursor: "pointer" }}>
                 + Add program
               </button>
@@ -747,12 +893,16 @@ export default function StaysPage() {
                 <h3 className="font-playfair" style={{ fontWeight: 400, fontSize: "20px", color: "#1C1C1C" }}>
                   {editingLoy ? "Edit program" : "Add program"}
                 </h3>
-                <button onClick={() => { setShowLoyForm(false); setEditingLoy(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279" }}><X size={16} /></button>
+                <button onClick={() => { setShowLoyForm(false); setEditingLoy(null); setPrefilledLoy(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279" }}><X size={16} /></button>
               </div>
               <LoyaltyForm
-                initial={editingLoy ? { programName: editingLoy.programName, brand: editingLoy.brand, membershipNumber: editingLoy.membershipNumber ?? "", tier: editingLoy.tier ?? "", notes: editingLoy.notes ?? "" } : undefined}
-                onSubmit={handleSaveLoy}
-                onCancel={() => { setShowLoyForm(false); setEditingLoy(null); }}
+                initial={
+                  editingLoy
+                    ? { programName: editingLoy.programName, brand: editingLoy.brand, membershipNumber: editingLoy.membershipNumber ?? "", tier: editingLoy.tier ?? "", notes: editingLoy.notes ?? "" }
+                    : prefilledLoy ?? undefined
+                }
+                onSubmit={(f) => { handleSaveLoy(f); setPrefilledLoy(null); }}
+                onCancel={() => { setShowLoyForm(false); setEditingLoy(null); setPrefilledLoy(null); }}
                 loading={createLoy.isPending || updateLoy.isPending}
                 suggested={suggested}
               />
@@ -763,13 +913,20 @@ export default function StaysPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {[1, 2, 3].map(i => <Skeleton key={i} style={{ height: "50px", borderRadius: "2px" }} />)}
             </div>
-          ) : loyaltyPrograms.length > 0 ? (
-            loyaltyPrograms.map(p => (
-              <LoyaltyRow key={p.id} program={p}
-                onEdit={() => { setShowLoyForm(false); setEditingLoy(p); }}
-                onDelete={() => { if (!confirm("Remove this program?")) return; removeLoy.mutate(p.id, { onSuccess: () => toast({ title: "Removed" }), onError: () => toast({ title: "Failed", variant: "destructive" }) }); }}
-              />
-            ))
+          ) : groupedLoyalty.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+              {groupedLoyalty.map(group => (
+                <div key={group.tier_type}>
+                  <p className="eyebrow" style={{ marginBottom: "8px" }}>{group.label}</p>
+                  {group.programs.map(p => (
+                    <LoyaltyRow key={p.id} program={p}
+                      onEdit={() => { setShowLoyForm(false); setPrefilledLoy(null); setEditingLoy(p); }}
+                      onDelete={() => { if (!confirm("Remove this program?")) return; removeLoy.mutate(p.id, { onSuccess: () => toast({ title: "Removed" }), onError: () => toast({ title: "Failed", variant: "destructive" }) }); }}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
           ) : (
             <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#8C8279" }}>
               No programs added yet.
