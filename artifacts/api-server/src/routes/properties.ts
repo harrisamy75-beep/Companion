@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, favoritePropertiesTable } from "@workspace/db";
+import { checkLimit, limitExceededResponse } from "../lib/plan-limits";
 
 const router: IRouter = Router();
 
@@ -40,6 +41,11 @@ router.post("/properties", async (req, res): Promise<void> => {
   const { propertyName, brand, location, category, tier, tags, notes, visitedAt } = req.body;
   if (!propertyName) {
     res.status(400).json({ error: "propertyName is required" });
+    return;
+  }
+  const limit = await checkLimit(userId, "favoriteProperties");
+  if (!limit.ok) {
+    res.status(402).json(limitExceededResponse(limit));
     return;
   }
   const [row] = await db

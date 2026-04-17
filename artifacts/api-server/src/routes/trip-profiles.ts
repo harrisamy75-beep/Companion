@@ -3,6 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { db, travelersTable, preferencesTable } from "@workspace/db";
 import { tripProfilesTable } from "@workspace/db";
 import { computeAge } from "./travelers";
+import { checkLimit, limitExceededResponse } from "../lib/plan-limits";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,11 @@ router.post("/trip-profiles", async (req, res): Promise<void> => {
   const { name, travelerIds, emoji, isDefault } = req.body;
   if (!name || typeof name !== "string") {
     res.status(400).json({ error: "name required" });
+    return;
+  }
+  const limit = await checkLimit(userId, "tripProfiles");
+  if (!limit.ok) {
+    res.status(402).json(limitExceededResponse(limit));
     return;
   }
   const [row] = await db
@@ -85,6 +91,11 @@ router.post("/trip-profiles/:id/duplicate", async (req, res): Promise<void> => {
     .from(tripProfilesTable)
     .where(and(eq(tripProfilesTable.id, id), eq(tripProfilesTable.userId, userId)));
   if (!source) { res.status(404).json({ error: "Profile not found" }); return; }
+  const limit = await checkLimit(userId, "tripProfiles");
+  if (!limit.ok) {
+    res.status(402).json(limitExceededResponse(limit));
+    return;
+  }
   const [copy] = await db
     .insert(tripProfilesTable)
     .values({

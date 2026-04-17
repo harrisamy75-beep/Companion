@@ -12,6 +12,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { X } from "lucide-react";
+import { Link } from "wouter";
+import { usePlan, isAtLimit } from "@/lib/use-plan";
 
 type TravelerType = "adult" | "child";
 
@@ -297,6 +299,8 @@ export default function TravelersPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { query: profilesQuery, create: createProfile, update: updateProfile, remove: removeProfile, duplicate: duplicateProfile } = useTripProfiles();
+  const { data: plan } = usePlan();
+  const travelersAtLimit = isAtLimit(plan, "travelers");
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -356,8 +360,16 @@ export default function TravelersPage() {
       });
     } else {
       createTraveler.mutate({ data: buildPayload() }, {
-        onSuccess: () => { setForm(EMPTY_FORM); setShowForm(false); invalidate(); toast({ title: "Traveler added" }); },
-        onError: () => toast({ title: "Failed to add", variant: "destructive" }),
+        onSuccess: () => { setForm(EMPTY_FORM); setShowForm(false); invalidate(); queryClient.invalidateQueries({ queryKey: ["plan"] }); toast({ title: "Traveler added" }); },
+        onError: (err: any) => {
+          const status = err?.status ?? err?.response?.status;
+          if (status === 402) {
+            toast({ title: "Plan limit reached", description: `Free plan allows ${plan?.limits.travelers ?? 2} travelers. Upgrade to Pro for unlimited.`, variant: "destructive" });
+            queryClient.invalidateQueries({ queryKey: ["plan"] });
+          } else {
+            toast({ title: "Failed to add", variant: "destructive" });
+          }
+        },
       });
     }
   };
@@ -386,6 +398,42 @@ export default function TravelersPage() {
           </p>
           <span className="section-rule" style={{ marginTop: "24px", display: "block" }} />
         </div>
+
+        {/* Plan limit banner */}
+        {travelersAtLimit && (
+          <div
+            style={{
+              padding: "16px 20px",
+              background: "white",
+              border: "1px solid #6B2737",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "16px",
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <span className="eyebrow" style={{ color: "#6B2737", display: "block", marginBottom: "4px" }}>
+                Plan limit reached
+              </span>
+              <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#5C5248" }}>
+                You're using all {plan?.limits.travelers} travelers on the Free plan.
+              </span>
+            </div>
+            <Link
+              href="/pricing"
+              style={{
+                fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "11px",
+                letterSpacing: "0.16em", textTransform: "uppercase",
+                color: "white", background: "#6B2737",
+                padding: "12px 20px", textDecoration: "none",
+              }}
+            >
+              Upgrade to Pro →
+            </Link>
+          </div>
+        )}
 
         {/* Trip profiles — slash breadcrumb */}
         <div>

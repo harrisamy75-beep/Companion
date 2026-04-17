@@ -5,6 +5,7 @@ import {
   CreateTravelerBody,
   UpdateTravelerParams,
 } from "@workspace/api-zod";
+import { checkLimit, limitExceededResponse } from "../lib/plan-limits";
 
 const router: IRouter = Router();
 
@@ -77,6 +78,11 @@ router.post("/travelers", async (req, res): Promise<void> => {
   const parsed = CreateTravelerBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const limit = await checkLimit(userId, "travelers");
+  if (!limit.ok) {
+    res.status(402).json(limitExceededResponse(limit));
     return;
   }
   const [row] = await db

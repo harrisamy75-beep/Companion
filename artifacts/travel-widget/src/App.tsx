@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import TravelersPage from "@/pages/travelers";
 import PreferencesPage from "@/pages/preferences";
 import StaysPage from "@/pages/stays";
+import PricingPage from "@/pages/pricing";
 import { OnboardingWizard } from "@/components/onboarding";
 import { useState, useEffect, useCallback } from "react";
 import { LogoutContext } from "@/lib/logout-context";
@@ -181,6 +182,7 @@ function AppRoutes() {
       <Route path="/travelers" component={TravelersPage} />
       <Route path="/stays" component={StaysPage} />
       <Route path="/preferences" component={PreferencesPage} />
+      <Route path="/pricing" component={PricingPage} />
       <Route component={NotFound} />
     </Switch>
   );

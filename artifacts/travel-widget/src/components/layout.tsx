@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/travelers", label: "Travelers" },
   { href: "/stays", label: "Stays" },
   { href: "/preferences", label: "Preferences" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
 export function Layout({ children }: LayoutProps) {

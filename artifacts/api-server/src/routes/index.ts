@@ -11,6 +11,7 @@ import loyaltyRouter from "./loyalty";
 import placesRouter from "./places";
 import personalityRouter from "./personality";
 import quickMatchRouter from "./quick-match";
+import planRouter from "./plan";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(loyaltyRouter);
 router.use(placesRouter);
 router.use(personalityRouter);
 router.use(quickMatchRouter);
+router.use(planRouter);
 
 export default router;

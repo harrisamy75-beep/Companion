@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, loyaltyProgramsTable } from "@workspace/db";
+import { checkLimit, limitExceededResponse } from "../lib/plan-limits";
 
 const router: IRouter = Router();
 
@@ -155,6 +156,11 @@ router.post("/loyalty", async (req, res): Promise<void> => {
   const { programName, brand, membershipNumber, tier, notes } = req.body;
   if (!programName || !brand) {
     res.status(400).json({ error: "programName and brand are required" });
+    return;
+  }
+  const limit = await checkLimit(userId, "loyaltyPrograms");
+  if (!limit.ok) {
+    res.status(402).json(limitExceededResponse(limit));
     return;
   }
   const [row] = await db
