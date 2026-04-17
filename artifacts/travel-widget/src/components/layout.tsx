@@ -105,7 +105,7 @@ export function Layout({ children }: LayoutProps) {
               onClick={logout}
               style={{
                 fontFamily: "'Raleway', sans-serif",
-                fontWeight: 300,
+                fontWeight: 400,
                 fontStyle: "italic" as const,
                 fontSize: "11px",
                 color: "rgba(255,255,255,0.35)",
@@ -126,7 +126,7 @@ export function Layout({ children }: LayoutProps) {
           <span
             style={{
               fontFamily: "'Raleway', sans-serif",
-              fontWeight: 300,
+              fontWeight: 400,
               fontStyle: "italic" as const,
               fontSize: "11px",
               color: "rgba(255,255,255,0.28)",

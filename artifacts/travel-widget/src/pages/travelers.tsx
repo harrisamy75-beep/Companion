@@ -124,7 +124,7 @@ function ProfileModal({ profiles, travelers, editingProfile, onClose, onCreate, 
           <h2 className="font-playfair" style={{ fontSize: "22px", fontWeight: 400, color: "#1C1C1C" }}>
             {editingProfile ? "Edit profile" : "New trip profile"}
           </h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279" }}><X size={16} /></button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248" }}><X size={16} /></button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <div style={{ display: "flex", gap: "16px" }}>
@@ -159,18 +159,18 @@ function ProfileModal({ profiles, travelers, editingProfile, onClose, onCreate, 
                     <label key={t.id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 0", borderBottom: "1px solid #E5E0D8", cursor: "pointer" }}>
                       <input type="checkbox" checked={checked} onChange={() => toggle(t.id)} style={{ accentColor: "#6B2737" }} />
                       <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#1C1C1C", flex: 1 }}>{t.name}</span>
-                      <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#8C8279", textTransform: "capitalize" }}>{t.travelerType}</span>
+                      <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#5C5248", textTransform: "capitalize" }}>{t.travelerType}</span>
                     </label>
                   );
                 })}
               </div>
-              <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#8C8279", marginTop: "8px" }}>{form.travelerIds.length} selected</p>
+              <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#5C5248", marginTop: "8px" }}>{form.travelerIds.length} selected</p>
             </div>
           )}
 
           <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
             <button type="button" onClick={onClose}
-              style={{ flex: 1, height: "44px", background: "transparent", border: "1px solid #E5E0D8", cursor: "pointer", fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#8C8279" }}>
+              style={{ flex: 1, height: "44px", background: "transparent", border: "1px solid #E5E0D8", cursor: "pointer", fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#5C5248" }}>
               Cancel
             </button>
             <button type="submit" disabled={!form.name.trim()} className="btn-wine"
@@ -236,7 +236,7 @@ function TravelerCard({ traveler, onEdit, onDelete, isEditing }: {
             >
               {traveler.name}
             </span>
-            <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#8C8279" }}>
+            <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248" }}>
               {isChild ? "Child" : "Adult"}
               {traveler.relationship ? ` · ${traveler.relationship}` : ""}
               {traveler.ageDisplay ? ` · ${traveler.ageDisplay}` : ""}
@@ -250,7 +250,7 @@ function TravelerCard({ traveler, onEdit, onDelete, isEditing }: {
                 Edit
               </button>
               <button onClick={onDelete}
-                style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#8C8279", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}>
+                style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#5C5248", background: "none", border: "none", cursor: "pointer", padding: "2px 0" }}>
                 Remove
               </button>
             </div>
@@ -259,17 +259,17 @@ function TravelerCard({ traveler, onEdit, onDelete, isEditing }: {
 
         {/* Tags as italic prose */}
         {foodTags.length > 0 && (
-          <p className="font-playfair" style={{ fontStyle: "italic", fontWeight: 300, fontSize: "15px", color: "#8C8279", marginTop: "10px" }}>
+          <p className="font-playfair" style={{ fontStyle: "italic", fontWeight: 400, fontSize: "15px", color: "#5C5248", marginTop: "10px" }}>
             Eats: {foodTags.join(", ")}
           </p>
         )}
         {actTags.length > 0 && (
-          <p className="font-playfair" style={{ fontStyle: "italic", fontWeight: 300, fontSize: "15px", color: "#8C8279", marginTop: "2px" }}>
+          <p className="font-playfair" style={{ fontStyle: "italic", fontWeight: 400, fontSize: "15px", color: "#5C5248", marginTop: "2px" }}>
             Does: {actTags.join(", ")}
           </p>
         )}
         {traveler.notes && (
-          <p style={{ fontFamily: "'Raleway', sans-serif", fontStyle: "italic", fontSize: "13px", color: "#8C8279", marginTop: "6px" }}>
+          <p style={{ fontFamily: "'Raleway', sans-serif", fontStyle: "italic", fontSize: "13px", color: "#5C5248", marginTop: "6px" }}>
             {traveler.notes}
           </p>
         )}
@@ -381,7 +381,7 @@ export default function TravelersPage() {
           <h1 className="font-playfair" style={{ fontWeight: 700, fontSize: "48px", color: "#1C1C1C", letterSpacing: "-0.01em" }}>
             Travel Party
           </h1>
-          <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#8C8279", marginTop: "6px" }}>
+          <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#5C5248", marginTop: "6px" }}>
             Every person in your group, captured once.
           </p>
           <span className="section-rule" style={{ marginTop: "24px", display: "block" }} />
@@ -400,7 +400,7 @@ export default function TravelersPage() {
                 fontStyle: activeProfileId === null ? "italic" : "normal",
                 fontWeight: 400,
                 fontSize: activeProfileId === null ? "17px" : "14px",
-                color: activeProfileId === null ? "#6B2737" : "#8C8279",
+                color: activeProfileId === null ? "#6B2737" : "#5C5248",
                 background: "none", border: "none", cursor: "pointer", padding: "0",
               }}
             >
@@ -422,7 +422,7 @@ export default function TravelersPage() {
                             fontStyle: isActive ? "italic" : "normal",
                             fontWeight: 400,
                             fontSize: isActive ? "17px" : "14px",
-                            color: isActive ? "#6B2737" : "#8C8279",
+                            color: isActive ? "#6B2737" : "#5C5248",
                             background: "none", border: "none", cursor: "pointer", padding: "0",
                           }}
                         >
@@ -483,16 +483,16 @@ export default function TravelersPage() {
               </div>
             ) : allTravelers.length === 0 ? (
               <div style={{ paddingTop: "20px" }}>
-                <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "20px", color: "#8C8279" }}>
+                <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "20px", color: "#5C5248" }}>
                   No travelers yet.
                 </p>
-                <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#8C8279", marginTop: "8px" }}>
+                <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#5C5248", marginTop: "8px" }}>
                   Add everyone in your party using the form.
                 </p>
               </div>
             ) : (
               <div style={{ paddingTop: "20px" }}>
-                <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "20px", color: "#8C8279" }}>
+                <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "20px", color: "#5C5248" }}>
                   No travelers in this profile.
                 </p>
                 <button
@@ -524,7 +524,7 @@ export default function TravelersPage() {
                 <h2 className="font-playfair" style={{ fontWeight: 400, fontSize: "22px", color: "#1C1C1C" }}>
                   {editingId !== null ? "Edit traveler" : "Add traveler"}
                 </h2>
-                <button onClick={cancelEdit} style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279" }}>
+                <button onClick={cancelEdit} style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248" }}>
                   <X size={16} />
                 </button>
               </div>
@@ -543,7 +543,7 @@ export default function TravelersPage() {
                           fontSize: "11px",
                           letterSpacing: "0.12em",
                           textTransform: "uppercase" as const,
-                          color: form.travelerType === t ? "#6B2737" : "#8C8279",
+                          color: form.travelerType === t ? "#6B2737" : "#5C5248",
                           background: "none", border: "none",
                           borderBottom: form.travelerType === t ? "2px solid #6B2737" : "2px solid transparent",
                           paddingBottom: "4px",

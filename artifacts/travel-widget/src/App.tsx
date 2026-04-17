@@ -118,7 +118,7 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
                 fontStyle: "italic",
                 fontWeight: 400,
                 fontSize: "17px",
-                color: "#8C8279",
+                color: "#5C5248",
                 lineHeight: 1,
                 margin: 0,
                 padding: 0,
@@ -158,9 +158,9 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
           <p
             style={{
               fontFamily: "'Raleway', sans-serif",
-              fontWeight: 300,
+              fontWeight: 400,
               fontSize: "11px",
-              color: "#8C8279",
+              color: "#5C5248",
               textAlign: "center",
               marginTop: "16px",
               letterSpacing: "0.03em",
@@ -198,7 +198,7 @@ function App() {
             className="min-h-screen flex items-center justify-center"
             style={{ background: "#F5F0E6" }}
           >
-            <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "20px", color: "#8C8279" }}>
+            <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "20px", color: "#5C5248" }}>
               Loading…
             </p>
           </div>

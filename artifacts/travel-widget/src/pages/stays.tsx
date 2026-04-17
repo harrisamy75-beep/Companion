@@ -73,7 +73,7 @@ const WHAT_YOU_LOVED_OPTIONS = [
 const TIER_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   loved: { label: "Loved", icon: <Heart size={13} fill="currentColor" />, color: "#6B2737" },
   liked: { label: "Liked", icon: <Star size={13} />, color: "#B8963E" },
-  avoid: { label: "Avoid", icon: <Minus size={13} />, color: "#8C8279" },
+  avoid: { label: "Avoid", icon: <Minus size={13} />, color: "#5C5248" },
 };
 
 /* ─── Hooks ─── */
@@ -196,12 +196,12 @@ function PropertyCard({ property, onEdit, onDelete }: {
 
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "4px" }}>
             {property.brand && (
-              <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#8C8279" }}>
+              <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248" }}>
                 {property.brand}
               </span>
             )}
             {property.location && (
-              <span className="font-playfair" style={{ fontStyle: "italic", fontSize: "13px", color: "#8C8279" }}>
+              <span className="font-playfair" style={{ fontStyle: "italic", fontSize: "13px", color: "#5C5248" }}>
                 {property.brand ? "· " : ""}{property.location}
               </span>
             )}
@@ -213,12 +213,12 @@ function PropertyCard({ property, onEdit, onDelete }: {
           </div>
 
           {property.tags && property.tags.length > 0 && (
-            <p className="font-playfair" style={{ fontStyle: "italic", fontWeight: 300, fontSize: "14px", color: "#8C8279", marginTop: "8px" }}>
+            <p className="font-playfair" style={{ fontStyle: "italic", fontWeight: 400, fontSize: "14px", color: "#5C5248", marginTop: "8px" }}>
               {property.tags.join(", ")}
             </p>
           )}
           {property.notes && (
-            <p style={{ fontFamily: "'Raleway', sans-serif", fontStyle: "italic", fontSize: "13px", color: "#8C8279", marginTop: "4px" }}>
+            <p style={{ fontFamily: "'Raleway', sans-serif", fontStyle: "italic", fontSize: "13px", color: "#5C5248", marginTop: "4px" }}>
               {property.notes}
             </p>
           )}
@@ -227,7 +227,7 @@ function PropertyCard({ property, onEdit, onDelete }: {
         {(hovered) && (
           <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
             <button onClick={onEdit} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6B2737", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
-            <button onClick={onDelete} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8C8279", background: "none", border: "none", cursor: "pointer" }}>Remove</button>
+            <button onClick={onDelete} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#5C5248", background: "none", border: "none", cursor: "pointer" }}>Remove</button>
           </div>
         )}
       </div>
@@ -373,7 +373,7 @@ function PlacesAutocomplete({ value, onChange, onSelect, placeholder }: PlacesAu
                   {r.name}
                 </div>
                 <div
-                  style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#8C8279", fontStyle: "italic", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                  style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248", fontStyle: "italic", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
                 >
                   {trimLocation(r.location)}
                 </div>
@@ -392,7 +392,7 @@ function PlacesAutocomplete({ value, onChange, onSelect, placeholder }: PlacesAu
             >
               <span
                 className="font-playfair"
-                style={{ fontStyle: "italic", fontSize: "14px", color: "#8C8279" }}
+                style={{ fontStyle: "italic", fontSize: "14px", color: "#5C5248" }}
               >
                 Add "{value}" as a custom property
               </span>
@@ -462,7 +462,7 @@ function PropertyForm({ initial, onSubmit, onCancel, loading }: {
       <Field label="Category">
         <div style={{ display: "flex", gap: "20px" }}>
           {["hotel", "resort", "villa", "restaurant"].map(c => (
-            <button key={c} type="button" onClick={() => set("category", c)} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase" as const, color: form.category === c ? "#6B2737" : "#8C8279", background: "none", border: "none", borderBottom: form.category === c ? "2px solid #6B2737" : "2px solid transparent", paddingBottom: "3px", cursor: "pointer" }}>
+            <button key={c} type="button" onClick={() => set("category", c)} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase" as const, color: form.category === c ? "#6B2737" : "#5C5248", background: "none", border: "none", borderBottom: form.category === c ? "2px solid #6B2737" : "2px solid transparent", paddingBottom: "3px", cursor: "pointer" }}>
               {c}
             </button>
           ))}
@@ -475,7 +475,7 @@ function PropertyForm({ initial, onSubmit, onCancel, loading }: {
           {["loved", "liked", "avoid"].map(t => {
             const m = TIER_LABELS[t];
             return (
-              <button key={t} type="button" onClick={() => set("tier", t)} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase" as const, color: form.tier === t ? m.color : "#8C8279", background: "none", border: "none", borderBottom: form.tier === t ? `2px solid ${m.color}` : "2px solid transparent", paddingBottom: "3px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <button key={t} type="button" onClick={() => set("tier", t)} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase" as const, color: form.tier === t ? m.color : "#5C5248", background: "none", border: "none", borderBottom: form.tier === t ? `2px solid ${m.color}` : "2px solid transparent", paddingBottom: "3px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
                 {m.icon} {m.label}
               </button>
             );
@@ -487,7 +487,7 @@ function PropertyForm({ initial, onSubmit, onCancel, loading }: {
       <Field label="What you loved">
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", paddingTop: "4px" }}>
           {WHAT_YOU_LOVED_OPTIONS.map(tag => (
-            <button key={tag} type="button" onClick={() => toggleTag(tag)} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "13px", color: form.tags.includes(tag) ? "#6B2737" : "#8C8279", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: form.tags.includes(tag) ? "underline" : "none", textDecorationColor: "#6B2737" }}>
+            <button key={tag} type="button" onClick={() => toggleTag(tag)} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "13px", color: form.tags.includes(tag) ? "#6B2737" : "#5C5248", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: form.tags.includes(tag) ? "underline" : "none", textDecorationColor: "#6B2737" }}>
               {tag}
             </button>
           ))}
@@ -499,7 +499,7 @@ function PropertyForm({ initial, onSubmit, onCancel, loading }: {
       </Field>
 
       <div style={{ display: "flex", gap: "12px" }}>
-        <button type="button" onClick={onCancel} style={{ flex: 1, height: "44px", background: "transparent", border: "1px solid #E5E0D8", cursor: "pointer", fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#8C8279" }}>
+        <button type="button" onClick={onCancel} style={{ flex: 1, height: "44px", background: "transparent", border: "1px solid #E5E0D8", cursor: "pointer", fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#5C5248" }}>
           Cancel
         </button>
         <button type="submit" disabled={loading} className="btn-wine" style={{ flex: 1, height: "44px" }}>
@@ -524,11 +524,11 @@ function LoyaltyRow({ program, onEdit, onDelete }: {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flexWrap: "wrap" }}>
           <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "15px", color: "#1C1C1C" }}>{program.brand}</span>
-          <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: "#8C8279" }}>{program.programName}</span>
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: "#5C5248" }}>{program.programName}</span>
           {program.tier && <span className="eyebrow">{program.tier}</span>}
         </div>
         {program.membershipNumber && (
-          <span style={{ fontFamily: "Menlo, monospace", fontSize: "12px", color: "#8C8279", display: "block", marginTop: "2px" }}>
+          <span style={{ fontFamily: "Menlo, monospace", fontSize: "12px", color: "#5C5248", display: "block", marginTop: "2px" }}>
             {program.membershipNumber}
           </span>
         )}
@@ -536,7 +536,7 @@ function LoyaltyRow({ program, onEdit, onDelete }: {
       {hovered && (
         <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
           <button onClick={onEdit} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6B2737", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
-          <button onClick={onDelete} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8C8279", background: "none", border: "none", cursor: "pointer" }}>Remove</button>
+          <button onClick={onDelete} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#5C5248", background: "none", border: "none", cursor: "pointer" }}>Remove</button>
         </div>
       )}
     </div>
@@ -582,7 +582,7 @@ function LoyaltyForm({ initial, onSubmit, onCancel, loading, suggested }: {
                   const isActive = form.brand === s.brand && form.programName === s.program;
                   return (
                     <button key={s.brand + s.program} type="button" onClick={() => prefill(s)}
-                      style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: isActive ? "#6B2737" : "#8C8279", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: isActive ? "underline" : "none", textDecorationColor: "#6B2737" }}>
+                      style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: isActive ? "#6B2737" : "#5C5248", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: isActive ? "underline" : "none", textDecorationColor: "#6B2737" }}>
                       {s.brand}
                     </button>
                   );
@@ -619,7 +619,7 @@ function LoyaltyForm({ initial, onSubmit, onCancel, loading, suggested }: {
       </Field>
 
       <div style={{ display: "flex", gap: "12px" }}>
-        <button type="button" onClick={onCancel} style={{ flex: 1, height: "44px", background: "transparent", border: "1px solid #E5E0D8", cursor: "pointer", fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#8C8279" }}>
+        <button type="button" onClick={onCancel} style={{ flex: 1, height: "44px", background: "transparent", border: "1px solid #E5E0D8", cursor: "pointer", fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#5C5248" }}>
           Cancel
         </button>
         <button type="submit" disabled={loading} className="btn-wine" style={{ flex: 1, height: "44px" }}>
@@ -761,7 +761,7 @@ export default function StaysPage() {
           <h1 className="font-playfair" style={{ fontWeight: 700, fontSize: "48px", color: "#1C1C1C", letterSpacing: "-0.01em" }}>
             Stays
           </h1>
-          <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#8C8279", marginTop: "6px" }}>
+          <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#5C5248", marginTop: "6px" }}>
             Favourite properties and loyalty programs, in one place.
           </p>
           <span className="section-rule" style={{ marginTop: "24px", display: "block" }} />
@@ -787,7 +787,7 @@ export default function StaysPage() {
               <span key={f} style={{ display: "inline-flex", alignItems: "center" }}>
                 {i > 0 && <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#E5E0D8", margin: "0 10px" }}>/</span>}
                 <button onClick={() => setTierFilter(f)}
-                  style={{ fontFamily: tierFilter === f ? "'Playfair Display', serif" : "'Raleway', sans-serif", fontStyle: tierFilter === f ? "italic" : "normal", fontWeight: 400, fontSize: tierFilter === f ? "17px" : "14px", color: tierFilter === f ? "#6B2737" : "#8C8279", background: "none", border: "none", cursor: "pointer", padding: 0, textTransform: "capitalize" as const }}>
+                  style={{ fontFamily: tierFilter === f ? "'Playfair Display', serif" : "'Raleway', sans-serif", fontStyle: tierFilter === f ? "italic" : "normal", fontWeight: 400, fontSize: tierFilter === f ? "17px" : "14px", color: tierFilter === f ? "#6B2737" : "#5C5248", background: "none", border: "none", cursor: "pointer", padding: 0, textTransform: "capitalize" as const }}>
                   {f}
                 </button>
               </span>
@@ -801,7 +801,7 @@ export default function StaysPage() {
                 <h3 className="font-playfair" style={{ fontWeight: 400, fontSize: "20px", color: "#1C1C1C" }}>
                   {editingProp ? "Edit property" : "Add property"}
                 </h3>
-                <button onClick={() => { setShowPropForm(false); setEditingProp(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279" }}><X size={16} /></button>
+                <button onClick={() => { setShowPropForm(false); setEditingProp(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248" }}><X size={16} /></button>
               </div>
               <PropertyForm
                 initial={editingProp ? { propertyName: editingProp.propertyName, brand: editingProp.brand ?? "", location: editingProp.location ?? "", category: editingProp.category ?? "hotel", tier: editingProp.tier ?? "liked", tags: editingProp.tags ?? [], notes: editingProp.notes ?? "", visitedAt: editingProp.visitedAt ?? "" } : undefined}
@@ -824,7 +824,7 @@ export default function StaysPage() {
               />
             ))
           ) : (
-            <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#8C8279", paddingTop: "16px" }}>
+            <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#5C5248", paddingTop: "16px" }}>
               {tierFilter === "all" ? "No properties saved yet." : `No ${tierFilter} properties.`}
             </p>
           )}
@@ -862,7 +862,7 @@ export default function StaysPage() {
               <button
                 onClick={() => setPendingSuggestion(null)}
                 aria-label="Dismiss suggestion"
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279", padding: 0, display: "flex" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248", padding: 0, display: "flex" }}
               >
                 <X size={14} />
               </button>
@@ -893,7 +893,7 @@ export default function StaysPage() {
                 <h3 className="font-playfair" style={{ fontWeight: 400, fontSize: "20px", color: "#1C1C1C" }}>
                   {editingLoy ? "Edit program" : "Add program"}
                 </h3>
-                <button onClick={() => { setShowLoyForm(false); setEditingLoy(null); setPrefilledLoy(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279" }}><X size={16} /></button>
+                <button onClick={() => { setShowLoyForm(false); setEditingLoy(null); setPrefilledLoy(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248" }}><X size={16} /></button>
               </div>
               <LoyaltyForm
                 initial={
@@ -928,7 +928,7 @@ export default function StaysPage() {
               ))}
             </div>
           ) : (
-            <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#8C8279" }}>
+            <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#5C5248" }}>
               No programs added yet.
             </p>
           )}

@@ -106,7 +106,7 @@ function ReviewMatchCard() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleMatch()}
           placeholder="Try: Rosewood Miramar"
-          style={{ flex: 1, background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.25)", color: "white", fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "14px", padding: "8px 0", outline: "none", caretColor: "#B8963E" }}
+          style={{ flex: 1, background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.25)", color: "white", fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "14px", padding: "8px 0", outline: "none", caretColor: "#B8963E" }}
         />
         <button
           onClick={handleMatch}
@@ -120,7 +120,7 @@ function ReviewMatchCard() {
       {/* Result */}
       {loading && (
         <div style={{ textAlign: "center", paddingTop: "16px" }}>
-          <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "14px", color: "rgba(255,255,255,0.4)", animation: "pulse 1.5s ease-in-out infinite" }}>Matching against your profile…</p>
+          <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "14px", color: "rgba(255,255,255,0.4)", animation: "pulse 1.5s ease-in-out infinite" }}>Matching against your profile…</p>
         </div>
       )}
 
@@ -129,7 +129,7 @@ function ReviewMatchCard() {
           <div style={{ lineHeight: 1 }}>
             <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "72px", color: "white" }}>{result.score}</span>
           </div>
-          <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "12px", color: "rgba(255,255,255,0.5)", marginTop: "6px", letterSpacing: "0.04em" }}>
+          <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "12px", color: "rgba(255,255,255,0.5)", marginTop: "6px", letterSpacing: "0.04em" }}>
             / 100 match for your travel style
           </p>
           {result.headline && (
@@ -150,7 +150,7 @@ function ReviewMatchCard() {
       )}
 
       {!result && !loading && (
-        <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "13px", color: "rgba(255,255,255,0.3)" }}>
+        <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "13px", color: "rgba(255,255,255,0.3)" }}>
           Enter any hotel, resort, or destination above.
         </p>
       )}
@@ -247,7 +247,7 @@ export default function Home() {
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 700, fontSize: "48px", color: "#1C1C1C", letterSpacing: "-0.01em", lineHeight: 1.1 }}>
             {getGreeting()}, {userName}.
           </h1>
-          <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 300, fontSize: "18px", color: "#8C8279", marginTop: "10px", lineHeight: 1.5 }}>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 400, fontSize: "18px", color: "#5C5248", marginTop: "10px", lineHeight: 1.5 }}>
             {subtitle}
           </p>
           <div style={{ height: "1px", background: "#E5E0D8", marginTop: "28px" }} />
@@ -266,20 +266,20 @@ export default function Home() {
           {tripProfiles.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px 10px", marginBottom: "20px" }}>
               <button onClick={() => setActiveProfileId(null)}
-                style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "17px", color: activeProfileId === null ? "#1C1C1C" : "#8C8279", background: "none", border: "none", cursor: "pointer", padding: 0, borderBottom: activeProfileId === null ? "1px solid #1C1C1C" : "1px solid transparent" }}>
+                style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "17px", color: activeProfileId === null ? "#1C1C1C" : "#5C5248", background: "none", border: "none", cursor: "pointer", padding: 0, borderBottom: activeProfileId === null ? "1px solid #1C1C1C" : "1px solid transparent" }}>
                 All travelers
               </button>
               {tripProfiles.map((p) => (
                 <>
                   <span key={`sep-${p.id}`} style={{ color: "#DDD8CE", fontFamily: "'Raleway', sans-serif" }}>/</span>
                   <button key={p.id} onClick={() => setActiveProfileId(p.id)}
-                    style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "17px", color: activeProfileId === p.id ? "#1C1C1C" : "#8C8279", background: "none", border: "none", cursor: "pointer", padding: 0, borderBottom: activeProfileId === p.id ? "1px solid #1C1C1C" : "1px solid transparent" }}>
+                    style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "17px", color: activeProfileId === p.id ? "#1C1C1C" : "#5C5248", background: "none", border: "none", cursor: "pointer", padding: 0, borderBottom: activeProfileId === p.id ? "1px solid #1C1C1C" : "1px solid transparent" }}>
                     {p.name}
                   </button>
                 </>
               ))}
               <span style={{ color: "#DDD8CE", fontFamily: "'Raleway', sans-serif" }}>/</span>
-              <Link href="/travelers" style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "13px", color: "#8C8279", textDecoration: "none" }}>+ New</Link>
+              <Link href="/travelers" style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "13px", color: "#5C5248", textDecoration: "none" }}>+ New</Link>
             </div>
           )}
 
@@ -292,14 +292,14 @@ export default function Home() {
                 ))}
               </div>
               {autofillLine && (
-                <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "13px", color: "#8C8279" }}>
+                <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "13px", color: "#5C5248" }}>
                   {autofillLine}
                 </p>
               )}
             </>
           ) : (
             <div>
-              <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#8C8279", marginBottom: "14px" }}>
+              <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#5C5248", marginBottom: "14px" }}>
                 No travelers added yet.
               </p>
               <Link href="/travelers" className="link-wine" style={{ fontSize: "13px" }}>
@@ -323,12 +323,12 @@ export default function Home() {
                   {personality}
                 </p>
               ) : (
-                <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "14px", color: "#8C8279", marginBottom: "18px" }}>
+                <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "14px", color: "#5C5248", marginBottom: "18px" }}>
                   {travelStyles.length === 0 ? "No travel styles set yet." : "Complete onboarding to generate your personality."}
                 </p>
               )}
               {topStyles.length > 0 && (
-                <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "14px", color: "#8C8279", lineHeight: 1.8, marginBottom: "18px" }}>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "14px", color: "#5C5248", lineHeight: 1.8, marginBottom: "18px" }}>
                   {topStyles.map(getStyleLabel).join(", ")}
                 </p>
               )}
@@ -350,13 +350,13 @@ export default function Home() {
                             {lp.programName || lp.brand}
                           </span>
                           {lp.tier && (
-                            <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "12px", color: "#B8963E", marginLeft: "8px" }}>
+                            <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "12px", color: "#B8963E", marginLeft: "8px" }}>
                               {lp.tier}
                             </span>
                           )}
                         </div>
                         {lp.membershipNumber && (
-                          <span style={{ fontFamily: "'Courier New', monospace", fontSize: "12px", color: "#8C8279" }}>
+                          <span style={{ fontFamily: "'Courier New', monospace", fontSize: "12px", color: "#5C5248" }}>
                             {maskNumber(lp.membershipNumber)}
                           </span>
                         )}
@@ -364,7 +364,7 @@ export default function Home() {
                     ))}
                   </div>
                   {extraLoyalty > 0 && (
-                    <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#8C8279", marginBottom: "12px" }}>+ {extraLoyalty} more</p>
+                    <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248", marginBottom: "12px" }}>+ {extraLoyalty} more</p>
                   )}
                   <Link href="/stays" className="link-wine" style={{ fontSize: "13px" }}>
                     Manage programs →
@@ -372,7 +372,7 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "14px", color: "#8C8279", marginBottom: "16px" }}>
+                  <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "14px", color: "#5C5248", marginBottom: "16px" }}>
                     No programs saved yet.
                   </p>
                   <Link href="/stays" className="link-wine" style={{ fontSize: "13px" }}>
@@ -400,7 +400,7 @@ export default function Home() {
                             {p.propertyName}
                           </span>
                           {(p.location || p.brand) && (
-                            <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "12px", color: "#8C8279" }}>
+                            <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "12px", color: "#5C5248" }}>
                               {[p.brand, p.location].filter(Boolean).join(" · ")}
                             </span>
                           )}
@@ -414,7 +414,7 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "14px", color: "#8C8279", marginBottom: "16px" }}>
+                  <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "14px", color: "#5C5248", marginBottom: "16px" }}>
                     No properties saved yet.
                   </p>
                   <Link href="/stays" className="link-wine" style={{ fontSize: "13px" }}>
@@ -451,7 +451,7 @@ export default function Home() {
                   <div style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: isActive ? 700 : 400, fontSize: "18px", color: isActive ? "#6B2737" : "#1C1C1C", marginBottom: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {p.emoji} {p.name}
                   </div>
-                  <div style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "12px", color: "#8C8279" }}>
+                  <div style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "12px", color: "#5C5248" }}>
                     {partyDesc || "No travelers assigned"}
                   </div>
                 </button>
@@ -459,7 +459,7 @@ export default function Home() {
             })}
             <Link href="/travelers">
               <div style={{ width: "200px", minWidth: "200px", height: "100px", border: "1px dashed #DDD8CE", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "13px", color: "#8C8279" }}>+ Create a profile</span>
+                <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "13px", color: "#5C5248" }}>+ Create a profile</span>
               </div>
             </Link>
           </div>
@@ -475,9 +475,9 @@ export default function Home() {
             <div key={action.href} style={{ display: "flex", alignItems: "center" }}>
               {i > 0 && <div style={{ width: "1px", height: "14px", background: "#DDD8CE", margin: "0 20px" }} />}
               <Link href={action.href}
-                style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#8C8279", textDecoration: "none", transition: "color 0.15s" }}
+                style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#5C5248", textDecoration: "none", transition: "color 0.15s" }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = "#6B2737")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#8C8279")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#5C5248")}
               >
                 {action.label}
               </Link>

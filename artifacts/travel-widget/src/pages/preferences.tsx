@@ -93,7 +93,7 @@ export default function PreferencesPage() {
               <h1 className="font-playfair" style={{ fontWeight: 700, fontSize: "48px", color: "#1C1C1C", letterSpacing: "-0.01em" }}>
                 Travel Preferences
               </h1>
-              <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#8C8279", marginTop: "6px" }}>
+              <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#5C5248", marginTop: "6px" }}>
                 Save once, auto-fill everywhere.
               </p>
             </div>
@@ -120,7 +120,7 @@ export default function PreferencesPage() {
             {/* Travel Style */}
             <section>
               <p className="eyebrow" style={{ marginBottom: "20px" }}>Travel Style</p>
-              <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#8C8279", marginBottom: "28px", lineHeight: 1.7 }}>
+              <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#5C5248", marginBottom: "28px", lineHeight: 1.7 }}>
                 Select all that describe how you like to travel.
               </p>
               <Controller
@@ -134,7 +134,7 @@ export default function PreferencesPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "36px" }}>
                       {TRAVEL_STYLE_GROUPS.map(group => (
                         <div key={group.label}>
-                          <p className="eyebrow" style={{ color: "#8C8279", marginBottom: "16px", letterSpacing: "0.16em" }}>
+                          <p className="eyebrow" style={{ color: "#5C5248", marginBottom: "16px", letterSpacing: "0.16em" }}>
                             {group.label}
                           </p>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 28px" }}>
@@ -149,7 +149,7 @@ export default function PreferencesPage() {
                                     fontFamily: "'Raleway', sans-serif",
                                     fontWeight: 400,
                                     fontSize: "15px",
-                                    color: isSelected ? "#6B2737" : "#8C8279",
+                                    color: isSelected ? "#6B2737" : "#5C5248",
                                     background: "none",
                                     border: "none",
                                     borderBottom: isSelected ? "2px solid #6B2737" : "2px solid transparent",

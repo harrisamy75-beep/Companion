@@ -29,13 +29,13 @@ interface PlaceResult {
 const TIER_META = {
   loved: { label: "Loved", icon: <Heart size={12} fill="currentColor" />, color: "#6B2737" },
   liked: { label: "Liked", icon: <Star size={12} />, color: "#B8963E" },
-  avoid: { label: "Avoid", icon: <Minus size={12} />, color: "#8C8279" },
+  avoid: { label: "Avoid", icon: <Minus size={12} />, color: "#5C5248" },
 };
 
 /* ─── eyebrow label helper ─── */
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#B8963E", display: "block", marginBottom: "8px" }}>
+    <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#A07840", display: "block", marginBottom: "8px" }}>
       {children}
     </span>
   );
@@ -103,7 +103,7 @@ function MiniPlacesSearch({ value, onChange, onSelect }: {
             <div key={r.placeId} onMouseDown={() => pick(r)} onMouseEnter={() => setActiveIdx(i)}
               style={{ padding: "12px 16px", cursor: "pointer", background: activeIdx === i ? "#F5F0E6" : "white", borderBottom: i < results.length - 1 ? "1px solid #F0EBE3" : "none" }}>
               <div className="font-playfair" style={{ fontSize: "14px", color: "#1C1C1C", fontWeight: 500 }}>{r.name}</div>
-              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#8C8279", fontStyle: "italic", marginTop: "2px" }}>{trimLoc(r.location ?? r.formatted_address ?? "")}</div>
+              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#5C5248", fontStyle: "italic", marginTop: "2px" }}>{trimLoc(r.location ?? r.formatted_address ?? "")}</div>
             </div>
           ))}
         </div>
@@ -148,7 +148,7 @@ function Step1({ userId, travelers, setTravelers }: {
       <h2 style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 700, fontSize: "36px", color: "#1C1C1C", letterSpacing: "-0.01em", marginBottom: "10px" }}>
         First, tell us about your travel party.
       </h2>
-      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "16px", color: "#8C8279", marginBottom: "32px", lineHeight: 1.6 }}>
+      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "16px", color: "#5C5248", marginBottom: "32px", lineHeight: 1.6 }}>
         Add everyone you typically travel with — you, your partner, kids, whoever.
       </p>
 
@@ -159,7 +159,7 @@ function Step1({ userId, travelers, setTravelers }: {
         </div>
         <div>
           <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "14px", color: "#1C1C1C" }}>{userId}</span>
-          <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#8C8279", marginLeft: "10px" }}>Adult · Self</span>
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248", marginLeft: "10px" }}>Adult · Self</span>
         </div>
       </div>
 
@@ -172,12 +172,12 @@ function Step1({ userId, travelers, setTravelers }: {
             </div>
             <div>
               <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "14px", color: "#1C1C1C" }}>{t.name}</span>
-              <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#8C8279", marginLeft: "10px" }}>
+              <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248", marginLeft: "10px" }}>
                 {t.type === "adult" ? `Adult · ${t.relationship}` : `Child${ageFrom(t.birthDate) ? ` · ${ageFrom(t.birthDate)}` : ""}`}
               </span>
             </div>
           </div>
-          <button onClick={() => removeAt(i)} style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279", fontSize: "18px", lineHeight: 1 }}>×</button>
+          <button onClick={() => removeAt(i)} style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248", fontSize: "18px", lineHeight: 1 }}>×</button>
         </div>
       ))}
 
@@ -190,7 +190,7 @@ function Step1({ userId, travelers, setTravelers }: {
               onMouseEnter={e => (e.currentTarget.style.background = "#F5F0E6")}
               onMouseLeave={e => (e.currentTarget.style.background = "white")}
             >
-              <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "14px", color: "#8C8279" }}>
+              <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "14px", color: "#5C5248" }}>
                 {type === "adult" ? "+ Add an adult" : "+ Add a child"}
               </span>
             </button>
@@ -212,7 +212,7 @@ function Step1({ userId, travelers, setTravelers }: {
                 <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
                   {["partner", "friend", "parent", "other"].map(r => (
                     <button key={r} type="button" onClick={() => setFormRelationship(r)}
-                      style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", fontWeight: 400, color: formRelationship === r ? "#6B2737" : "#8C8279", background: "none", border: "none", borderBottom: formRelationship === r ? "2px solid #6B2737" : "2px solid transparent", paddingBottom: "3px", cursor: "pointer", textTransform: "capitalize" }}>
+                      style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", fontWeight: 400, color: formRelationship === r ? "#6B2737" : "#5C5248", background: "none", border: "none", borderBottom: formRelationship === r ? "2px solid #6B2737" : "2px solid transparent", paddingBottom: "3px", cursor: "pointer", textTransform: "capitalize" }}>
                       {r}
                     </button>
                   ))}
@@ -227,7 +227,7 @@ function Step1({ userId, travelers, setTravelers }: {
             )}
             <div style={{ display: "flex", gap: "10px" }}>
               <button type="button" onClick={handleAdd} disabled={!formName.trim()} className="btn-wine" style={{ height: "40px", width: "100px" }}>Add</button>
-              <button type="button" onClick={() => { setAddForm(null); setFormName(""); }} style={{ height: "40px", padding: "0 16px", background: "transparent", border: "1px solid #E5E0D8", cursor: "pointer", fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "13px", color: "#8C8279" }}>
+              <button type="button" onClick={() => { setAddForm(null); setFormName(""); }} style={{ height: "40px", padding: "0 16px", background: "transparent", border: "1px solid #E5E0D8", cursor: "pointer", fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "13px", color: "#5C5248" }}>
                 Cancel
               </button>
             </div>
@@ -237,7 +237,7 @@ function Step1({ userId, travelers, setTravelers }: {
 
       {!addForm && (
         <div style={{ textAlign: "center", marginTop: "20px" }}>
-          <button onClick={() => setTravelers([])} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "13px", color: "#8C8279", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", textDecorationColor: "#DDD8CE" }}>
+          <button onClick={() => setTravelers([])} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "13px", color: "#5C5248", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", textDecorationColor: "#DDD8CE" }}>
             {travelers.length === 0 ? "Just me for now" : "Clear all"}
           </button>
         </div>
@@ -260,14 +260,14 @@ function Step2({ styles, setStyles }: { styles: string[]; setStyles: React.Dispa
       <h2 style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 700, fontSize: "36px", color: "#1C1C1C", letterSpacing: "-0.01em", marginBottom: "10px" }}>
         Your travel style.
       </h2>
-      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "16px", color: "#8C8279", marginBottom: "32px", lineHeight: 1.6 }}>
+      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "16px", color: "#5C5248", marginBottom: "32px", lineHeight: 1.6 }}>
         Select everything that feels like you. You can always change this.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
         {TRAVEL_STYLE_GROUPS.map(group => (
           <div key={group.label}>
-            <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#B8963E", marginBottom: "14px" }}>
+            <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#A07840", marginBottom: "14px" }}>
               {group.label}
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 24px" }}>
@@ -275,7 +275,7 @@ function Step2({ styles, setStyles }: { styles: string[]; setStyles: React.Dispa
                 const on = styles.includes(style.id);
                 return (
                   <button key={`${group.label}-${style.id}`} type="button" onClick={() => toggle(style.id)}
-                    style={{ fontFamily: "'Playfair Display', serif", fontWeight: 400, fontSize: "15px", color: on ? "#6B2737" : "#8C8279", background: "none", border: "none", borderBottom: on ? "2px solid #6B2737" : "2px solid transparent", paddingBottom: "3px", cursor: "pointer", transition: "color 0.15s, border-color 0.15s", lineHeight: 2.2 }}>
+                    style={{ fontFamily: "'Playfair Display', serif", fontWeight: 400, fontSize: "15px", color: on ? "#6B2737" : "#5C5248", background: "none", border: "none", borderBottom: on ? "2px solid #6B2737" : "2px solid transparent", paddingBottom: "3px", cursor: "pointer", transition: "color 0.15s, border-color 0.15s", lineHeight: 2.2 }}>
                     {style.label}
                   </button>
                 );
@@ -287,7 +287,7 @@ function Step2({ styles, setStyles }: { styles: string[]; setStyles: React.Dispa
 
       {/* Live counter */}
       <div style={{ textAlign: "right", marginTop: "24px" }}>
-        <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "13px", color: "#8C8279" }}>
+        <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "13px", color: "#5C5248" }}>
           {uniqueSelected.length > 0 ? `${uniqueSelected.length} selected` : "Select anything that resonates"}
         </span>
       </div>
@@ -326,7 +326,7 @@ function Step3({ properties, setProperties }: {
       <h2 style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 700, fontSize: "36px", color: "#1C1C1C", letterSpacing: "-0.01em", marginBottom: "10px" }}>
         Places you've loved.
       </h2>
-      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "16px", color: "#8C8279", marginBottom: "32px", lineHeight: 1.6 }}>
+      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "16px", color: "#5C5248", marginBottom: "32px", lineHeight: 1.6 }}>
         Hotels, resorts, restaurants — anywhere that set the standard for you.
       </p>
 
@@ -340,15 +340,15 @@ function Step3({ properties, setProperties }: {
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <span style={{ color: tm.color, display: "flex", alignItems: "center" }}>{tm.icon}</span>
                   <span className="font-playfair" style={{ fontWeight: 500, fontSize: "15px", color: "#1C1C1C" }}>{p.propertyName}</span>
-                  {p.location && <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#8C8279", fontStyle: "italic" }}>{p.location}</span>}
+                  {p.location && <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248", fontStyle: "italic" }}>{p.location}</span>}
                 </div>
-                <button onClick={() => setProperties(ps => ps.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", cursor: "pointer", color: "#8C8279", fontSize: "16px" }}>×</button>
+                <button onClick={() => setProperties(ps => ps.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248", fontSize: "16px" }}>×</button>
               </div>
             );
           })}
 
           {/* Encouraging message */}
-          <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "13px", color: "#8C8279", marginTop: "4px", animation: "obFadeIn 0.4s ease both" }}>
+          <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "13px", color: "#5C5248", marginTop: "4px", animation: "obFadeIn 0.4s ease both" }}>
             Great — we'll use this to calibrate your review matches.
           </p>
         </div>
@@ -384,7 +384,7 @@ function Step3({ properties, setProperties }: {
                 const tm = TIER_META[t];
                 return (
                   <button key={t} type="button" onClick={() => setF("tier", t)}
-                    style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: form.tier === t ? tm.color : "#8C8279", background: "none", border: "none", borderBottom: form.tier === t ? `2px solid ${tm.color}` : "2px solid transparent", paddingBottom: "3px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: form.tier === t ? tm.color : "#5C5248", background: "none", border: "none", borderBottom: form.tier === t ? `2px solid ${tm.color}` : "2px solid transparent", paddingBottom: "3px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
                     {tm.icon} {tm.label}
                   </button>
                 );
@@ -407,7 +407,7 @@ function Step3({ properties, setProperties }: {
 
       <div style={{ marginTop: showForm ? "16px" : "12px" }}>
         <button onClick={() => { setProperties([]); setShowForm(true); }}
-          style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "13px", color: "#8C8279", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", textDecorationColor: "#DDD8CE" }}>
+          style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "13px", color: "#5C5248", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", textDecorationColor: "#DDD8CE" }}>
           Skip for now
         </button>
       </div>
@@ -459,8 +459,8 @@ function Step4({ userId, travelers, travelStyles, properties }: {
 
   const SummaryRow = ({ label, value }: { label: string; value: string }) => (
     <div style={{ paddingTop: "16px" }}>
-      <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#B8963E", display: "block", marginBottom: "6px" }}>{label}</span>
-      <span className="font-playfair" style={{ fontStyle: "italic", fontSize: "15px", color: "#8C8279" }}>{value}</span>
+      <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#A07840", display: "block", marginBottom: "6px" }}>{label}</span>
+      <span className="font-playfair" style={{ fontStyle: "italic", fontSize: "15px", color: "#5C5248" }}>{value}</span>
     </div>
   );
 
@@ -469,7 +469,7 @@ function Step4({ userId, travelers, travelStyles, properties }: {
       <h2 style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 700, fontSize: "36px", color: "#1C1C1C", letterSpacing: "-0.01em", marginBottom: "10px" }}>
         Your profile is ready.
       </h2>
-      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "16px", color: "#8C8279", marginBottom: "32px", lineHeight: 1.6 }}>
+      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "16px", color: "#5C5248", marginBottom: "32px", lineHeight: 1.6 }}>
         Here's what we know about you so far.
       </p>
 
@@ -481,7 +481,7 @@ function Step4({ userId, travelers, travelStyles, properties }: {
           </div>
           <div>
             <span className="font-playfair" style={{ fontWeight: 700, fontSize: "20px", color: "#1C1C1C" }}>{userId}</span>
-            <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#8C8279", marginLeft: "10px" }}>Adult · Self</span>
+            <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248", marginLeft: "10px" }}>Adult · Self</span>
           </div>
         </div>
 
@@ -500,7 +500,7 @@ function Step4({ userId, travelers, travelStyles, properties }: {
       {/* Personality block */}
       <div style={{ textAlign: "center", minHeight: "80px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         {loading ? (
-          <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "15px", color: "#8C8279", animation: "obPulse 1.5s ease-in-out infinite" }}>
+          <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "15px", color: "#5C5248", animation: "obPulse 1.5s ease-in-out infinite" }}>
             Crafting your travel profile…
           </p>
         ) : personality ? (
@@ -613,7 +613,7 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
           ))}
         </div>
 
-        <button onClick={handleSkip} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "11px", color: "#8C8279", background: "none", border: "none", cursor: "pointer", letterSpacing: "0.03em" }}>
+        <button onClick={handleSkip} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "11px", color: "#5C5248", background: "none", border: "none", cursor: "pointer", letterSpacing: "0.03em" }}>
           Skip setup
         </button>
       </div>
@@ -635,7 +635,7 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
       {/* Bottom navigation */}
       <div style={{ flexShrink: 0, padding: "20px 36px 36px", display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: "592px", width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         {step > 1 ? (
-          <button onClick={handleBack} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "14px", color: "#8C8279", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          <button onClick={handleBack} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "14px", color: "#5C5248", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             Back
           </button>
         ) : <div />}
@@ -649,7 +649,7 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
             fontSize: "11px",
             letterSpacing: "0.14em",
             textTransform: "uppercase",
-            background: saving ? "#8C8279" : "#6B2737",
+            background: saving ? "#5C5248" : "#6B2737",
             color: "white",
             border: "none",
             borderRadius: 0,
