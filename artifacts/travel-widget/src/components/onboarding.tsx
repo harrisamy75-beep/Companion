@@ -69,7 +69,10 @@ function MiniPlacesSearch({ value, onChange, onSelect }: {
 
   const pick = (r: PlaceResult) => { onSelect(r); setOpen(false); setResults([]); };
 
-  const trimLoc = (raw: string) => raw.split(",").map(s => s.trim()).filter(Boolean).slice(-2).join(", ");
+  const trimLoc = (raw: string | undefined | null) => {
+    if (!raw) return "";
+    return raw.split(",").map(s => s.trim()).filter(Boolean).slice(-2).join(", ");
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -96,11 +99,11 @@ function MiniPlacesSearch({ value, onChange, onSelect }: {
       />
       {open && results.length > 0 && (
         <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "white", border: "1px solid #E5E0D8", borderRadius: "2px", zIndex: 50 }}>
-          {results.map((r, i) => (
+          {results.filter(r => r && r.name).map((r: any, i) => (
             <div key={r.placeId} onMouseDown={() => pick(r)} onMouseEnter={() => setActiveIdx(i)}
               style={{ padding: "12px 16px", cursor: "pointer", background: activeIdx === i ? "#F5F0E6" : "white", borderBottom: i < results.length - 1 ? "1px solid #F0EBE3" : "none" }}>
               <div className="font-playfair" style={{ fontSize: "14px", color: "#1C1C1C", fontWeight: 500 }}>{r.name}</div>
-              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#8C8279", fontStyle: "italic", marginTop: "2px" }}>{trimLoc(r.location)}</div>
+              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#8C8279", fontStyle: "italic", marginTop: "2px" }}>{trimLoc(r.location ?? r.formatted_address ?? "")}</div>
             </div>
           ))}
         </div>
