@@ -89,7 +89,7 @@ router.get("/summary", async (req, res): Promise<void> => {
   const children = travelersRows.filter((t) => t.travelerType === "child");
 
   res.json({
-    userName: userId,
+    userName: req.session.displayName ?? userId,
     travelers: travelersRows,
     children,
     preferences: preferences ?? { id: 0 },

@@ -17,7 +17,7 @@ const queryClient = new QueryClient();
 type AuthState =
   | { status: "loading" }
   | { status: "needs-name" }
-  | { status: "ready"; userId: string };
+  | { status: "ready"; userId: string; displayName: string };
 
 function useSessionUser() {
   const [auth, setAuth] = useState<AuthState>({ status: "loading" });
@@ -33,7 +33,11 @@ function useSessionUser() {
       if (!data.userId || data.userId === "default-user") {
         setAuth({ status: "needs-name" });
       } else {
-        setAuth({ status: "ready", userId: data.userId });
+        setAuth({
+          status: "ready",
+          userId: data.userId,
+          displayName: data.displayName || data.userId,
+        });
         setShowOnboarding(needsOnboarding());
       }
     } catch {
@@ -48,10 +52,15 @@ function useSessionUser() {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: name }),
+      body: JSON.stringify({ name }),
     });
     if (res.ok) {
-      setAuth({ status: "ready", userId: name });
+      const data = await res.json();
+      setAuth({
+        status: "ready",
+        userId: data.userId,
+        displayName: data.displayName || name,
+      });
       setShowOnboarding(needsOnboarding());
     }
   }, []);

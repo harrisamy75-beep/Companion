@@ -66,6 +66,136 @@ function TravelerChip({ name, ageYears, travelerType }: { name: string; ageYears
   );
 }
 
+/* ─── Auto-fill Preview demo ─── */
+function AutoFillPreview({
+  adults,
+  children,
+  childAges,
+  partyDescription,
+}: {
+  adults: number;
+  children: number;
+  childAges: number[];
+  partyDescription: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const payload = {
+    adults,
+    children,
+    childAges,
+    partyDescription,
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* noop */
+    }
+  };
+
+  /* Mock booking-form styling — deliberately a bit grey to look "external" */
+  const mockBg = "#FBFBF9";
+  const mockBorder = "#D9D5CC";
+  const mockLabel = { fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#6B6358", marginBottom: "4px", display: "block" };
+  const mockSelect: React.CSSProperties = {
+    width: "100%",
+    background: "white",
+    border: `1px solid ${mockBorder}`,
+    fontFamily: "'Raleway', sans-serif",
+    fontWeight: 400,
+    fontSize: "13px",
+    color: "#2C2820",
+    padding: "8px 10px",
+    appearance: "none",
+    cursor: "default",
+  };
+
+  return (
+    <div style={{ background: "white", border: "1px solid #E5E0D8", padding: "26px 28px" }}>
+      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#A07840", marginBottom: "10px" }}>
+        Auto-fill Preview
+      </p>
+      <h3 style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 400, fontSize: "22px", color: "#1C1C1C", marginBottom: "6px", lineHeight: 1.3 }}>
+        Here's exactly what gets filled in.
+      </h3>
+      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "13px", color: "#5C5248", marginBottom: "20px" }}>
+        A peek at how a typical booking form will look once the extension fires.
+      </p>
+
+      {adults === 0 && children === 0 ? (
+        <p style={{ fontFamily: "'Raleway', sans-serif", fontStyle: "italic", fontSize: "14px", color: "#5C5248" }}>
+          Add travelers to see the preview.
+        </p>
+      ) : (
+        <>
+          {/* Mock form */}
+          <div style={{ background: mockBg, border: `1px solid ${mockBorder}`, padding: "20px 22px", marginBottom: "18px" }}>
+            <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#3A352C", marginBottom: "16px" }}>
+              Guests
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: childAges.length > 0 ? "14px" : "0" }}>
+              <div>
+                <label style={mockLabel}>Adults</label>
+                <select value={adults} onChange={() => {}} style={mockSelect} disabled>
+                  <option>{adults}</option>
+                </select>
+              </div>
+              <div>
+                <label style={mockLabel}>Children</label>
+                <select value={children} onChange={() => {}} style={mockSelect} disabled>
+                  <option>{children}</option>
+                </select>
+              </div>
+            </div>
+
+            {childAges.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "14px" }}>
+                {childAges.map((age, i) => (
+                  <div key={i}>
+                    <label style={mockLabel}>Child {i + 1} age</label>
+                    <select value={age} onChange={() => {}} style={mockSelect} disabled>
+                      <option>{age}</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Copy button + helper */}
+          <button
+            onClick={handleCopy}
+            style={{
+              background: copied ? "#3A2028" : "#6B2737",
+              border: "none",
+              color: "white",
+              fontFamily: "'Raleway', sans-serif",
+              fontWeight: 600,
+              fontSize: "10px",
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              padding: "11px 20px",
+              cursor: "pointer",
+              transition: "background 0.15s",
+            }}
+          >
+            {copied ? "Copied ✓" : "Copy auto-fill data"}
+          </button>
+
+          <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "12px", color: "#5C5248", marginTop: "14px", lineHeight: 1.55 }}>
+            The browser extension fills this automatically on Expedia, Booking.com, Google Hotels and more.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ─── Review Match Card (dark, self-contained) ─── */
 type CategoryDetail = { score: number; reason: string; weight: number; contribution: number };
 type QuickMatchResult = {
@@ -296,7 +426,6 @@ export default function Home() {
   const summary = rawSummary as any;
 
   const [activeProfileId, setActiveProfileId] = useState<number | null>(null);
-  const [matchQuery, setMatchQuery] = useState("");
 
   if (isLoading) {
     return (
@@ -580,7 +709,15 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Section 3.5: Review Sorter ── */}
+        {/* ── Section 3.5: Auto-fill Preview ── */}
+        <AutoFillPreview
+          adults={adultTravelers.length}
+          children={childTravelers.length}
+          childAges={childAges}
+          partyDescription={`${userName} Family — ${adultTravelers.length} adult${adultTravelers.length === 1 ? "" : "s"}${childTravelers.length > 0 ? `, ${childTravelers.length} kid${childTravelers.length === 1 ? "" : "s"}` : ""}`}
+        />
+
+        {/* ── Section 3.75: Review Sorter ── */}
         <ReviewSorter userTags={travelStyles} />
 
         {/* ── Section 4: Quick actions ── */}
