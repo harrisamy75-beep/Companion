@@ -53,6 +53,19 @@ const EMPTY_FORM: FormState = {
 };
 
 const EMPTY_PROFILE_FORM: ProfileFormState = { name: "", emoji: "✈️", travelerIds: [], duplicateFromId: null };
+
+const PROFILE_EMOJIS = [
+  "👨‍👩‍👧‍👦", "👨‍👩‍👦", "👨‍👩‍👧", "👨‍👩‍👧‍👧", "👨‍👩‍👦‍👦",
+  "👩‍👧‍👦", "👩‍👦", "👩‍👧", "👨‍👦", "👨‍👧",
+  "✈️", "🧳", "🗺️", "🌍", "🏖️",
+  "🏔️", "🚢", "🛥️", "🚁", "🛸",
+  "🍷", "🍸", "☕", "🍽️", "🎿",
+  "🏄", "🤿", "🧘", "🎭", "🛍️",
+  "🌴", "🏝️", "🌺", "🦋", "🌊",
+  "🏰", "🗼", "🎪", "🌅", "🌙",
+  "⭐", "💫", "🎯", "🎨", "📸",
+  "🦁", "🐬", "🦅", "🌸", "💎",
+];
 const ACTIVE_PROFILE_KEY = "activeProfileId";
 
 function parseTags(raw: string): string[] {
@@ -129,14 +142,61 @@ function ProfileModal({ profiles, travelers, editingProfile, onClose, onCreate, 
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248" }}><X size={16} /></button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div style={{ display: "flex", gap: "16px" }}>
-            <div style={{ flex: "0 0 60px" }}>
-              <p className="eyebrow" style={{ marginBottom: "6px" }}>Emoji</p>
-              <input className="input-underline" value={form.emoji} onChange={e => set("emoji", e.target.value)} maxLength={4} style={{ textAlign: "center" }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <p className="eyebrow" style={{ marginBottom: "6px" }}>Profile name</p>
-              <input autoFocus className="input-underline" placeholder="e.g. Harris Family" value={form.name} onChange={e => set("name", e.target.value)} required />
+          <div>
+            <p className="eyebrow" style={{ marginBottom: "6px" }}>Profile name</p>
+            <input autoFocus className="input-underline" placeholder="e.g. Harris Family" value={form.name} onChange={e => set("name", e.target.value)} required />
+          </div>
+
+          <div>
+            <p className="eyebrow" style={{ marginBottom: "10px" }}>
+              Choose an icon <span style={{ fontSize: "20px", marginLeft: "8px", verticalAlign: "middle" }}>{form.emoji}</span>
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(8, 1fr)",
+                gap: "6px",
+                background: "#FAFAF8",
+                border: "1px solid #E5E0D8",
+                padding: "10px",
+                maxHeight: "260px",
+                overflowY: "auto",
+              }}
+            >
+              {PROFILE_EMOJIS.map((em) => {
+                const selected = em === form.emoji;
+                return (
+                  <button
+                    type="button"
+                    key={em}
+                    onClick={() => set("emoji", em)}
+                    aria-label={`Choose ${em} icon`}
+                    aria-pressed={selected}
+                    style={{
+                      aspectRatio: "1",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "20px",
+                      lineHeight: 1,
+                      background: selected ? "#6B2737" : "#fff",
+                      border: selected ? "1px solid #6B2737" : "1px solid #E5E0D8",
+                      cursor: "pointer",
+                      transition: "transform 0.08s, background 0.12s, border-color 0.12s",
+                      transform: selected ? "scale(1.05)" : "scale(1)",
+                      padding: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!selected) (e.currentTarget as HTMLButtonElement).style.borderColor = "#A07840";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!selected) (e.currentTarget as HTMLButtonElement).style.borderColor = "#E5E0D8";
+                    }}
+                  >
+                    {em}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
