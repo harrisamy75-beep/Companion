@@ -9,6 +9,7 @@ export const travelersTable = pgTable("travelers", {
   birthDate: date("birth_date"),
   travelerType: text("traveler_type").notNull().default("adult"),
   relationship: text("relationship"),
+  gender: text("gender"),
   foodPreferences: jsonb("food_preferences").$type<string[]>().default([]),
   activityPreferences: jsonb("activity_preferences").$type<string[]>().default([]),
   accessibilityNeeds: text("accessibility_needs"),

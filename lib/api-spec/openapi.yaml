@@ -420,6 +420,9 @@ components:
         relationship:
           type: string
           nullable: true
+        gender:
+          type: string
+          nullable: true
         foodPreferences:
           type: array
           items:

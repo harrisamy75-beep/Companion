@@ -22,11 +22,37 @@ interface FormState {
   birthDate: string;
   travelerType: TravelerType;
   relationship: string;
+  gender: string;
   foodPreferences: string;
   activityPreferences: string;
   accessibilityNeeds: string;
   notes: string;
 }
+
+const ADULT_RELATIONSHIPS = ["Self", "Spouse", "Partner", "Friend", "Parent", "Sibling", "Colleague", "Other"];
+const CHILD_RELATIONSHIPS = ["Son", "Daughter", "Grandchild", "Niece", "Nephew", "Family Friend's Child", "Other"];
+const GENDER_OPTIONS = ["Female", "Male", "Non-binary", "Prefer not to say"];
+
+const SELECT_STYLE: React.CSSProperties = {
+  width: "100%",
+  appearance: "none",
+  WebkitAppearance: "none",
+  MozAppearance: "none",
+  background: "transparent",
+  border: "none",
+  borderBottom: "1px solid #E5E0D8",
+  fontFamily: "'Raleway', sans-serif",
+  fontWeight: 300,
+  fontSize: "15px",
+  color: "#1C1C1C",
+  padding: "8px 24px 8px 0",
+  cursor: "pointer",
+  outline: "none",
+  backgroundImage:
+    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'><path d='M1 1L5 5L9 1' stroke='%238C8279' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/></svg>\")",
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "right 4px center",
+};
 
 interface TripProfile {
   id: number;
@@ -48,7 +74,7 @@ interface ProfileFormState {
 
 const EMPTY_FORM: FormState = {
   name: "", birthDate: "", travelerType: "adult",
-  relationship: "", foodPreferences: "", activityPreferences: "",
+  relationship: "", gender: "", foodPreferences: "", activityPreferences: "",
   accessibilityNeeds: "", notes: "",
 };
 
@@ -298,11 +324,15 @@ function TravelerCard({ traveler, onEdit, onDelete, isEditing }: {
             >
               {traveler.name}
             </span>
-            <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248" }}>
-              {isChild ? "Child" : "Adult"}
-              {traveler.relationship ? ` · ${traveler.relationship}` : ""}
-              {traveler.ageDisplay ? ` · ${traveler.ageDisplay}` : ""}
-              {traveler.birthDate && !traveler.ageDisplay ? ` · ${traveler.birthDate}` : ""}
+            <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "12px", color: "#8C8279" }}>
+              {[
+                isChild ? "Child" : "Adult",
+                traveler.relationship,
+                (traveler as any).gender,
+                traveler.ageDisplay || (traveler.birthDate ? traveler.birthDate : ""),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </span>
           </div>
           {(hovered || isEditing) && (
@@ -390,7 +420,7 @@ export default function TravelersPage() {
     setShowForm(true);
     setForm({
       name: t.name, birthDate: t.birthDate ?? "", travelerType: t.travelerType,
-      relationship: t.relationship ?? "", foodPreferences: (t.foodPreferences ?? []).join(", "),
+      relationship: t.relationship ?? "", gender: (t as any).gender ?? "", foodPreferences: (t.foodPreferences ?? []).join(", "),
       activityPreferences: (t.activityPreferences ?? []).join(", "),
       accessibilityNeeds: t.accessibilityNeeds ?? "", notes: t.notes ?? "",
     });
@@ -406,6 +436,7 @@ export default function TravelersPage() {
   const buildPayload = () => ({
     name: form.name, travelerType: form.travelerType,
     birthDate: form.birthDate || undefined, relationship: form.relationship || undefined,
+    gender: form.gender || undefined,
     foodPreferences: parseTags(form.foodPreferences), activityPreferences: parseTags(form.activityPreferences),
     accessibilityNeeds: form.accessibilityNeeds || undefined, notes: form.notes || undefined,
   });
@@ -670,8 +701,51 @@ export default function TravelersPage() {
                 </FormRow>
 
                 <FormRow label="Relationship">
-                  <input className="input-underline" placeholder={form.travelerType === "child" ? "child, stepchild…" : "self, partner, friend…"} value={form.relationship} onChange={e => setField("relationship", e.target.value)} />
+                  <select
+                    value={form.relationship}
+                    onChange={(e) => setField("relationship", e.target.value)}
+                    style={SELECT_STYLE}
+                    onFocus={(e) => (e.currentTarget.style.borderBottomColor = "#1C1C1C")}
+                    onBlur={(e) => (e.currentTarget.style.borderBottomColor = "#E5E0D8")}
+                  >
+                    <option value="">— Select —</option>
+                    {(form.travelerType === "child" ? CHILD_RELATIONSHIPS : ADULT_RELATIONSHIPS).map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
                 </FormRow>
+
+                <div>
+                  <p className="eyebrow" style={{ marginBottom: "10px" }}>Gender</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
+                    {GENDER_OPTIONS.map((g) => {
+                      const active = form.gender === g;
+                      return (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setField("gender", active ? "" : g)}
+                          style={{
+                            fontFamily: "'Raleway', sans-serif",
+                            fontWeight: 600,
+                            fontSize: "11px",
+                            letterSpacing: "0.12em",
+                            textTransform: "uppercase",
+                            color: active ? "#6B2737" : "#8C8279",
+                            background: "none",
+                            border: "none",
+                            borderBottom: active ? "2px solid #6B2737" : "2px solid transparent",
+                            paddingBottom: "4px",
+                            cursor: "pointer",
+                            transition: "color 0.15s, border-color 0.15s",
+                          }}
+                        >
+                          {g}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 <FormRow label={form.travelerType === "child" ? "Birthdate" : "Birthdate (optional)"}>
                   <input className="input-underline" type="date" value={form.birthDate} onChange={e => setField("birthDate", e.target.value)} required={form.travelerType === "child"} />

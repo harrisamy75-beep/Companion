@@ -51,6 +51,7 @@ export function formatTraveler(row: typeof travelersTable.$inferSelect) {
     birthDate: row.birthDate ?? null,
     travelerType: row.travelerType,
     relationship: row.relationship ?? null,
+    gender: (row as any).gender ?? null,
     foodPreferences: (row.foodPreferences as string[] | null) ?? [],
     activityPreferences: (row.activityPreferences as string[] | null) ?? [],
     accessibilityNeeds: row.accessibilityNeeds ?? null,

@@ -13,6 +13,7 @@ export interface CreateTravelerBody {
   birthDate?: Date | null;
   travelerType: CreateTravelerBodyTravelerType;
   relationship?: string | null;
+  gender?: string | null;
   foodPreferences?: string[] | null;
   activityPreferences?: string[] | null;
   accessibilityNeeds?: string | null;
