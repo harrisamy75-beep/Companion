@@ -258,6 +258,7 @@ function PlacesAutocomplete({ value, onChange, onSelect, placeholder }: PlacesAu
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
   const [loading, setLoading] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -269,10 +270,16 @@ function PlacesAutocomplete({ value, onChange, onSelect, placeholder }: PlacesAu
       if (r.ok) {
         const data: PlaceResult[] = await r.json();
         setResults(data);
+        setUnavailable(false);
         setOpen(true);
         setActiveIdx(-1);
+      } else if (r.status === 503) {
+        setResults([]);
+        setUnavailable(true);
+        setOpen(q.length >= 3);
       } else {
         setResults([]);
+        setUnavailable(false);
         setOpen(q.length >= 3);
       }
     } catch {
@@ -322,7 +329,8 @@ function PlacesAutocomplete({ value, onChange, onSelect, placeholder }: PlacesAu
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const showCustomOption = open && results.length === 0 && value.length >= 3 && !loading;
+  const showCustomOption = open && results.length === 0 && value.length >= 3 && !loading && !unavailable;
+  const showUnavailable = open && unavailable && value.length >= 3 && !loading;
 
   return (
     <div ref={containerRef} style={{ position: "relative" }}>
@@ -335,7 +343,7 @@ function PlacesAutocomplete({ value, onChange, onSelect, placeholder }: PlacesAu
         placeholder={placeholder ?? "Rosewood Miramar Beach"}
         autoComplete="off"
       />
-      {open && (results.length > 0 || showCustomOption) && (
+      {open && (results.length > 0 || showCustomOption || showUnavailable) && (
         <div
           style={{
             position: "absolute",
@@ -396,6 +404,24 @@ function PlacesAutocomplete({ value, onChange, onSelect, placeholder }: PlacesAu
               >
                 Add "{value}" as a custom property
               </span>
+            </div>
+          )}
+          {showUnavailable && (
+            <div style={{ padding: "14px 16px", borderTop: results.length > 0 ? "1px solid #F0EBE3" : "none" }}>
+              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#6B2737", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "4px" }}>
+                Hotel search unavailable
+              </div>
+              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: "#5C5248", lineHeight: 1.5, marginBottom: "8px" }}>
+                We can't reach the hotel directory right now. You can still add this property by hand.
+              </div>
+              <div
+                onMouseDown={() => handleSelect(null)}
+                style={{ cursor: "pointer", display: "inline-block" }}
+              >
+                <span className="font-playfair" style={{ fontStyle: "italic", fontSize: "14px", color: "#1C1C1C", borderBottom: "1px solid #1C1C1C" }}>
+                  Add "{value}" manually
+                </span>
+              </div>
             </div>
           )}
         </div>

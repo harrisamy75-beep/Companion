@@ -59,6 +59,11 @@ router.get("/places/search", async (req, res) => {
 
     if (data.status && data.status !== "OK" && data.status !== "ZERO_RESULTS") {
       console.error("Places API error:", data.status, data.error_message);
+      return res.status(503).json({
+        error: "places_unavailable",
+        status: data.status,
+        message: data.error_message ?? "Hotel search is temporarily unavailable.",
+      });
     }
 
     const results = (data.results ?? []).slice(0, 6).map((r) => ({

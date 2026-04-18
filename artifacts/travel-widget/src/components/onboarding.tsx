@@ -50,14 +50,27 @@ function MiniPlacesSearch({ value, onChange, onSelect }: {
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
+  const [unavailable, setUnavailable] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const search = useCallback(async (q: string) => {
-    if (q.length < 2) { setResults([]); setOpen(false); return; }
+    if (q.length < 2) { setResults([]); setOpen(false); setUnavailable(false); return; }
     try {
       const r = await fetch(`/api/places/search?q=${encodeURIComponent(q)}`, { credentials: "include" });
-      if (r.ok) { const d: PlaceResult[] = await r.json(); setResults(d); setOpen(d.length > 0); }
+      if (r.ok) {
+        const d: PlaceResult[] = await r.json();
+        setResults(d);
+        setUnavailable(false);
+        setOpen(d.length > 0);
+      } else if (r.status === 503) {
+        setResults([]);
+        setUnavailable(true);
+        setOpen(true);
+      } else {
+        setResults([]);
+        setUnavailable(false);
+      }
     } catch { setResults([]); }
   }, []);
 
@@ -97,7 +110,7 @@ function MiniPlacesSearch({ value, onChange, onSelect }: {
         placeholder="e.g. Rosewood Miramar Beach"
         autoComplete="off"
       />
-      {open && results.length > 0 && (
+      {open && (results.length > 0 || unavailable) && (
         <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "white", border: "1px solid #E5E0D8", borderRadius: "2px", zIndex: 50 }}>
           {results.filter(r => r && r.name).map((r: any, i) => (
             <div key={r.placeId} onMouseDown={() => pick(r)} onMouseEnter={() => setActiveIdx(i)}
@@ -106,6 +119,16 @@ function MiniPlacesSearch({ value, onChange, onSelect }: {
               <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#5C5248", fontStyle: "italic", marginTop: "2px" }}>{trimLoc(r.location ?? r.formatted_address ?? "")}</div>
             </div>
           ))}
+          {unavailable && (
+            <div style={{ padding: "12px 16px" }}>
+              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", color: "#6B2737", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "4px" }}>
+                Hotel search unavailable
+              </div>
+              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248", lineHeight: 1.5 }}>
+                The directory is offline right now — type the name and continue to add it manually.
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
