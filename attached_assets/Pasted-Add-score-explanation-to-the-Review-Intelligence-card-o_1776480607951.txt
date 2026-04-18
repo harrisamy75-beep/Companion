@@ -1,0 +1,137 @@
+Add score explanation to the Review Intelligence card on the 
+dashboard and to the review sorter widget.
+
+Step 1 — Update the Claude scoring prompt in 
+artifacts/api-server/src/routes/reviews.ts:
+
+Add two new fields to the JSON the model returns:
+
+{
+  ...existing fields...,
+  "score_explanation": string,  
+  // 1-2 sentences explaining the overall score.
+  // Be specific about what drove it up and what held it back.
+  // e.g. "Strong marks for exceptional food and local sourcing, 
+  // but pulled back by mentions of inconsistent service and 
+  // limited beach access — key for this traveler's profile."
+  
+  "score_breakdown": {
+    "luxury_value": { "score": number, "reason": string },
+    "foodie": { "score": number, "reason": string },
+    "eco": { "score": number, "reason": string },
+    "adventurous_menu": { "score": number, "reason": string }
+  }
+  // Each reason is max 8 words explaining that specific score
+  // e.g. "Chef-driven menu, locally sourced ingredients noted"
+  // or "Generic buffet, no mention of local cuisine"
+}
+
+Update the insertReviewScore db call to also store 
+score_explanation and score_breakdown in rawClaudeResponse 
+(it's already jsonb so no schema change needed — just make 
+sure these fields are preserved in raw).
+
+Add scoreExplanation: text("score_explanation") and 
+scoreBreakdown: jsonb("score_breakdown") as proper columns 
+to the review_scores table for easier querying.
+Run drizzle-kit push.
+
+Step 2 — Update GET /reviews/match response to include
+explanation data on each review and an aggregate explanation:
+
+Return from the endpoint:
+{
+  matchScore: number,
+  matchExplanation: string,  // NEW — why this overall score
+  scoreBreakdown: {          // NEW — aggregate breakdown
+    luxuryValue: { avgScore: number, weight: number, contribution: number },
+    foodie: { avgScore: number, weight: number, contribution: number },
+    eco: { avgScore: number, weight: number, contribution: number },
+    adventurousMenu: { avgScore: number, weight: number, contribution: number }
+  },
+  whatWorked: string[],      // NEW — top 3 positive signals
+  whatHeldItBack: string[],  // NEW — top 3 negative signals or gaps
+  topReviews: ReviewScore[],
+  tagSummary: string[]
+}
+
+Build matchExplanation by having Claude generate it, OR 
+construct it programmatically from the breakdown:
+
+function buildMatchExplanation(breakdown, userTags, score) {
+  const strengths = [];
+  const gaps = [];
+  
+  if (breakdown.luxuryValue.avgScore >= 7) 
+    strengths.push("strong luxury-value ratio");
+  else if (breakdown.luxuryValue.avgScore <= 4)
+    gaps.push("luxury-value doesn't match your tier");
+    
+  if (userTags.includes("foodie") && breakdown.foodie.avgScore >= 7)
+    strengths.push("excellent food credentials");
+  else if (userTags.includes("foodie") && breakdown.foodie.avgScore <= 4)
+    gaps.push("food didn't impress reviewers");
+    
+  if (userTags.includes("eco") && breakdown.eco.avgScore >= 7)
+    strengths.push("strong eco practices");
+  else if (userTags.includes("eco") && breakdown.eco.avgScore <= 4)
+    gaps.push("limited eco credentials");
+
+  if (userTags.includes("adventurous_menu") && 
+      breakdown.adventurousMenu.avgScore <= 4)
+    gaps.push("menu plays it safe");
+
+  let explanation = "";
+  if (strengths.length > 0) 
+    explanation += `Scores well for ${strengths.join(" and ")}. `;
+  if (gaps.length > 0)
+    explanation += `Held back by ${gaps.join(" and ")}.`;
+  if (explanation === "") 
+    explanation = `Solid mid-range match across your key criteria.`;
+    
+  return explanation;
+}
+
+Step 3 — Update the Review Intelligence card on the dashboard:
+
+After the score number (72) add:
+
+A — Score explanation text directly below the score:
+Playfair Display italic, 14px, rgba(255,255,255,0.85)
+e.g. "Scores well for coastal luxury and family amenities. 
+Held back by limited foodie credentials in reviews."
+
+B — Score breakdown bars below that:
+Four slim horizontal bars, each showing:
+- Category label: Raleway 10px ALL CAPS white/muted
+  e.g. "LUXURY VALUE" "FOODIE" "ECO" "ADVENTUROUS MENU"
+- Thin progress bar: 100% wide container, filled % = score/10
+  Filled: wine red #6B2737
+  Empty: rgba(255,255,255,0.15)
+  Height: 3px, no border-radius
+- Score number right-aligned: Raleway 11px white
+  e.g. "8/10"
+- Weight indicator below bar in tiny muted text:
+  "weighted 0.8×" if that category is in their travel styles
+  "weighted 0.2×" if not — so they understand why it matters
+
+C — "What worked" and "What held it back" below bars:
+Two columns, small text:
+Left: green dot + text for each strength
+Right: amber dot + text for each gap
+Raleway 300, 12px, rgba(255,255,255,0.7)
+
+Step 4 — Update the review sorter widget:
+
+On each individual review card, add a "Why this score?" 
+expandable section:
+
+Collapsed: small wine link "Why [score]?" 
+Expanded (smooth CSS transition, no JS libraries):
+  - score_explanation text in italic muted
+  - Mini breakdown: four scores in a row
+    LUXURY 8 · FOODIE 9 · ECO 5 · MENU 7
+    Color-coded: ≥7 gold, 5-6 muted, ≤4 red-muted
+
+Step 5 — On the aggregate results header of the review sorter:
+"8 reviews analysed ·

@@ -1,0 +1,133 @@
+Fix three issues visible on the live dashboard:
+
+1. SESSION / NAME BUG — shows "default-user" instead of real name:
+The userId stored in session is "default-user" as a fallback.
+When a user completes onboarding and POSTs to /auth/login with 
+their name, that should become their session userId permanently.
+
+In the login flow (wherever POST /auth/login is called after 
+the name input on the login screen):
+- Store both userId (slug version e.g. "amy-harris") AND 
+  displayName (raw input e.g. "Amy Harris") in the session:
+  req.session.userId = slugify(name)
+  req.session.displayName = name
+
+- Add displayName to GET /auth/me response:
+  res.json({ userId: req.session.userId, displayName: req.session.displayName })
+
+- Update the dashboard greeting to use displayName:
+  "Good evening, Amy." not "Good evening, default-user."
+
+2. TRAVELERS NOT SHOWING — "No travelers added yet":
+The travelers added during onboarding are being saved with 
+the session userId at that moment. But if the session userId 
+changes between onboarding and dashboard load, the query 
+finds nothing.
+
+Fix: ensure the userId is set BEFORE any travelers are created 
+during onboarding. The POST /auth/login must complete and set 
+the session cookie before Step 1 of onboarding makes any 
+API calls to POST /travelers.
+
+In the onboarding component, make the flow:
+1. User enters name → POST /auth/login → wait for 200 response
+2. ONLY THEN start onboarding step 1 and make traveler API calls
+3. All subsequent API calls will use the now-established session
+
+Also check: does the onboarding POST /travelers include 
+credentials: "include" on the fetch? If not, the session 
+cookie won't be sent:
+fetch("/api/travelers", {
+  method: "POST",
+  credentials: "include",  // ← this is critical
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(data)
+})
+
+Apply credentials: "include" to ALL fetch calls in the 
+frontend — travelers, preferences, properties, loyalty, 
+summary, personality, reviews. Every single one.
+
+3. BUILD THE REVIEW SORTING WIDGET:
+This is the core feature to test. Create a new component:
+artifacts/travel-widget/src/components/review-sorter.tsx
+
+This is a standalone demo widget that shows how the extension 
+will work on real booking sites. Add it to the dashboard 
+below the Review Intelligence card, or as its own section.
+
+The widget has two parts:
+
+PART A — Paste reviews input:
+- Large textarea (8 rows), placeholder: 
+  "Paste hotel reviews here — copy from TripAdvisor, 
+  Google, Booking.com, or anywhere else."
+- Property name input above it
+- "ANALYSE REVIEWS" button — wine red, full width
+
+On submit: POST /api/reviews/score with:
+{
+  propertyId: slugify(propertyName),
+  source: "manual",
+  reviews: splitIntoIndividualReviews(pastedText)
+}
+
+splitIntoIndividualReviews: split on double newlines, 
+or numbered patterns (1. 2. 3.), or "---" dividers.
+Filter out chunks under 50 characters.
+
+PART B — Sorted results display:
+After scoring, show reviews sorted by match score 
+(highest first), each as a card:
+
+[Match score badge — wine color, e.g. "94 match"]
+[One-line summary in Playfair italic]
+[Original review text truncated to 3 lines, expand on click]
+[Tags as small ALL CAPS labels: FOODIE · LUXURY VALUE · ECO]
+[Sentiment indicator: small dot, green=positive, 
+ amber=neutral, red=negative]
+
+Above the results, show an aggregate:
+"[N] reviews analysed · Average match: [X]/100"
+In Raleway 300 italic, muted
+
+Sort toggle at top right: 
+"Sorted by: Match ↓" / "Date" / "Sentiment"
+Plain text toggle, Raleway ALL CAPS small
+
+Loading state while Claude scores:
+Animated pulsing bar with italic text:
+"Reading [N] reviews through your travel lens..."
+
+4. AUTO-FILL AGE DEMO:
+Add a section to the dashboard called "AUTO-FILL PREVIEW"
+that shows exactly what will get injected into booking forms.
+
+Show a mock booking form — styled to look like a generic 
+travel site form (slightly different styling, maybe a subtle 
+gray border to indicate "this is what they see"):
+
+[GUESTS]
+Adults: [2        ▼]
+Children: [2      ▼]
+Child 1 age: [8   ▼]  
+Child 2 age: [6   ▼]
+
+Pre-populated with real data from GET /api/summary 
+autoFillPayload.
+
+Below it, a wine button: "COPY AUTO-FILL DATA"
+That copies a JSON payload to clipboard:
+{
+  "adults": 2,
+  "children": 2, 
+  "childAges": [8, 6],
+  "partyDescription": "Harris Family — 2 adults, 2 kids"
+}
+
+And a note in italic muted Raleway:
+"The browser extension fills this automatically on 
+Expedia, Booking.com, Google Hotels and more."
+
+This lets you demo the auto-fill concept to anyone 
+without needing the extension installed.
