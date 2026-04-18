@@ -42,6 +42,51 @@ export default function PricingPage() {
 
         {isLoading || !data ? (
           <p style={{ fontFamily: "'Raleway', sans-serif", color: "#5C5248" }}>Loading…</p>
+        ) : data.betaMode ? (
+          <>
+            <div style={{ textAlign: "center", padding: "48px 24px" }}>
+              <p
+                className="font-playfair"
+                style={{ fontStyle: "italic", fontSize: "22px", color: "#6B2737", margin: 0, lineHeight: 1.4, maxWidth: "640px", marginInline: "auto" }}
+              >
+                You're on our founding member beta — full Pro access, on us, while we're in testing.
+              </p>
+              <p
+                style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "15px", color: "#5C5248", marginTop: "20px" }}
+              >
+                Pricing will be introduced when we launch publicly.
+              </p>
+            </div>
+
+            <div className="section-rule" style={{ margin: "16px 0 32px" }} />
+
+            <span className="eyebrow" style={{ display: "block", marginBottom: "16px" }}>
+              What you'll get
+            </span>
+            <div
+              className="card-editorial"
+              style={{ padding: "24px 28px", background: "white", border: "1px solid #E5E0D8" }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "1fr repeat(2, minmax(80px, auto))", gap: "0 24px", alignItems: "center" }}>
+                <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#A07840" }}></span>
+                {data.plans.map((p) => (
+                  <span key={p.id} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#A07840", textAlign: "right" }}>
+                    {p.label}
+                  </span>
+                ))}
+                {ROW_DEFS.map(({ key, label }) => (
+                  <>
+                    <span key={`l-${key}`} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", color: "#5C5248", padding: "12px 0", borderTop: "1px solid #F2EEE6" }}>{label}</span>
+                    {data.plans.map((p) => (
+                      <span key={`${key}-${p.id}`} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "14px", fontWeight: 500, color: "#1C1C1C", textAlign: "right", padding: "12px 0", borderTop: "1px solid #F2EEE6" }}>
+                        {formatLimit(p.limits[key])}
+                      </span>
+                    ))}
+                  </>
+                ))}
+              </div>
+            </div>
+          </>
         ) : (
           <>
             <div

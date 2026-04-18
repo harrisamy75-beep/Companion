@@ -17,6 +17,7 @@ export interface PlanDef {
 export interface PlanResponse {
   plan: "free" | "pro";
   label: string;
+  betaMode?: boolean;
   limits: PlanLimitsValues;
   usage: PlanLimitsValues;
   plans: PlanDef[];
@@ -58,6 +59,7 @@ export function formatLimit(n: number): string {
 
 export function isAtLimit(plan: PlanResponse | undefined, resource: keyof PlanLimitsValues): boolean {
   if (!plan) return false;
+  if (plan.betaMode) return false;
   const limit = plan.limits[resource];
   if (limit < 0) return false;
   return plan.usage[resource] >= limit;

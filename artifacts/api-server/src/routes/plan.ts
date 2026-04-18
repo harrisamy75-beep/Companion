@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { PLANS, getUserPlan, getUsage, setUserPlan, type PlanId } from "../lib/plan-limits";
+import { PLANS, getUserPlan, getUsage, setUserPlan, BETA_MODE, type PlanId } from "../lib/plan-limits";
 
 const router: IRouter = Router();
 
@@ -11,6 +11,7 @@ router.get("/plan", async (req, res): Promise<void> => {
   res.json({
     plan,
     label: current.label,
+    betaMode: BETA_MODE,
     limits: {
       travelers: current.limits.travelers === Infinity ? -1 : current.limits.travelers,
       favoriteProperties: current.limits.favoriteProperties === Infinity ? -1 : current.limits.favoriteProperties,

@@ -1,6 +1,8 @@
 import { db, usersTable, travelersTable, favoritePropertiesTable, loyaltyProgramsTable, tripProfilesTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 
+export const BETA_MODE = process.env.BETA_MODE === "1";
+
 export type PlanId = "free" | "pro";
 
 export interface PlanLimits {
@@ -92,6 +94,9 @@ export interface LimitCheckResult {
 }
 
 export async function checkLimit(userId: string, resource: ResourceKey): Promise<LimitCheckResult> {
+  if (BETA_MODE) {
+    return { ok: true, plan: "pro", limit: -1, current: 0, resource, resourceLabel: RESOURCE_LABEL[resource] };
+  }
   const plan = await getUserPlan(userId);
   const limit = PLANS[plan].limits[resource];
   const current = await countResource(userId, resource);
