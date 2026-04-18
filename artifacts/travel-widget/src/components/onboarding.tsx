@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { apiFetch } from "@/lib/api";
 import { Heart, Minus, Star } from "lucide-react";
 import { TRAVEL_STYLE_GROUPS } from "@/lib/travel-styles";
 
@@ -57,7 +58,7 @@ function MiniPlacesSearch({ value, onChange, onSelect }: {
   const search = useCallback(async (q: string) => {
     if (q.length < 2) { setResults([]); setOpen(false); setUnavailable(false); return; }
     try {
-      const r = await fetch(`/api/places/search?q=${encodeURIComponent(q)}`, { credentials: "include" });
+      const r = await apiFetch(`/api/places/search?q=${encodeURIComponent(q)}`);
       if (r.ok) {
         const d: PlaceResult[] = await r.json();
         setResults(d);
@@ -454,9 +455,9 @@ function Step4({ userId, travelers, travelStyles, properties }: {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch("/api/personality", {
+        const res = await apiFetch("/api/personality", {
           method: "POST",
-          credentials: "include",
+          
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: userId, travelers, travelStyles, favoriteProperties: properties }),
         });
@@ -576,23 +577,23 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
       const saves: Promise<unknown>[] = [];
 
       travelers.forEach(t => {
-        saves.push(fetch("/api/travelers", {
-          method: "POST", credentials: "include",
+        saves.push(apiFetch("/api/travelers", {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: t.name, travelerType: t.type, relationship: t.relationship, birthDate: t.birthDate }),
         }));
       });
 
       properties.forEach(p => {
-        saves.push(fetch("/api/properties", {
-          method: "POST", credentials: "include",
+        saves.push(apiFetch("/api/properties", {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ propertyName: p.propertyName, brand: p.brand || null, location: p.location || null, tier: p.tier }),
         }));
       });
 
-      saves.push(fetch("/api/preferences", {
-        method: "PUT", credentials: "include",
+      saves.push(apiFetch("/api/preferences", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ travelStyles: Array.from(new Set(travelStyles)) }),
       }));

@@ -1,0 +1,174 @@
+Add privacy and legal compliance to the app.
+
+Step 1 — Create a Privacy Policy page:
+New file artifacts/travel-widget/src/pages/privacy.tsx
+Route: /privacy — add to App.tsx, no auth required
+
+Content written in plain English, not legalese.
+Same T+L editorial styling as the rest of the app.
+Playfair Display headings, Raleway body text.
+
+Include these sections:
+
+WHAT WE COLLECT
+- Account information (name, email via Clerk)
+- Travel party details you enter (names, ages, relationships)
+- Travel preferences and style selections
+- Favourite properties and hotel brands
+- Loyalty program names and membership numbers (optional)
+- Usage data — which features you use, when
+
+WHY WE COLLECT IT
+- To auto-fill travel booking forms on your behalf
+- To match hotel and restaurant reviews to your preferences
+- To generate your travel personality profile using AI
+- To sync your profile to the browser extension
+
+HOW WE USE AI
+- Review scoring uses Anthropic's Claude API
+- Your travel preferences are sent to Claude to score reviews
+- Your profile data is used to generate a personality description
+- We do not use your data to train AI models
+- Anthropic's privacy policy applies to Claude API usage
+
+CHILDREN'S DATA
+- We collect ages of children in your travel party at your request
+- This data is used solely for booking form auto-fill (guest ages)
+- We do not knowingly collect data directly from children under 13
+- Parents/guardians control all data entered about their children
+- You can delete any traveler record at any time
+
+YOUR RIGHTS (CCPA / GDPR)
+- Access: request a copy of all your data
+- Deletion: delete your account and all associated data
+- Portability: export your data as JSON
+- Opt-out: you can disable AI review scoring in preferences
+
+DATA STORAGE & SECURITY
+- Data stored in PostgreSQL database hosted by Replit/Neon
+- Authentication managed by Clerk
+- Loyalty numbers stored but never shared with third parties
+- We do not sell your data. Ever.
+
+THIRD PARTY SERVICES
+- Clerk (authentication) — clerk.com/privacy
+- Anthropic Claude API (AI review scoring) — anthropic.com/privacy
+- Google Places API (hotel search) — policies.google.com/privacy
+- Stripe (payments, when enabled) — stripe.com/privacy
+
+CONTACT
+- For privacy requests: [your email]
+- To delete your account: use Settings > Delete Account in the app
+- Response within 30 days as required by CCPA
+
+UPDATES
+- Last updated: [today's date]
+- We'll notify users of material changes via email
+
+Step 2 — Create a Terms of Service page:
+New file artifacts/travel-widget/src/pages/terms.tsx
+Route: /terms — no auth required
+
+Keep it short and plain English. Key points:
+- Service is provided as-is during beta
+- You own your data
+- Don't use the extension to scrape or harm travel sites
+- We can suspend accounts that abuse the service
+- Governing law: California
+- Arbitration clause for disputes
+
+Step 3 — Add consent to the Clerk signup flow:
+In the onboarding flow, before the user completes step 1,
+add a consent step BEFORE any data is saved:
+
+Show a simple card with:
+Heading: "Before we get started" in Playfair italic 24px
+
+Two checkboxes (must both be checked to proceed):
+
+☐ "I agree to the Terms of Service and Privacy Policy"
+   With linked text: Terms of Service | Privacy Policy
+   Both open in new tab
+
+☐ "I understand that Companion uses AI (Claude by Anthropic) 
+   to analyse hotel reviews based on my travel preferences"
+
+Below checkboxes in Raleway 300 11px muted:
+"You can delete your account and all data at any time 
+from Settings."
+
+"GET STARTED" button disabled until both checked.
+On check: button becomes active (wine color).
+
+Store consent in the database:
+Add to users/preferences table:
+- consentGivenAt: timestamp
+- consentVersion: text (e.g. "1.0")
+
+Step 4 — Add data export and deletion:
+New route GET /api/account/export
+Returns all user data as a single JSON object:
+{
+  account: { userId, consentGivenAt },
+  travelers: [...],
+  preferences: {...},
+  properties: [...],
+  loyaltyPrograms: [...],
+  tripProfiles: [...],
+  reviewScores: [...],
+  exportedAt: timestamp
+}
+
+New route DELETE /api/account
+Deletes ALL records for userId across all tables:
+travelers, preferences, properties, loyalty_programs,
+trip_profiles, review_scores, subscriptions
+Returns { deleted: true }
+
+Step 5 — Add Settings page:
+New file artifacts/travel-widget/src/pages/settings.tsx
+Route: /settings — add to sidebar nav as "SETTINGS"
+Between PRICING and the bottom of nav.
+
+Sections:
+
+ACCOUNT
+- Display name (from Clerk)
+- Email (from Clerk, read-only)
+- "Manage account →" links to Clerk's user management portal
+
+PRIVACY & DATA
+- "Export my data" button → GET /api/account/export 
+  Downloads as companion-data.json
+- "Delete my account" button → DELETE /api/account
+  Opens a confirmation modal:
+  "This permanently deletes your profile, travel party,
+  favourite stays, loyalty programs and all preferences.
+  This cannot be undone."
+  Type "DELETE" to confirm, then red button "DELETE EVERYTHING"
+  After deletion: sign out via Clerk and redirect to /
+
+AI FEATURES
+- Toggle: "AI review scoring" on/off (default on)
+  When off: reviews route returns neutral scores without 
+  calling Claude API
+- Toggle: "Travel personality profile" on/off
+  When off: don't call /personality endpoint
+
+NOTIFICATIONS (placeholder for later)
+- Email updates about new features: toggle
+- Note: "Email notifications coming soon"
+
+Step 6 — Add footer links to the login screen:
+Below "No account needed · Your data stays private"
+(or wherever the bottom of the login/onboarding is):
+
+"Privacy Policy · Terms of Service"
+Raleway 300, 11px, #8C8279, centered
+Both link to /privacy and /terms respectively
+
+Step 7 — Add footer to the sidebar:
+Below "crafted for discerning travelers":
+"Privacy · Terms"
+Raleway 300, 10px, rgba(255,255,255,0.3)
+Links to /privacy and /terms

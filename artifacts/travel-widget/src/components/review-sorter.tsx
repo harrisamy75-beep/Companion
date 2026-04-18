@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 type CategoryDetail = { score: number; reason: string };
 type ScoreBreakdown = {
@@ -208,9 +209,9 @@ export default function ReviewSorter({ userTags }: { userTags: string[] }) {
     setError(null);
     setResults(null);
     try {
-      const res = await fetch("/api/reviews/score", {
+      const res = await apiFetch("/api/reviews/score", {
         method: "POST",
-        credentials: "include",
+        
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           propertyId: propertyName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60),

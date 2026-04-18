@@ -89,7 +89,7 @@ router.get("/summary", async (req, res): Promise<void> => {
   const children = travelersRows.filter((t) => t.travelerType === "child");
 
   res.json({
-    userName: req.session.displayName ?? userId,
+    userName: userId,
     travelers: travelersRows,
     children,
     preferences: preferences ?? { id: 0 },
@@ -116,7 +116,7 @@ router.get("/summary", async (req, res): Promise<void> => {
       emoji: r.emoji ?? "✈️",
       isDefault: r.isDefault,
     })),
-    personality: (req as any).session?.personality ?? null,
+    personality: null,
   });
 });
 

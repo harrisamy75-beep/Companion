@@ -1,0 +1,195 @@
+Add Clerk authentication to replace the current session-based 
+name login. This gives users real accounts with Google sign-in,
+persistent data across devices, and proper identity.
+
+Step 1 — Install dependencies:
+npm install @clerk/clerk-react @clerk/express
+
+Step 2 — Add to Replit Secrets:
+CLERK_PUBLISHABLE_KEY — from clerk.com dashboard
+CLERK_SECRET_KEY — from clerk.com dashboard
+VITE_CLERK_PUBLISHABLE_KEY — same publishable key, 
+  needed for the frontend Vite build
+
+Step 3 — Update artifacts/api-server/src/app.ts:
+Remove the existing session middleware and custom auth middleware.
+Replace with Clerk Express middleware:
+
+import { clerkMiddleware, getAuth } from "@clerk/express";
+
+app.use(clerkMiddleware());
+
+Replace the existing userId middleware with:
+app.use("/api", (req, res, next) => {
+  if (req.path === "/health") return next();
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  (req as any).userId = userId;
+  next();
+});
+
+Remove the /auth/login and /auth/me routes entirely.
+Remove express-session and related imports.
+
+Step 4 — Update artifacts/travel-widget/src/main.tsx:
+Wrap the app in ClerkProvider:
+
+import { ClerkProvider } from "@clerk/clerk-react";
+
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+    <App />
+  </ClerkProvider>
+);
+
+Step 5 — Update artifacts/travel-widget/src/App.tsx:
+Import Clerk hooks and components:
+
+import { 
+  SignedIn, 
+  SignedOut, 
+  RedirectToSignIn,
+  useUser
+} from "@clerk/clerk-react";
+
+Replace the current login screen / name gate with:
+
+function Router() {
+  return (
+    <>
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
+      <SignedIn>
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/travelers" component={TravelersPage} />
+          <Route path="/stays" component={StaysPage} />
+          <Route path="/preferences" component={PreferencesPage} />
+          <Route path="/pricing" component={PricingPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </SignedIn>
+    </>
+  );
+}
+
+Step 6 — Update the dashboard greeting in home.tsx:
+Replace the old displayName from session with Clerk user:
+
+import { useUser } from "@clerk/clerk-react";
+const { user } = useUser();
+const displayName = user?.firstName ?? user?.fullName ?? "there";
+
+Show: "Good morning, Amy." using firstName.
+
+Step 7 — Update layout.tsx sidebar:
+Add user profile and sign out at the bottom of the sidebar,
+replacing "switch profile":
+
+import { UserButton } from "@clerk/clerk-react";
+
+At the bottom of the sidebar above "crafted for discerning travelers":
+<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+  <UserButton afterSignOutUrl="/" />
+  <span style Raleway 12px muted>Account</span>
+</div>
+
+UserButton shows their avatar and a dropdown with 
+"Manage account" and "Sign out" — Clerk handles the UI.
+
+Style the UserButton to be small and unobtrusive:
+appearance={{
+  elements: {
+    avatarBox: { width: 28, height: 28 }
+  }
+}}
+
+Step 8 — Handle onboarding for new Clerk users:
+When a user signs in for the first time (new Clerk account),
+check if they have any travelers saved. If not, redirect 
+to onboarding.
+
+In home.tsx, after fetching summary:
+if (totalTravelers === 0 && !isLoading) {
+  // redirect to onboarding
+  setLocation("/onboarding");
+}
+
+Add /onboarding route in App.tsx pointing to the existing 
+onboarding component.
+
+Step 9 — Update ALL fetch calls in the frontend:
+Clerk handles auth via its own session tokens, not cookies.
+Add the Clerk token to every API request:
+
+import { useAuth } from "@clerk/clerk-react";
+const { getToken } = useAuth();
+
+// In each fetch call:
+const token = await getToken();
+fetch("/api/travelers", {
+  headers: {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  }
+})
+
+Create a shared helper in src/lib/api.ts:
+export async function apiFetch(
+  path: string, 
+  options: RequestInit = {},
+  getToken: () => Promise<string | null>
+) {
+  const token = await getToken();
+  return fetch(path, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+}
+
+Use apiFetch everywhere instead of raw fetch.
+
+Step 10 — Update the browser extension:
+The extension needs to pass the Clerk token to the API.
+In background.js, after the user logs into the web app,
+Clerk stores a session token. The extension needs to 
+retrieve this. 
+
+For now, add a "Copy API token" button to the popup that
+the user can use to paste their token into the extension config.
+This is a temporary bridge — proper extension OAuth comes later.
+
+In popup.js, add a token input field:
+Label: "API TOKEN (from app settings)"
+Input: password type, paste from app
+Store in chrome.storage.local as "clerk_token"
+
+In content.js and background.js, include the token:
+const { clerk_token } = await chrome.storage.local.get("clerk_token");
+headers: {
+  "Authorization": `Bearer ${clerk_token}`
+}
+
+Step 11 — Remove these now-unnecessary files:
+- artifacts/api-server/src/routes/auth.ts
+- Any session-related imports in app.ts
+
+Step 12 — Update the login screen copy:
+The current "No account needed · Your data stays private"
+line should be removed since accounts are now required.
+Clerk's sign-in page handles this messaging.
+
+Step 13 — run drizzle-kit push if any schema changes needed.
+Note: userId column throughout the app already uses text —
+Clerk userIds are strings like "user_2abc123" so no type 
+changes needed, just the values will change format.

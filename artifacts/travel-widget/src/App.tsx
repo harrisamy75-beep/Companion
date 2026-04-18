@@ -1,5 +1,25 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import {
+  ClerkProvider,
+  SignIn,
+  SignUp,
+  Show,
+  useAuth,
+  useUser,
+  useClerk,
+} from "@clerk/react";
+import {
+  Switch,
+  Route,
+  Redirect,
+  useLocation,
+  Router as WouterRouter,
+} from "wouter";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
@@ -9,97 +29,162 @@ import PreferencesPage from "@/pages/preferences";
 import StaysPage from "@/pages/stays";
 import PricingPage from "@/pages/pricing";
 import { OnboardingWizard } from "@/components/onboarding";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { LogoutContext } from "@/lib/logout-context";
+import { setApiTokenGetter } from "@/lib/api";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 const queryClient = new QueryClient();
 
-type AuthState =
-  | { status: "loading" }
-  | { status: "needs-name" }
-  | { status: "ready"; userId: string; displayName: string };
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as
+  | string
+  | undefined;
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL as
+  | string
+  | undefined;
 
-function useSessionUser() {
-  const [auth, setAuth] = useState<AuthState>({ status: "loading" });
-  const [showOnboarding, setShowOnboarding] = useState(false);
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-  const needsOnboarding = () =>
-    localStorage.getItem("onboardingComplete") !== "true";
-
-  const check = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      const data = await res.json();
-      if (!data.userId || data.userId === "default-user") {
-        setAuth({ status: "needs-name" });
-      } else {
-        setAuth({
-          status: "ready",
-          userId: data.userId,
-          displayName: data.displayName || data.userId,
-        });
-        setShowOnboarding(needsOnboarding());
-      }
-    } catch {
-      setAuth({ status: "needs-name" });
-    }
-  }, []);
-
-  useEffect(() => { check(); }, [check]);
-
-  const login = useCallback(async (name: string) => {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setAuth({
-        status: "ready",
-        userId: data.userId,
-        displayName: data.displayName || name,
-      });
-      setShowOnboarding(needsOnboarding());
-    }
-  }, []);
-
-  const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    setAuth({ status: "needs-name" });
-    setShowOnboarding(false);
-    queryClient.clear();
-  }, []);
-
-  const completeOnboarding = useCallback(() => {
-    localStorage.setItem("onboardingComplete", "true");
-    setShowOnboarding(false);
-  }, []);
-
-  return { auth, login, logout, showOnboarding, completeOnboarding };
+function stripBase(path: string): string {
+  return basePath && path.startsWith(basePath)
+    ? path.slice(basePath.length) || "/"
+    : path;
 }
 
-function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> }) {
-  const [value, setValue] = useState("");
-  const [busy, setBusy] = useState(false);
+if (!clerkPubKey) {
+  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    setBusy(true);
-    await onSubmit(trimmed);
-    setBusy(false);
-  };
+const clerkAppearance = {
+  options: {
+    logoPlacement: "inside" as const,
+    logoLinkUrl: basePath || "/",
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: "#6B2737",
+    colorBackground: "#F5F0E6",
+    colorInputBackground: "#FAFAF8",
+    colorText: "#1C1C1C",
+    colorTextSecondary: "#5C5248",
+    colorInputText: "#1C1C1C",
+    colorNeutral: "#1C1C1C",
+    borderRadius: "6px",
+    fontFamily: "'Raleway', sans-serif",
+    fontFamilyButtons: "'Raleway', sans-serif",
+    fontSize: "14px",
+  },
+  elements: {
+    rootBox: "w-full",
+    cardBox:
+      "border border-[#E5E0D8] shadow-[0_2px_24px_rgba(28,28,28,0.06)] rounded-2xl w-full overflow-hidden bg-[#FAFAF8]",
+    card: "!shadow-none !border-0 !bg-transparent !rounded-none",
+    footer:
+      "!shadow-none !border-0 !bg-transparent !rounded-none border-t border-[#E5E0D8]",
+    headerTitle: "font-playfair italic",
+    headerSubtitle: "",
+    socialButtonsBlockButtonText: "",
+    formFieldLabel: "",
+    footerActionLink: "underline",
+    footerActionText: "",
+    dividerText: "",
+    identityPreviewEditButton: "",
+    formFieldSuccessText: "",
+    alertText: "",
+    logoBox: "flex justify-center pt-2 pb-4",
+    logoImage: "h-10 w-auto",
+    socialButtonsBlockButton:
+      "border border-[#E5E0D8] hover:bg-[#F5F0E6] rounded-md",
+    formButtonPrimary:
+      "bg-[#6B2737] hover:bg-[#56202D] rounded-md uppercase tracking-[0.14em] text-[11px] font-semibold py-3",
+    formFieldInput:
+      "border border-[#E5E0D8] rounded-md bg-[#FAFAF8] focus:border-[#6B2737]",
+    footerAction: "py-4",
+    dividerLine: "bg-[#E5E0D8]",
+    alert: "border border-[#E5E0D8] rounded-md",
+    otpCodeFieldInput: "border border-[#E5E0D8] rounded-md",
+    formFieldRow: "",
+    main: "",
+  },
+};
 
+const textStyles: Record<string, React.CSSProperties> = {
+  headerTitle: { color: "#1C1C1C" },
+  headerSubtitle: { color: "#5C5248" },
+  footerActionText: { color: "#5C5248" },
+  footerActionLink: { color: "#6B2737" },
+  dividerText: { color: "#8C8279" },
+  formFieldLabel: { color: "#1C1C1C" },
+  socialButtonsBlockButtonText: { color: "#1C1C1C" },
+  formFieldInput: { color: "#1C1C1C" },
+  alertText: { color: "#6B2737" },
+  formFieldSuccessText: { color: "#1C7A52" },
+  identityPreviewText: { color: "#1C1C1C" },
+  identityPreviewEditButton: { color: "#6B2737" },
+};
+
+const localizedAppearance = {
+  ...clerkAppearance,
+  elements: Object.fromEntries(
+    Object.entries(clerkAppearance.elements).map(([k, v]) => {
+      const style = textStyles[k];
+      if (style) {
+        return [k, { className: v, style }];
+      }
+      return [k, v];
+    }),
+  ),
+};
+
+function SignInPage() {
+  // To update login providers, app branding, or OAuth settings use the Auth
+  // pane in the workspace toolbar. More information can be found in the Replit docs.
+  return (
+    <div
+      className="flex min-h-[100dvh] items-center justify-center px-4"
+      style={{ background: "#F5F0E6" }}
+    >
+      <div style={{ width: 400, maxWidth: "100%" }}>
+        <SignIn
+          routing="path"
+          path={`${basePath}/sign-in`}
+          signUpUrl={`${basePath}/sign-up`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SignUpPage() {
+  // To update login providers, app branding, or OAuth settings use the Auth
+  // pane in the workspace toolbar. More information can be found in the Replit docs.
+  return (
+    <div
+      className="flex min-h-[100dvh] items-center justify-center px-4"
+      style={{ background: "#F5F0E6" }}
+    >
+      <div style={{ width: 400, maxWidth: "100%" }}>
+        <SignUp
+          routing="path"
+          path={`${basePath}/sign-up`}
+          signInUrl={`${basePath}/sign-in`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function LandingHero() {
+  const [, setLocation] = useLocation();
   return (
     <div
       className="min-h-screen flex items-center justify-center px-6"
       style={{ background: "#F5F0E6" }}
     >
-      <div className="flex flex-col items-center text-center" style={{ width: 340 }}>
-        {/* Hero wordmark */}
+      <div
+        className="flex flex-col items-center text-center"
+        style={{ width: 380 }}
+      >
         <h1
           className="font-playfair"
           style={{
@@ -114,8 +199,15 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
           Companion
         </h1>
 
-        {/* Three-line value prop */}
-        <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "18px", alignItems: "center" }}>
+        <div
+          style={{
+            marginTop: "20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "18px",
+            alignItems: "center",
+          }}
+        >
           {[
             "Save your family's ages, preferences & loyalty numbers.",
             "Auto-fill every travel booking form in one click.",
@@ -129,10 +221,9 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
                 fontWeight: 400,
                 fontSize: "17px",
                 color: "#5C5248",
-                lineHeight: 1,
+                lineHeight: 1.2,
                 margin: 0,
                 padding: 0,
-                whiteSpace: "nowrap",
               }}
             >
               {line}
@@ -140,103 +231,224 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => Promise<void> })
           ))}
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} style={{ marginTop: "48px", width: "100%" }}>
-          <label
-            className="eyebrow"
-            style={{ display: "block", textAlign: "left", marginBottom: "6px" }}
-          >
-            Your name
-          </label>
-          <input
-            autoFocus
-            type="text"
-            placeholder="e.g. Sarah"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            className="input-underline"
-            style={{ textAlign: "center", fontSize: "16px" }}
-          />
+        <div style={{ marginTop: "48px", width: "100%" }}>
           <button
-            type="submit"
-            disabled={busy || !value.trim()}
+            onClick={() => setLocation("/sign-up")}
             className="btn-wine"
-            style={{ width: "100%", height: "48px", marginTop: "28px" }}
+            style={{ width: "100%", height: "48px" }}
           >
-            {busy ? "Setting up…" : "Get started"}
+            Get started
           </button>
-          <p
+          <button
+            onClick={() => setLocation("/sign-in")}
             style={{
-              fontFamily: "'Raleway', sans-serif",
-              fontWeight: 400,
-              fontSize: "11px",
-              color: "#5C5248",
-              textAlign: "center",
               marginTop: "16px",
-              letterSpacing: "0.03em",
+              width: "100%",
+              height: "44px",
+              background: "transparent",
+              border: "none",
+              fontFamily: "'Raleway', sans-serif",
+              fontSize: "12px",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "#5C5248",
+              cursor: "pointer",
             }}
           >
-            No account needed · Your data stays private
-          </p>
-        </form>
+            Already have an account? Sign in
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function AppRoutes() {
+function HomeRedirect() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/travelers" component={TravelersPage} />
-      <Route path="/stays" component={StaysPage} />
-      <Route path="/preferences" component={PreferencesPage} />
-      <Route path="/pricing" component={PricingPage} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Show when="signed-in">
+        <Redirect to="/dashboard" />
+      </Show>
+      <Show when="signed-out">
+        <LandingHero />
+      </Show>
+    </>
+  );
+}
+
+function ProtectedShell({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Show when="signed-in">{children}</Show>
+      <Show when="signed-out">
+        <Redirect to="/" />
+      </Show>
+    </>
+  );
+}
+
+function onboardingKey(userId: string | null | undefined) {
+  return userId ? `onboardingComplete:${userId}` : "onboardingComplete";
+}
+
+function AuthenticatedApp() {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const [, setLocation] = useLocation();
+
+  const userId = user?.id;
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [checkedOnboarding, setCheckedOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    const done = localStorage.getItem(onboardingKey(userId)) === "true";
+    setShowOnboarding(!done);
+    setCheckedOnboarding(true);
+  }, [userId]);
+
+  const completeOnboarding = useCallback(() => {
+    if (userId) {
+      localStorage.setItem(onboardingKey(userId), "true");
+    }
+    setShowOnboarding(false);
+  }, [userId]);
+
+  const logout = useCallback(async () => {
+    await signOut();
+    queryClient.clear();
+    setLocation("/");
+  }, [signOut, setLocation]);
+
+  if (!userId || !checkedOnboarding) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "#F5F0E6" }}
+      >
+        <p
+          className="font-playfair"
+          style={{ fontStyle: "italic", fontSize: "20px", color: "#5C5248" }}
+        >
+          Loading…
+        </p>
+      </div>
+    );
+  }
+
+  if (showOnboarding) {
+    return (
+      <LogoutContext.Provider value={logout}>
+        <OnboardingWizard userId={userId} onComplete={completeOnboarding} />
+      </LogoutContext.Provider>
+    );
+  }
+
+  return (
+    <LogoutContext.Provider value={logout}>
+      <Switch>
+        <Route path="/dashboard" component={Home} />
+        <Route path="/travelers" component={TravelersPage} />
+        <Route path="/stays" component={StaysPage} />
+        <Route path="/preferences" component={PreferencesPage} />
+        <Route path="/pricing" component={PricingPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </LogoutContext.Provider>
+  );
+}
+
+// Bridges Clerk's getToken into the apiFetch helper so all API calls
+// automatically include the bearer token.
+function ClerkTokenBridge() {
+  const { getToken } = useAuth();
+  useEffect(() => {
+    const fn = () => getToken();
+    setApiTokenGetter(fn);
+    setAuthTokenGetter(fn);
+    return () => {
+      setApiTokenGetter(null);
+      setAuthTokenGetter(null);
+    };
+  }, [getToken]);
+  return null;
+}
+
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const qc = useQueryClient();
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const unsubscribe = addListener(({ user }: { user: { id: string } | null | undefined }) => {
+      const id = user?.id ?? null;
+      if (
+        prevUserIdRef.current !== undefined &&
+        prevUserIdRef.current !== id
+      ) {
+        qc.clear();
+      }
+      prevUserIdRef.current = id;
+    });
+    return unsubscribe;
+  }, [addListener, qc]);
+
+  return null;
+}
+
+function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <ClerkProvider
+      publishableKey={clerkPubKey!}
+      proxyUrl={clerkProxyUrl}
+      appearance={localizedAppearance as any}
+      localization={{
+        signIn: {
+          start: {
+            title: "Welcome back",
+            subtitle: "Sign in to your Companion account",
+          },
+        },
+        signUp: {
+          start: {
+            title: "Create your account",
+            subtitle: "Save your family's travel profile in seconds",
+          },
+        },
+      }}
+      routerPush={(to: string) => setLocation(stripBase(to))}
+      routerReplace={(to: string) =>
+        setLocation(stripBase(to), { replace: true })
+      }
+    >
+      <QueryClientProvider client={queryClient}>
+        <ClerkTokenBridge />
+        <ClerkQueryClientCacheInvalidator />
+        <TooltipProvider>
+          <Switch>
+            <Route path="/" component={HomeRedirect} />
+            <Route path="/sign-in/*?" component={SignInPage} />
+            <Route path="/sign-up/*?" component={SignUpPage} />
+            <Route>
+              <ProtectedShell>
+                <AuthenticatedApp />
+              </ProtectedShell>
+            </Route>
+          </Switch>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }
 
 function App() {
-  const { auth, login, logout, showOnboarding, completeOnboarding } = useSessionUser();
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        {/* Loading */}
-        {auth.status === "loading" && (
-          <div
-            className="min-h-screen flex items-center justify-center"
-            style={{ background: "#F5F0E6" }}
-          >
-            <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "20px", color: "#5C5248" }}>
-              Loading…
-            </p>
-          </div>
-        )}
-
-        {/* Login */}
-        {auth.status === "needs-name" && <NamePrompt onSubmit={login} />}
-
-        {/* Onboarding wizard */}
-        {auth.status === "ready" && showOnboarding && (
-          <LogoutContext.Provider value={logout}>
-            <OnboardingWizard userId={auth.userId} onComplete={completeOnboarding} />
-          </LogoutContext.Provider>
-        )}
-
-        {/* Main app */}
-        {auth.status === "ready" && !showOnboarding && (
-          <LogoutContext.Provider value={logout}>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <AppRoutes />
-            </WouterRouter>
-          </LogoutContext.Provider>
-        )}
-
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <WouterRouter base={basePath}>
+      <ClerkProviderWithRoutes />
+    </WouterRouter>
   );
 }
 

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useUser } from "@clerk/react";
+import { apiFetch } from "@/lib/api";
 import { Layout } from "@/components/layout";
 import { useGetTravelSummary } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -253,9 +255,9 @@ function ReviewMatchCard() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch("/api/reviews/quick-match", {
+      const res = await apiFetch("/api/reviews/quick-match", {
         method: "POST",
-        credentials: "include",
+        
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: query.trim() }),
       });
@@ -422,6 +424,7 @@ function CardEyebrow({ children }: { children: React.ReactNode }) {
 
 /* ─── Dashboard ─── */
 export default function Home() {
+  const { user: clerkUser } = useUser();
   const { data: rawSummary, isLoading } = useGetTravelSummary();
   const summary = rawSummary as any;
 
@@ -445,7 +448,11 @@ export default function Home() {
     );
   }
 
-  const userName: string = summary?.userName ?? "Traveller";
+  const userName: string =
+    clerkUser?.firstName ??
+    (clerkUser?.fullName ? clerkUser.fullName.split(" ")[0] : null) ??
+    summary?.userName ??
+    "there";
   const allTravelers: any[] = summary?.travelers ?? [];
   const preferences: any = summary?.preferences ?? {};
   const loyaltyPrograms: any[] = summary?.loyaltyPrograms ?? [];

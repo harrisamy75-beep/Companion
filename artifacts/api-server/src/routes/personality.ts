@@ -13,13 +13,6 @@ function buildClient(): Anthropic | null {
 }
 
 router.post("/personality", async (req, res): Promise<void> => {
-  const session = (req as any).session;
-
-  if (session.personality) {
-    res.json({ personality: session.personality });
-    return;
-  }
-
   const {
     name = "Traveler",
     travelers = [],
@@ -77,7 +70,6 @@ router.post("/personality", async (req, res): Promise<void> => {
     });
 
     const personality = (message.content[0] as { type: string; text: string }).text.trim();
-    session.personality = personality;
     res.json({ personality });
   } catch (err) {
     console.error("Personality generation failed:", err);

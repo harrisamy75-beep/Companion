@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api";
 
 export interface PlanLimitsValues {
   travelers: number;
@@ -29,7 +30,7 @@ export function usePlan() {
   return useQuery<PlanResponse>({
     queryKey: PLAN_QUERY_KEY,
     queryFn: async () => {
-      const res = await fetch("/api/plan", { credentials: "include" });
+      const res = await apiFetch("/api/plan");
       if (!res.ok) throw new Error("Failed to load plan");
       return res.json();
     },
@@ -40,10 +41,8 @@ export function useChangePlan() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (plan: "free" | "pro") => {
-      const res = await fetch("/api/plan", {
+      const res = await apiFetch("/api/plan", {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
       });
       if (!res.ok) throw new Error("Failed to change plan");

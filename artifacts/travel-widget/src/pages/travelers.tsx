@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/api";
 import { Layout } from "@/components/layout";
 import {
   useListTravelers,
@@ -105,7 +106,7 @@ function useTripProfiles() {
   const query = useQuery<TripProfile[]>({
     queryKey: KEY,
     queryFn: async () => {
-      const res = await fetch("/api/trip-profiles", { credentials: "include" });
+      const res = await apiFetch("/api/trip-profiles");
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
@@ -113,22 +114,22 @@ function useTripProfiles() {
   const inv = () => qc.invalidateQueries({ queryKey: KEY });
   const create = useMutation({
     mutationFn: async (d: Omit<ProfileFormState, "duplicateFromId">) => {
-      const r = await fetch("/api/trip-profiles", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+      const r = await apiFetch("/api/trip-profiles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
       if (!r.ok) throw new Error("Failed"); return r.json() as Promise<TripProfile>;
     }, onSuccess: inv,
   });
   const update = useMutation({
     mutationFn: async ({ id, ...d }: Partial<ProfileFormState> & { id: number }) => {
-      const r = await fetch(`/api/trip-profiles/${id}`, { method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+      const r = await apiFetch(`/api/trip-profiles/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
       if (!r.ok) throw new Error("Failed"); return r.json() as Promise<TripProfile>;
     }, onSuccess: inv,
   });
   const remove = useMutation({
-    mutationFn: async (id: number) => { const r = await fetch(`/api/trip-profiles/${id}`, { method: "DELETE", credentials: "include" }); if (!r.ok) throw new Error("Failed"); },
+    mutationFn: async (id: number) => { const r = await apiFetch(`/api/trip-profiles/${id}`, { method: "DELETE" }); if (!r.ok) throw new Error("Failed"); },
     onSuccess: inv,
   });
   const duplicate = useMutation({
-    mutationFn: async (id: number) => { const r = await fetch(`/api/trip-profiles/${id}/duplicate`, { method: "POST", credentials: "include" }); if (!r.ok) throw new Error("Failed"); return r.json() as Promise<TripProfile>; },
+    mutationFn: async (id: number) => { const r = await apiFetch(`/api/trip-profiles/${id}/duplicate`, { method: "POST" }); if (!r.ok) throw new Error("Failed"); return r.json() as Promise<TripProfile>; },
     onSuccess: inv,
   });
   return { query, create, update, remove, duplicate };

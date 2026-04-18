@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { apiFetch } from "@/lib/api";
 import { Layout } from "@/components/layout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -83,7 +84,7 @@ function useProperties() {
   const query = useQuery<FavoriteProperty[]>({
     queryKey: KEY,
     queryFn: async () => {
-      const r = await fetch("/api/properties", { credentials: "include" });
+      const r = await apiFetch("/api/properties");
       if (!r.ok) throw new Error("Failed");
       return r.json();
     },
@@ -91,19 +92,19 @@ function useProperties() {
   const inv = () => qc.invalidateQueries({ queryKey: KEY });
   const create = useMutation({
     mutationFn: async (d: Partial<FavoriteProperty>) => {
-      const r = await fetch("/api/properties", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+      const r = await apiFetch("/api/properties", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
       if (!r.ok) throw new Error("Failed"); return r.json();
     }, onSuccess: inv,
   });
   const update = useMutation({
     mutationFn: async ({ id, ...d }: Partial<FavoriteProperty> & { id: number }) => {
-      const r = await fetch(`/api/properties/${id}`, { method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+      const r = await apiFetch(`/api/properties/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
       if (!r.ok) throw new Error("Failed"); return r.json();
     }, onSuccess: inv,
   });
   const remove = useMutation({
     mutationFn: async (id: number) => {
-      const r = await fetch(`/api/properties/${id}`, { method: "DELETE", credentials: "include" });
+      const r = await apiFetch(`/api/properties/${id}`, { method: "DELETE" });
       if (!r.ok) throw new Error("Failed");
     }, onSuccess: inv,
   });
@@ -116,7 +117,7 @@ function useLoyalty() {
   const query = useQuery<LoyaltyProgram[]>({
     queryKey: KEY,
     queryFn: async () => {
-      const r = await fetch("/api/loyalty", { credentials: "include" });
+      const r = await apiFetch("/api/loyalty");
       if (!r.ok) throw new Error("Failed");
       return r.json();
     },
@@ -124,7 +125,7 @@ function useLoyalty() {
   const suggestedQuery = useQuery<SuggestedProgramGroup[]>({
     queryKey: ["loyalty-programs-suggested"],
     queryFn: async () => {
-      const r = await fetch("/api/loyalty/programs", { credentials: "include" });
+      const r = await apiFetch("/api/loyalty/programs");
       if (!r.ok) throw new Error("Failed");
       return r.json();
     },
@@ -132,19 +133,19 @@ function useLoyalty() {
   const inv = () => qc.invalidateQueries({ queryKey: KEY });
   const create = useMutation({
     mutationFn: async (d: Partial<LoyaltyProgram>) => {
-      const r = await fetch("/api/loyalty", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+      const r = await apiFetch("/api/loyalty", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
       if (!r.ok) throw new Error("Failed"); return r.json();
     }, onSuccess: inv,
   });
   const update = useMutation({
     mutationFn: async ({ id, ...d }: Partial<LoyaltyProgram> & { id: number }) => {
-      const r = await fetch(`/api/loyalty/${id}`, { method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+      const r = await apiFetch(`/api/loyalty/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
       if (!r.ok) throw new Error("Failed"); return r.json();
     }, onSuccess: inv,
   });
   const remove = useMutation({
     mutationFn: async (id: number) => {
-      const r = await fetch(`/api/loyalty/${id}`, { method: "DELETE", credentials: "include" });
+      const r = await apiFetch(`/api/loyalty/${id}`, { method: "DELETE" });
       if (!r.ok) throw new Error("Failed");
     }, onSuccess: inv,
   });
@@ -266,7 +267,7 @@ function PlacesAutocomplete({ value, onChange, onSelect, placeholder }: PlacesAu
     if (q.length < 2) { setResults([]); setOpen(false); return; }
     setLoading(true);
     try {
-      const r = await fetch(`/api/places/search?q=${encodeURIComponent(q)}`, { credentials: "include" });
+      const r = await apiFetch(`/api/places/search?q=${encodeURIComponent(q)}`);
       if (r.ok) {
         const data: PlaceResult[] = await r.json();
         setResults(data);
