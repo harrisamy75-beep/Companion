@@ -1,0 +1,103 @@
+There are two critical issues to fix:
+
+ISSUE 1 — Session not persisting:
+The session is being lost on every page refresh. Fix this:
+
+In artifacts/api-server/src/app.ts, update the session config:
+app.use(session({
+  secret: process.env.SESSION_SECRET ?? "dev-secret-change-me",
+  resave: true,
+  saveUninitialized: false,
+  rolling: true,
+  cookie: {
+    secure: false,
+    sameSite: "lax",
+    maxAge: 30 * 24 * 60 * 60 * 1000  // 30 days
+  }
+}));
+
+Also check: is session being stored in memory only? 
+If so, it resets every time the server restarts.
+Install connect-pg-simple to store sessions in the database:
+
+npm install connect-pg-simple
+
+Then update app.ts:
+import connectPgSimple from "connect-pg-simple";
+const PgStore = connectPgSimple(session);
+
+app.use(session({
+  store: new PgStore({
+    conString: process.env.DATABASE_URL,
+    tableName: "user_sessions",
+    createTableIfMissing: true,
+  }),
+  secret: process.env.SESSION_SECRET ?? "dev-secret-change-me",
+  resave: false,
+  saveUninitialized: false,
+  rolling: true,
+  cookie: {
+    secure: false,
+    sameSite: "lax",
+    maxAge: 30 * 24 * 60 * 60 * 1000
+  }
+}));
+
+This stores sessions in Postgres so they survive server restarts.
+
+ISSUE 2 — Data migration:
+Run these SQL commands directly on the database:
+
+UPDATE travelers SET user_id = 'amy-harris' 
+  WHERE user_id = 'default-user' OR user_id = '';
+UPDATE travel_preferences SET user_id = 'amy-harris' 
+  WHERE user_id = 'default-user' OR user_id = '' OR user_id IS NULL;
+UPDATE favorite_properties SET user_id = 'amy-harris' 
+  WHERE user_id = 'default-user' OR user_id = '';
+UPDATE loyalty_programs SET user_id = 'amy-harris' 
+  WHERE user_id = 'default-user' OR user_id = '';
+UPDATE trip_profiles SET user_id = 'amy-harris' 
+  WHERE user_id = 'default-user' OR user_id = '';
+
+Then report how many rows were updated in each table.
+
+ISSUE 3 — Login screen must set session properly:
+In the POST /auth/login route, make sure it:
+1. Sets req.session.userId to the slugified name
+2. Calls req.session.save() explicitly before responding:
+
+router.post("/login", (req, res) => {
+  const { userId } = req.body;
+  if (!userId) { res.status(400).json({ error: "userId required" }); return; }
+  const slug = userId.toLowerCase().replace(/\s+/g, '-');
+  req.session.userId = slug;
+  req.session.save((err) => {
+    if (err) { res.status(500).json({ error: "Session save failed" }); return; }
+    res.json({ ok: true, userId: slug });
+  });
+});
+
+ISSUE 4 — Frontend must send credentials on every request:
+Check that ALL fetch calls in the React frontend include:
+credentials: "include"
+
+Create a shared fetch wrapper in 
+artifacts/travel-widget/src/lib/api.ts:
+
+export async function api(path: string, options: RequestInit = {}) {
+  const response = await fetch(path, {
+    ...options,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+  return response;
+}
+
+Replace all raw fetch() calls throughout the frontend 
+with this api() helper.
+
+After all fixes, republish the app so the live version 
+gets the session persistence fix.
