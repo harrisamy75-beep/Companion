@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Heart } from "lucide-react";
 import { TRAVEL_STYLE_GROUPS } from "@/lib/travel-styles";
+import ReviewSorter from "@/components/review-sorter";
 
 /* ─── Helpers ─── */
 function getGreeting(): string {
@@ -66,10 +67,56 @@ function TravelerChip({ name, ageYears, travelerType }: { name: string; ageYears
 }
 
 /* ─── Review Match Card (dark, self-contained) ─── */
+type CategoryDetail = { score: number; reason: string; weight: number; contribution: number };
+type QuickMatchResult = {
+  score: number;
+  tags: string[];
+  headline: string;
+  scoreExplanation?: string;
+  scoreBreakdown?: {
+    luxuryValue: CategoryDetail;
+    foodie: CategoryDetail;
+    eco: CategoryDetail;
+    adventurousMenu: CategoryDetail;
+  };
+  whatWorked?: string[];
+  whatHeldItBack?: string[];
+  userTags?: string[];
+};
+
+const CATEGORY_LABELS: { key: keyof NonNullable<QuickMatchResult["scoreBreakdown"]>; label: string }[] = [
+  { key: "luxuryValue", label: "Luxury Value" },
+  { key: "foodie", label: "Foodie" },
+  { key: "eco", label: "Eco" },
+  { key: "adventurousMenu", label: "Adventurous Menu" },
+];
+
+function BreakdownBar({ label, score, weight }: { label: string; score: number; weight: number }) {
+  const pct = Math.max(0, Math.min(100, (score / 10) * 100));
+  return (
+    <div style={{ marginBottom: "12px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+        <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)" }}>
+          {label}
+        </span>
+        <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", color: "white" }}>
+          {score}/10
+        </span>
+      </div>
+      <div style={{ width: "100%", height: "3px", background: "rgba(255,255,255,0.15)" }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: "#6B2737", transition: "width 0.4s ease" }} />
+      </div>
+      <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "9.5px", color: "rgba(255,255,255,0.4)", marginTop: "3px", letterSpacing: "0.04em" }}>
+        weighted {weight.toFixed(1)}×
+      </p>
+    </div>
+  );
+}
+
 function ReviewMatchCard() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ score: number; tags: string[]; headline: string } | null>(null);
+  const [result, setResult] = useState<QuickMatchResult | null>(null);
 
   const handleMatch = async () => {
     if (!query.trim()) return;
@@ -125,25 +172,93 @@ function ReviewMatchCard() {
       )}
 
       {result && !loading && (
-        <div style={{ textAlign: "center" }}>
-          <div style={{ lineHeight: 1 }}>
-            <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "72px", color: "white" }}>{result.score}</span>
+        <div>
+          {/* Score */}
+          <div style={{ textAlign: "center", marginBottom: "8px" }}>
+            <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "72px", color: "white", lineHeight: 1 }}>
+              {result.score}
+            </span>
+            <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "12px", color: "rgba(255,255,255,0.5)", marginTop: "6px", letterSpacing: "0.04em" }}>
+              / 100 match for your travel style
+            </p>
           </div>
-          <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "12px", color: "rgba(255,255,255,0.5)", marginTop: "6px", letterSpacing: "0.04em" }}>
-            / 100 match for your travel style
-          </p>
+
+          {/* Headline */}
           {result.headline && (
-            <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "15px", color: "rgba(255,255,255,0.75)", marginTop: "14px", lineHeight: 1.5 }}>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "15px", color: "rgba(255,255,255,0.75)", textAlign: "center", marginTop: "12px", marginBottom: "8px", lineHeight: 1.5 }}>
               {result.headline}
             </p>
           )}
+
+          {/* Score explanation */}
+          {result.scoreExplanation && (
+            <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "14px", color: "rgba(255,255,255,0.85)", textAlign: "center", marginTop: "10px", marginBottom: "20px", lineHeight: 1.55 }}>
+              {result.scoreExplanation}
+            </p>
+          )}
+
+          {/* Tags */}
           {result.tags.length > 0 && (
-            <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginTop: "16px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginTop: "12px", marginBottom: "22px", flexWrap: "wrap" }}>
               {result.tags.map((tag) => (
                 <span key={tag} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#B8963E", background: "rgba(184,150,62,0.15)", padding: "5px 10px" }}>
                   {tag}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* Breakdown bars */}
+          {result.scoreBreakdown && (
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "20px", marginTop: "12px" }}>
+              {CATEGORY_LABELS.map((c) => (
+                <BreakdownBar
+                  key={c.key}
+                  label={c.label}
+                  score={result.scoreBreakdown![c.key].score}
+                  weight={result.scoreBreakdown![c.key].weight}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* What worked / held back */}
+          {((result.whatWorked?.length ?? 0) > 0 || (result.whatHeldItBack?.length ?? 0) > 0) && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "20px", paddingTop: "18px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+              <div>
+                <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "9.5px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: "10px" }}>
+                  What worked
+                </p>
+                {(result.whatWorked ?? []).length > 0 ? (
+                  (result.whatWorked ?? []).map((s, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "6px" }}>
+                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#7CB67C", marginTop: "6px", flexShrink: 0 }} />
+                      <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "12px", color: "rgba(255,255,255,0.75)", lineHeight: 1.45 }}>
+                        {s}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "11px", color: "rgba(255,255,255,0.35)" }}>—</span>
+                )}
+              </div>
+              <div>
+                <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "9.5px", letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: "10px" }}>
+                  What held it back
+                </p>
+                {(result.whatHeldItBack ?? []).length > 0 ? (
+                  (result.whatHeldItBack ?? []).map((s, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "6px" }}>
+                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#D4A85C", marginTop: "6px", flexShrink: 0 }} />
+                      <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "12px", color: "rgba(255,255,255,0.75)", lineHeight: 1.45 }}>
+                        {s}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "11px", color: "rgba(255,255,255,0.35)" }}>—</span>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -464,6 +579,9 @@ export default function Home() {
             </Link>
           </div>
         </div>
+
+        {/* ── Section 3.5: Review Sorter ── */}
+        <ReviewSorter userTags={travelStyles} />
 
         {/* ── Section 4: Quick actions ── */}
         <div style={{ display: "flex", alignItems: "center", gap: "0", paddingTop: "8px", borderTop: "1px solid #E5E0D8" }}>

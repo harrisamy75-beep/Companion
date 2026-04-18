@@ -59,7 +59,14 @@ const SYSTEM_PROMPT = `You are a travel review classifier. Given a hotel or rest
   "eco_score": number,
   "adventurous_menu_score": number,
   "sentiment": "positive" | "neutral" | "negative",
-  "one_line_summary": string
+  "one_line_summary": string,
+  "score_explanation": string,
+  "score_breakdown": {
+    "luxury_value": { "score": number, "reason": string },
+    "foodie":       { "score": number, "reason": string },
+    "eco":          { "score": number, "reason": string },
+    "adventurous_menu": { "score": number, "reason": string }
+  }
 }
 
 Tags must come only from this list: luxury_value, overpriced, tourist_trap, foodie, adventurous_menu, kids_menu_only, eco_certified, vegetarian_friendly, hiking_nearby, family_friendly, romantic, business, pretentious, worth_every_penny, hidden_gem.
@@ -71,8 +78,18 @@ Scoring guidelines:
 - adventurous_menu_score (1-10): High = unusual ingredients, global cuisine, not safe options. Low = plain/predictable.
 - sentiment: overall tone of the review.
 - one_line_summary: max 12 words, plain English, no quotes.
+- score_explanation: 1-2 sentences explaining the overall pattern. Be specific about what drove scores up and what held them back. e.g. "Strong marks for exceptional food and local sourcing, but pulled back by mentions of inconsistent service and limited beach access."
+- score_breakdown: For each of the four categories, mirror the score above and add a short reason (max 8 words). e.g. "Chef-driven menu, locally sourced ingredients noted" or "Generic buffet, no mention of local cuisine".
 
 Return only the JSON object. No explanation, no markdown.`;
+
+type CategoryDetail = { score: number; reason: string };
+interface ScoreBreakdown {
+  luxury_value: CategoryDetail;
+  foodie: CategoryDetail;
+  eco: CategoryDetail;
+  adventurous_menu: CategoryDetail;
+}
 
 interface ScoredResult {
   tags: string[];
@@ -82,7 +99,18 @@ interface ScoredResult {
   adventurousMenuScore: number;
   sentiment: string;
   oneLineSummary: string;
+  scoreExplanation: string;
+  scoreBreakdown: ScoreBreakdown;
   raw: object;
+}
+
+function neutralBreakdown(): ScoreBreakdown {
+  return {
+    luxury_value: { score: 5, reason: "" },
+    foodie: { score: 5, reason: "" },
+    eco: { score: 5, reason: "" },
+    adventurous_menu: { score: 5, reason: "" },
+  };
 }
 
 function neutral(): ScoredResult {
@@ -93,9 +121,26 @@ function neutral(): ScoredResult {
     adventurousMenuScore: 5,
     sentiment: "neutral",
     oneLineSummary: "",
+    scoreExplanation: "",
+    scoreBreakdown: neutralBreakdown(),
     tags: [],
     raw: {},
   };
+}
+
+function parseBreakdown(raw: any): ScoreBreakdown {
+  const b = neutralBreakdown();
+  if (!raw || typeof raw !== "object") return b;
+  for (const key of ["luxury_value", "foodie", "eco", "adventurous_menu"] as const) {
+    const entry = raw[key];
+    if (entry && typeof entry === "object") {
+      b[key] = {
+        score: clamp(entry.score),
+        reason: typeof entry.reason === "string" ? entry.reason.slice(0, 80) : "",
+      };
+    }
+  }
+  return b;
 }
 
 function buildClient(): Anthropic | null {
@@ -144,6 +189,11 @@ async function scoreWithClaude(reviewText: string, log: any): Promise<ScoredResu
         typeof parsed.one_line_summary === "string"
           ? parsed.one_line_summary.slice(0, 120)
           : "",
+      scoreExplanation:
+        typeof parsed.score_explanation === "string"
+          ? parsed.score_explanation.slice(0, 280)
+          : "",
+      scoreBreakdown: parseBreakdown(parsed.score_breakdown),
       tags: Array.isArray(parsed.tags) ? parsed.tags : [],
       raw: parsed,
     };
@@ -164,11 +214,11 @@ router.post("/reviews/score", async (req, res): Promise<void> => {
   }
 
   const { propertyId, source, reviews } = parsed.data;
-  if (!req.isAuthenticated()) {
+  const userId: string = (req as any).userId;
+  if (!userId) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  const userId = req.user.id;
 
   const results = [];
 
@@ -222,6 +272,8 @@ router.post("/reviews/score", async (req, res): Promise<void> => {
         adventurousMenuScore: scores.adventurousMenuScore,
         sentiment: scores.sentiment,
         oneLineSummary: scores.oneLineSummary,
+        scoreExplanation: scores.scoreExplanation,
+        scoreBreakdown: scores.scoreBreakdown,
         rawClaudeResponse: scores.raw,
       })
       .returning();
@@ -235,8 +287,60 @@ router.post("/reviews/score", async (req, res): Promise<void> => {
 // ---------------------------------------------------------------------------
 // GET /reviews/match?property_id=X&user_id=Y
 // ---------------------------------------------------------------------------
+function buildMatchExplanation(
+  breakdown: {
+    luxuryValue: { avgScore: number };
+    foodie: { avgScore: number };
+    eco: { avgScore: number };
+    adventurousMenu: { avgScore: number };
+  },
+  userTags: string[]
+): { explanation: string; whatWorked: string[]; whatHeldItBack: string[] } {
+  const whatWorked: string[] = [];
+  const whatHeldItBack: string[] = [];
+
+  if (breakdown.luxuryValue.avgScore >= 7)
+    whatWorked.push("Strong luxury-value ratio");
+  else if (breakdown.luxuryValue.avgScore <= 4)
+    whatHeldItBack.push("Luxury-value doesn't match your tier");
+
+  if (userTags.includes("foodie")) {
+    if (breakdown.foodie.avgScore >= 7) whatWorked.push("Excellent food credentials");
+    else if (breakdown.foodie.avgScore <= 4)
+      whatHeldItBack.push("Food didn't impress reviewers");
+  }
+
+  if (userTags.includes("eco")) {
+    if (breakdown.eco.avgScore >= 7) whatWorked.push("Strong eco practices");
+    else if (breakdown.eco.avgScore <= 4)
+      whatHeldItBack.push("Limited eco credentials");
+  }
+
+  if (userTags.includes("adventurous_menu")) {
+    if (breakdown.adventurousMenu.avgScore >= 7)
+      whatWorked.push("Adventurous, creative menu");
+    else if (breakdown.adventurousMenu.avgScore <= 4)
+      whatHeldItBack.push("Menu plays it safe");
+  }
+
+  let explanation = "";
+  if (whatWorked.length > 0)
+    explanation += `Scores well for ${whatWorked.map((s) => s.toLowerCase()).join(" and ")}. `;
+  if (whatHeldItBack.length > 0)
+    explanation += `Held back by ${whatHeldItBack.map((s) => s.toLowerCase()).join(" and ")}.`;
+  if (explanation === "")
+    explanation = "Solid mid-range match across your key criteria.";
+
+  return {
+    explanation: explanation.trim(),
+    whatWorked: whatWorked.slice(0, 3),
+    whatHeldItBack: whatHeldItBack.slice(0, 3),
+  };
+}
+
 router.get("/reviews/match", async (req, res): Promise<void> => {
-  if (!req.isAuthenticated()) {
+  const userId: string = (req as any).userId;
+  if (!userId) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
@@ -254,11 +358,23 @@ router.get("/reviews/match", async (req, res): Promise<void> => {
     .where(eq(reviewScoresTable.propertyId, propertyId));
 
   if (reviews.length === 0) {
-    res.json({ matchScore: 0, topReviews: [], tagSummary: [] });
+    res.json({
+      matchScore: 0,
+      matchExplanation: "No reviews analysed yet.",
+      scoreBreakdown: null,
+      whatWorked: [],
+      whatHeldItBack: [],
+      topReviews: [],
+      tagSummary: [],
+    });
     return;
   }
 
-  const prefRows = await db.select().from(preferencesTable).limit(1);
+  const prefRows = await db
+    .select()
+    .from(preferencesTable)
+    .where(eq(preferencesTable.userId, userId))
+    .limit(1);
   const prefs = prefRows[0] ?? null;
 
   const styleTags: string[] = Array.isArray(prefs?.travelStyleTags)
@@ -266,14 +382,16 @@ router.get("/reviews/match", async (req, res): Promise<void> => {
     : [];
   const priceValueWeight = prefs?.priceValueWeight ?? 8;
 
+  const luxWeight = priceValueWeight / 10;
   const foodieWeight = styleTags.includes("foodie") ? 1.0 : 0.2;
   const ecoWeight = styleTags.includes("eco") ? 1.0 : 0.2;
   const adventurousWeight = styleTags.includes("adventurous_menu") ? 1.0 : 0.2;
 
-  const MAX_RAW = 40;
+  const MAX_RAW =
+    10 * luxWeight + 10 * foodieWeight + 10 * ecoWeight + 10 * adventurousWeight;
 
   const rawScores = reviews.map((r) => {
-    const lux = (r.luxuryValueScore ?? 5) * (priceValueWeight / 10);
+    const lux = (r.luxuryValueScore ?? 5) * luxWeight;
     const food = (r.foodieScore ?? 5) * foodieWeight;
     const eco = (r.ecoScore ?? 5) * ecoWeight;
     const adv = (r.adventurousMenuScore ?? 5) * adventurousWeight;
@@ -282,6 +400,37 @@ router.get("/reviews/match", async (req, res): Promise<void> => {
 
   const avgRaw = rawScores.reduce((a, b) => a + b, 0) / rawScores.length;
   const matchScore = Math.round((avgRaw / MAX_RAW) * 100);
+
+  const avg = (key: "luxuryValueScore" | "foodieScore" | "ecoScore" | "adventurousMenuScore") =>
+    reviews.reduce((s, r) => s + ((r as any)[key] ?? 5), 0) / reviews.length;
+
+  const scoreBreakdown = {
+    luxuryValue: {
+      avgScore: Number(avg("luxuryValueScore").toFixed(1)),
+      weight: Number(luxWeight.toFixed(1)),
+      contribution: Number((avg("luxuryValueScore") * luxWeight).toFixed(1)),
+    },
+    foodie: {
+      avgScore: Number(avg("foodieScore").toFixed(1)),
+      weight: foodieWeight,
+      contribution: Number((avg("foodieScore") * foodieWeight).toFixed(1)),
+    },
+    eco: {
+      avgScore: Number(avg("ecoScore").toFixed(1)),
+      weight: ecoWeight,
+      contribution: Number((avg("ecoScore") * ecoWeight).toFixed(1)),
+    },
+    adventurousMenu: {
+      avgScore: Number(avg("adventurousMenuScore").toFixed(1)),
+      weight: adventurousWeight,
+      contribution: Number((avg("adventurousMenuScore") * adventurousWeight).toFixed(1)),
+    },
+  };
+
+  const { explanation, whatWorked, whatHeldItBack } = buildMatchExplanation(
+    scoreBreakdown,
+    styleTags
+  );
 
   const scored = reviews
     .map((r, i) => ({ review: r, score: rawScores[i] }))
@@ -299,7 +448,15 @@ router.get("/reviews/match", async (req, res): Promise<void> => {
     .sort((a, b) => b[1] - a[1])
     .map(([tag]) => tag);
 
-  res.json({ matchScore, topReviews, tagSummary });
+  res.json({
+    matchScore,
+    matchExplanation: explanation,
+    scoreBreakdown,
+    whatWorked,
+    whatHeldItBack,
+    topReviews,
+    tagSummary,
+  });
 });
 
 export default router;
