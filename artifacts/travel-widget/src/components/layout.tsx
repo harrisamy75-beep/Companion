@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: "/stays", label: "Stays" },
   { href: "/preferences", label: "Preferences" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/settings", label: "Settings" },
 ];
 
 function getInitials(user: { firstName?: string | null; lastName?: string | null; primaryEmailAddress?: { emailAddress: string } | null } | null | undefined): string {
@@ -272,6 +273,42 @@ export function Layout({ children }: LayoutProps) {
           >
             crafted for discerning travelers
           </span>
+          <div style={{ marginTop: "10px" }}>
+            <Link
+              href="/privacy"
+              style={{
+                fontFamily: "'Raleway', sans-serif",
+                fontWeight: 300,
+                fontSize: "10px",
+                color: "rgba(255,255,255,0.3)",
+                textDecoration: "none",
+              }}
+            >
+              Privacy
+            </Link>
+            <span
+              style={{
+                color: "rgba(255,255,255,0.2)",
+                fontFamily: "'Raleway', sans-serif",
+                fontSize: "10px",
+                margin: "0 6px",
+              }}
+            >
+              ·
+            </span>
+            <Link
+              href="/terms"
+              style={{
+                fontFamily: "'Raleway', sans-serif",
+                fontWeight: 300,
+                fontSize: "10px",
+                color: "rgba(255,255,255,0.3)",
+                textDecoration: "none",
+              }}
+            >
+              Terms
+            </Link>
+          </div>
         </div>
       </aside>
 

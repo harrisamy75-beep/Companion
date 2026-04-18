@@ -74,6 +74,10 @@ export interface TravelPreferences {
   luxuryIndexMax?: number | null;
   priceValueWeight?: number | null;
   notes?: string | null;
+  consentGivenAt?: string | null;
+  consentVersion?: string | null;
+  aiReviewScoringEnabled?: boolean | null;
+  personalityEnabled?: boolean | null;
 }
 
 export interface UpsertPreferencesBody {
@@ -91,6 +95,9 @@ export interface UpsertPreferencesBody {
   luxuryIndexMax?: number | null;
   priceValueWeight?: number | null;
   notes?: string | null;
+  consentVersion?: string | null;
+  aiReviewScoringEnabled?: boolean | null;
+  personalityEnabled?: boolean | null;
 }
 
 export interface TravelSummary {

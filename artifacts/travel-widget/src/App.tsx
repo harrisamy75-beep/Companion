@@ -28,6 +28,9 @@ import TravelersPage from "@/pages/travelers";
 import PreferencesPage from "@/pages/preferences";
 import StaysPage from "@/pages/stays";
 import PricingPage from "@/pages/pricing";
+import SettingsPage from "@/pages/settings";
+import PrivacyPage from "@/pages/privacy";
+import TermsPage from "@/pages/terms";
 import { OnboardingWizard } from "@/components/onboarding";
 import { useState, useCallback } from "react";
 import { LogoutContext } from "@/lib/logout-context";
@@ -258,6 +261,31 @@ function LandingHero() {
             Already have an account? Sign in
           </button>
         </div>
+
+        <div
+          style={{
+            marginTop: "32px",
+            fontFamily: "'Raleway', sans-serif",
+            fontWeight: 300,
+            fontSize: "11px",
+            color: "#8C8279",
+            textAlign: "center",
+          }}
+        >
+          <a
+            href={`${basePath}/privacy`}
+            style={{ color: "#8C8279", textDecoration: "none" }}
+          >
+            Privacy Policy
+          </a>
+          <span style={{ margin: "0 8px" }}>·</span>
+          <a
+            href={`${basePath}/terms`}
+            style={{ color: "#8C8279", textDecoration: "none" }}
+          >
+            Terms of Service
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -352,6 +380,7 @@ function AuthenticatedApp() {
         <Route path="/stays" component={StaysPage} />
         <Route path="/preferences" component={PreferencesPage} />
         <Route path="/pricing" component={PricingPage} />
+        <Route path="/settings" component={SettingsPage} />
         <Route component={NotFound} />
       </Switch>
     </LogoutContext.Provider>
@@ -429,6 +458,8 @@ function ClerkProviderWithRoutes() {
         <TooltipProvider>
           <Switch>
             <Route path="/" component={HomeRedirect} />
+            <Route path="/privacy" component={PrivacyPage} />
+            <Route path="/terms" component={TermsPage} />
             <Route path="/sign-in/*?" component={SignInPage} />
             <Route path="/sign-up/*?" component={SignUpPage} />
             <Route>

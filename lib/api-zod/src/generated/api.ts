@@ -112,6 +112,10 @@ export const GetPreferencesResponse = zod.object({
   luxuryIndexMax: zod.number().nullish(),
   priceValueWeight: zod.number().nullish(),
   notes: zod.string().nullish(),
+  consentGivenAt: zod.coerce.date().nullish(),
+  consentVersion: zod.string().nullish(),
+  aiReviewScoringEnabled: zod.boolean().nullish(),
+  personalityEnabled: zod.boolean().nullish(),
 });
 
 /**
@@ -132,6 +136,9 @@ export const UpsertPreferencesBody = zod.object({
   luxuryIndexMax: zod.number().nullish(),
   priceValueWeight: zod.number().nullish(),
   notes: zod.string().nullish(),
+  consentVersion: zod.string().nullish(),
+  aiReviewScoringEnabled: zod.boolean().nullish(),
+  personalityEnabled: zod.boolean().nullish(),
 });
 
 export const UpsertPreferencesResponse = zod.object({
@@ -150,6 +157,10 @@ export const UpsertPreferencesResponse = zod.object({
   luxuryIndexMax: zod.number().nullish(),
   priceValueWeight: zod.number().nullish(),
   notes: zod.string().nullish(),
+  consentGivenAt: zod.coerce.date().nullish(),
+  consentVersion: zod.string().nullish(),
+  aiReviewScoringEnabled: zod.boolean().nullish(),
+  personalityEnabled: zod.boolean().nullish(),
 });
 
 /**
@@ -174,6 +185,10 @@ export const GetTravelSummaryResponse = zod.object({
       luxuryIndexMax: zod.number().nullish(),
       priceValueWeight: zod.number().nullish(),
       notes: zod.string().nullish(),
+      consentGivenAt: zod.coerce.date().nullish(),
+      consentVersion: zod.string().nullish(),
+      aiReviewScoringEnabled: zod.boolean().nullish(),
+      personalityEnabled: zod.boolean().nullish(),
     })
     .optional(),
   totalTravelers: zod.number(),

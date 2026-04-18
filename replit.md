@@ -81,6 +81,13 @@ Simple session-based auth via `express-session`. First visit prompts for a name 
 - `DELETE /loyalty/:id` — remove program
 - `GET /loyalty/programs` — static list of 12 suggested programs for quick-add
 
+## Privacy & Compliance
+- **Onboarding consent step (Step 1 of 5)**: Users must agree to ToS + Privacy Policy + AI processing before continuing. Saved to `preferences.consentGivenAt` + `consentVersion` via `POST /api/account/consent`.
+- **AI gating**: `/api/reviews/score` and `/api/personality` require BOTH `consentGivenAt != null` AND the user's per-feature toggle. When AI is disabled by the user, reviews route returns synthetic neutral results (skips shared cache); personality returns empty string.
+- **Settings page (`/settings`)**: Manage account (Clerk profile), export data as JSON, delete account (multi-table tx), toggle AI review scoring + personality generation.
+- **Public legal pages**: `/privacy`, `/terms` (no auth required, plain English).
+- **Account routes** (`artifacts/api-server/src/routes/account.ts`): `POST /api/account/consent`, `GET /api/account/export`, `DELETE /api/account` (transactional). Review scores are a global anonymous cache (no user_id), so excluded from export/delete by design.
+
 ## Frontend Pages
 - `/` — Dashboard (summary cards)
 - `/travelers` — Travel party management + trip profiles

@@ -220,10 +220,50 @@ router.post("/reviews/score", async (req, res): Promise<void> => {
     return;
   }
 
+  // Respect user's AI scoring preference and consent state.
+  // AI is enabled only if the user has given consent AND has the toggle on.
+  const userPrefs = await db
+    .select({
+      enabled: preferencesTable.aiReviewScoringEnabled,
+      consentGivenAt: preferencesTable.consentGivenAt,
+    })
+    .from(preferencesTable)
+    .where(eq(preferencesTable.userId, userId))
+    .limit(1);
+  const aiEnabled =
+    userPrefs.length > 0 &&
+    userPrefs[0].enabled !== false &&
+    userPrefs[0].consentGivenAt != null;
+
   const results = [];
 
   for (const reviewText of reviews) {
     const reviewHash = hashText(reviewText);
+
+    // When AI is disabled by the user, skip the shared cache entirely
+    // and return synthetic neutral output so that no AI-derived data is shown.
+    if (!aiEnabled) {
+      req.log.info({ propertyId, source }, "AI scoring disabled — neutral");
+      const n = neutral();
+      results.push({
+        propertyId,
+        source,
+        reviewHash,
+        reviewText,
+        tags: n.tags,
+        luxuryValueScore: n.luxuryValueScore,
+        foodieScore: n.foodieScore,
+        ecoScore: n.ecoScore,
+        adventurousMenuScore: n.adventurousMenuScore,
+        sentiment: n.sentiment,
+        oneLineSummary: n.oneLineSummary,
+        scoreExplanation: n.scoreExplanation,
+        scoreBreakdown: n.scoreBreakdown,
+        rawClaudeResponse: {},
+        cachedAt: new Date(),
+      });
+      continue;
+    }
 
     const cached = await db
       .select()
@@ -243,20 +283,23 @@ router.post("/reviews/score", async (req, res): Promise<void> => {
       continue;
     }
 
-    const rateCheck = checkRateLimit(userId);
-    if (!rateCheck.allowed) {
-      res.status(429).json({
-        error: "Rate limit exceeded: max 50 AI scoring calls per hour",
-        retryAfter: "1 hour",
-      });
-      return;
-    }
+    let scores: ScoredResult;
+    {
+      const rateCheck = checkRateLimit(userId);
+      if (!rateCheck.allowed) {
+        res.status(429).json({
+          error: "Rate limit exceeded: max 50 AI scoring calls per hour",
+          retryAfter: "1 hour",
+        });
+        return;
+      }
 
-    req.log.info(
-      { propertyId, source, remaining: rateCheck.remaining },
-      "Calling Claude"
-    );
-    const scores = await scoreWithClaude(reviewText, req.log);
+      req.log.info(
+        { propertyId, source, remaining: rateCheck.remaining },
+        "Calling Claude"
+      );
+      scores = await scoreWithClaude(reviewText, req.log);
+    }
 
     const [inserted] = await db
       .insert(reviewScoresTable)

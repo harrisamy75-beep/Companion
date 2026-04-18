@@ -1,5 +1,7 @@
 import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
+import { eq } from "drizzle-orm";
+import { db, preferencesTable } from "@workspace/db";
 
 const router = Router();
 
@@ -13,6 +15,34 @@ function buildClient(): Anthropic | null {
 }
 
 router.post("/personality", async (req, res): Promise<void> => {
+  // Gate AI personality on both consent and the user's toggle.
+  // - If consent not recorded -> no AI processing.
+  // - If toggle is off -> no AI processing.
+  const userId: string | undefined = (req as any).userId;
+  if (userId) {
+    const prefs = await db
+      .select({
+        enabled: preferencesTable.personalityEnabled,
+        consentGivenAt: preferencesTable.consentGivenAt,
+      })
+      .from(preferencesTable)
+      .where(eq(preferencesTable.userId, userId))
+      .limit(1);
+
+    const allowed =
+      prefs.length > 0 &&
+      prefs[0].enabled !== false &&
+      prefs[0].consentGivenAt != null;
+
+    if (!allowed) {
+      res.json({ personality: "" });
+      return;
+    }
+  } else {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
   const {
     name = "Traveler",
     travelers = [],

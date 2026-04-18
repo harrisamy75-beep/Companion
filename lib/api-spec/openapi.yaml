@@ -502,6 +502,19 @@ components:
         notes:
           type: string
           nullable: true
+        consentGivenAt:
+          type: string
+          format: date-time
+          nullable: true
+        consentVersion:
+          type: string
+          nullable: true
+        aiReviewScoringEnabled:
+          type: boolean
+          nullable: true
+        personalityEnabled:
+          type: boolean
+          nullable: true
       required:
         - id
 
@@ -553,6 +566,15 @@ components:
           nullable: true
         notes:
           type: string
+          nullable: true
+        consentVersion:
+          type: string
+          nullable: true
+        aiReviewScoringEnabled:
+          type: boolean
+          nullable: true
+        personalityEnabled:
+          type: boolean
           nullable: true
 
     TravelSummary:

@@ -21,4 +21,7 @@ export interface UpsertPreferencesBody {
   luxuryIndexMax?: number | null;
   priceValueWeight?: number | null;
   notes?: string | null;
+  consentVersion?: string | null;
+  aiReviewScoringEnabled?: boolean | null;
+  personalityEnabled?: boolean | null;
 }

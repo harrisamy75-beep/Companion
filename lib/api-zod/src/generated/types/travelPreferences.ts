@@ -22,4 +22,8 @@ export interface TravelPreferences {
   luxuryIndexMax?: number | null;
   priceValueWeight?: number | null;
   notes?: string | null;
+  consentGivenAt?: Date | null;
+  consentVersion?: string | null;
+  aiReviewScoringEnabled?: boolean | null;
+  personalityEnabled?: boolean | null;
 }

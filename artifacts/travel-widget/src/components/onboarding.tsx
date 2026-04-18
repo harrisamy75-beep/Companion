@@ -545,18 +545,168 @@ export interface OnboardingWizardProps {
   onComplete: () => void;
 }
 
+function ConsentStep({
+  consent,
+  setConsent,
+}: {
+  consent: boolean;
+  setConsent: (v: boolean) => void;
+}) {
+  return (
+    <div>
+      <h2
+        style={{
+          fontFamily: "'Playfair Display', serif",
+          fontStyle: "italic",
+          fontWeight: 700,
+          fontSize: "36px",
+          color: "#1C1C1C",
+          letterSpacing: "-0.01em",
+          marginBottom: "10px",
+        }}
+      >
+        Before we begin.
+      </h2>
+      <p
+        style={{
+          fontFamily: "'Raleway', sans-serif",
+          fontWeight: 400,
+          fontSize: "16px",
+          color: "#5C5248",
+          marginBottom: "32px",
+          lineHeight: 1.6,
+        }}
+      >
+        A quick word about your data. Plain English, no fine print.
+      </p>
+
+      <div
+        style={{
+          background: "white",
+          border: "1px solid #E5E0D8",
+          padding: "26px 28px",
+          marginBottom: "20px",
+        }}
+      >
+        <ul
+          style={{
+            listStyle: "none",
+            padding: 0,
+            margin: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: "14px",
+          }}
+        >
+          {[
+            "Your travel party, preferences and favourite stays are stored in your account.",
+            "We use Anthropic's Claude AI to score reviews and write your travel personality.",
+            "We never sell your data and never use it to train AI models.",
+            "You can export everything or delete your account from Settings at any time.",
+          ].map((line) => (
+            <li
+              key={line}
+              style={{
+                fontFamily: "'Raleway', sans-serif",
+                fontWeight: 300,
+                fontSize: "14px",
+                color: "#2A2A2A",
+                lineHeight: 1.6,
+                paddingLeft: "20px",
+                position: "relative",
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  color: "#A07840",
+                  fontWeight: 600,
+                }}
+              >
+                ·
+              </span>
+              {line}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <label
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "12px",
+          padding: "14px 16px",
+          background: consent ? "#F5F0E6" : "white",
+          border: `1px solid ${consent ? "#A07840" : "#E5E0D8"}`,
+          cursor: "pointer",
+          transition: "background 0.15s, border-color 0.15s",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+          style={{
+            marginTop: "3px",
+            accentColor: "#6B2737",
+            cursor: "pointer",
+          }}
+        />
+        <span
+          style={{
+            fontFamily: "'Raleway', sans-serif",
+            fontWeight: 400,
+            fontSize: "13px",
+            color: "#1C1C1C",
+            lineHeight: 1.6,
+          }}
+        >
+          I agree to the{" "}
+          <a
+            href={`${import.meta.env.BASE_URL}terms`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "#6B2737", textDecoration: "underline" }}
+          >
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a
+            href={`${import.meta.env.BASE_URL}privacy`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "#6B2737", textDecoration: "underline" }}
+          >
+            Privacy Policy
+          </a>
+          , and consent to AI-assisted review scoring and personality generation.
+        </span>
+      </label>
+    </div>
+  );
+}
+
 export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) {
-  const TOTAL = 4;
+  const TOTAL = 5;
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [saving, setSaving] = useState(false);
 
+  const [consent, setConsent] = useState(false);
   const [travelers, setTravelers] = useState<TravelerEntry[]>([]);
   const [travelStyles, setTravelStyles] = useState<string[]>([]);
   const [properties, setProperties] = useState<PropertyEntry[]>([]);
 
   const handleSkip = () => {
+    if (!consent) return;
     localStorage.setItem("onboardingComplete", "true");
+    apiFetch("/api/account/consent", {
+      method: "POST",
+      body: JSON.stringify({ version: "1.0" }),
+    }).catch(() => {});
     onComplete();
   };
 
@@ -575,6 +725,11 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
     setSaving(true);
     try {
       const saves: Promise<unknown>[] = [];
+
+      saves.push(apiFetch("/api/account/consent", {
+        method: "POST",
+        body: JSON.stringify({ version: "1.0" }),
+      }));
 
       travelers.forEach(t => {
         saves.push(apiFetch("/api/travelers", {
@@ -637,9 +792,11 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
           ))}
         </div>
 
-        <button onClick={handleSkip} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "11px", color: "#5C5248", background: "none", border: "none", cursor: "pointer", letterSpacing: "0.03em" }}>
-          Skip setup
-        </button>
+        {step > 1 ? (
+          <button onClick={handleSkip} style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "11px", color: "#5C5248", background: "none", border: "none", cursor: "pointer", letterSpacing: "0.03em" }}>
+            Skip setup
+          </button>
+        ) : <div style={{ width: 60 }} />}
       </div>
 
       {/* Step content */}
@@ -649,10 +806,11 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
           className={direction === "forward" ? "ob-slide-forward" : "ob-slide-back"}
           style={{ width: "100%", maxWidth: "520px", paddingBottom: "56px" }}
         >
-          {step === 1 && <Step1 userId={userId} travelers={travelers} setTravelers={setTravelers} />}
-          {step === 2 && <Step2 styles={travelStyles} setStyles={setTravelStyles} />}
-          {step === 3 && <Step3 properties={properties} setProperties={setProperties} />}
-          {step === 4 && <Step4 userId={userId} travelers={travelers} travelStyles={travelStyles} properties={properties} />}
+          {step === 1 && <ConsentStep consent={consent} setConsent={setConsent} />}
+          {step === 2 && <Step1 userId={userId} travelers={travelers} setTravelers={setTravelers} />}
+          {step === 3 && <Step2 styles={travelStyles} setStyles={setTravelStyles} />}
+          {step === 4 && <Step3 properties={properties} setProperties={setProperties} />}
+          {step === 5 && <Step4 userId={userId} travelers={travelers} travelStyles={travelStyles} properties={properties} />}
         </div>
       </div>
 
@@ -666,24 +824,30 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
 
         <button
           onClick={handleNext}
-          disabled={saving}
+          disabled={saving || (step === 1 && !consent)}
           style={{
             fontFamily: "'Raleway', sans-serif",
             fontWeight: 600,
             fontSize: "11px",
             letterSpacing: "0.14em",
             textTransform: "uppercase",
-            background: saving ? "#5C5248" : "#6B2737",
+            background: saving || (step === 1 && !consent) ? "#B6A89B" : "#6B2737",
             color: "white",
             border: "none",
             borderRadius: 0,
-            cursor: saving ? "default" : "pointer",
+            cursor: saving || (step === 1 && !consent) ? "default" : "pointer",
             height: "44px",
-            width: step === TOTAL ? "220px" : "180px",
+            width: step === TOTAL ? "220px" : step === 1 ? "180px" : "180px",
             transition: "width 0.2s, background 0.15s",
           }}
         >
-          {saving ? "Saving…" : step === TOTAL ? "Open my dashboard →" : "Next"}
+          {saving
+            ? "Saving…"
+            : step === 1
+            ? "I agree, continue →"
+            : step === TOTAL
+            ? "Open my dashboard →"
+            : "Next"}
         </button>
       </div>
     </div>
