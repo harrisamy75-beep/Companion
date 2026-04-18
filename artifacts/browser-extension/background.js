@@ -3,7 +3,7 @@ const CONFIG_KEY = "tripprofile_config";
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 
 const DEFAULT_CONFIG = {
-  apiBase: "https://travel-companion.replit.app/api",
+  apiBase: "https://travelcompaniontool.replit.app/api",
   userId: "",
 };
 

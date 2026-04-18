@@ -2,7 +2,7 @@ const STORAGE_KEY = "tripprofile";
 const CONFIG_KEY = "tripprofile_config";
 
 const DEFAULT_CONFIG = {
-  apiBase: "https://travel-companion.replit.app/api",
+  apiBase: "https://travelcompaniontool.replit.app/api",
   userId: "",
 };
 

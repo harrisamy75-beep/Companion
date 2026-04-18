@@ -9,7 +9,8 @@
     "https://*.booking.com/*",
     "https://*.hotels.com/*",
     "https://www.google.com/travel/*",
-    "https://*.airbnb.com/*"
+    "https://*.airbnb.com/*",
+    "https://travelcompaniontool.replit.app/*"
   ],
   "action": { "default_popup": "popup.html" },
   "background": { "service_worker": "background.js" },

@@ -132,7 +132,7 @@ async function fillGoogleHotels(profile) {
 }
 
 const CONFIG_KEY = "tripprofile_config";
-const DEFAULT_API_BASE = "https://travel-companion.replit.app/api";
+const DEFAULT_API_BASE = "https://travelcompaniontool.replit.app/api";
 
 async function getApiBase() {
   const result = await chrome.storage.local.get(CONFIG_KEY);
