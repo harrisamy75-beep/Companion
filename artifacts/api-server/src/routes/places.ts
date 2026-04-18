@@ -39,8 +39,15 @@ router.get("/places/search", async (req, res) => {
       `https://maps.googleapis.com/maps/api/place/textsearch/json` +
       `?query=${encodeURIComponent(q)}&type=lodging&key=${key}`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        Referer: "https://travelcompaniontool.replit.app",
+        Origin: "https://travelcompaniontool.replit.app",
+      },
+    });
     const data = (await response.json()) as {
+      status?: string;
+      error_message?: string;
       results: Array<{
         place_id: string;
         name: string;
@@ -49,6 +56,10 @@ router.get("/places/search", async (req, res) => {
         price_level?: number;
       }>;
     };
+
+    if (data.status && data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+      console.error("Places API error:", data.status, data.error_message);
+    }
 
     const results = (data.results ?? []).slice(0, 6).map((r) => ({
       placeId: r.place_id,
