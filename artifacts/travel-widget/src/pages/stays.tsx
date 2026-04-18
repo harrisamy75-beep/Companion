@@ -573,10 +573,12 @@ function LoyaltyRow({ program, onEdit, onDelete }: {
 type LoyForm = { programName: string; brand: string; membershipNumber: string; tier: string; notes: string };
 const EMPTY_LOY: LoyForm = { programName: "", brand: "", membershipNumber: "", tier: "", notes: "" };
 
-function LoyaltyForm({ initial, onSubmit, onCancel, loading, suggested }: {
-  initial?: LoyForm; onSubmit: (f: LoyForm) => void; onCancel: () => void; loading: boolean; suggested: SuggestedProgramGroup[];
+function LoyaltyForm({ initial, onSubmit, onBulkAdd, onCancel, loading, suggested }: {
+  initial?: LoyForm; onSubmit: (f: LoyForm) => void; onBulkAdd?: (programs: SuggestedProgram[]) => Promise<void> | void; onCancel: () => void; loading: boolean; suggested: SuggestedProgramGroup[];
 }) {
   const [form, setForm] = useState<LoyForm>(initial ?? EMPTY_LOY);
+  const [selectedBrands, setSelectedBrands] = useState<SuggestedProgram[]>([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
   // Re-sync local form when `initial` changes (e.g. user clicks "Add it →" on a smart suggestion
   // while the form is already mounted, or switches between editing different programs).
   useEffect(() => {
@@ -584,8 +586,28 @@ function LoyaltyForm({ initial, onSubmit, onCancel, loading, suggested }: {
   }, [initial]);
   const set = <K extends keyof LoyForm>(k: K, v: LoyForm[K]) => setForm(f => ({ ...f, [k]: v }));
 
-  const prefill = (s: SuggestedProgram) =>
-    setForm(f => ({ ...f, brand: s.brand, programName: s.program, tier: "" }));
+  const keyOf = (s: SuggestedProgram) => `${s.brand}|${s.program}`;
+  const isSelected = (s: SuggestedProgram) => selectedBrands.some(x => keyOf(x) === keyOf(s));
+  const toggleBrand = (s: SuggestedProgram) => {
+    setSelectedBrands(prev =>
+      prev.some(x => keyOf(x) === keyOf(s))
+        ? prev.filter(x => keyOf(x) !== keyOf(s))
+        : [...prev, s]
+    );
+  };
+
+  const handleBulkAdd = async () => {
+    if (!onBulkAdd || selectedBrands.length === 0) return;
+    setBulkSaving(true);
+    try {
+      await onBulkAdd(selectedBrands);
+      setSelectedBrands([]);
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  const inBulkMode = !initial && selectedBrands.length > 0;
 
   // Look up the currently-selected program's tier list (from the grouped data)
   const selectedTiers: string[] | undefined = (() => {
@@ -603,12 +625,34 @@ function LoyaltyForm({ initial, onSubmit, onCancel, loading, suggested }: {
           {suggested.map(group => (
             <div key={group.tier_type}>
               <p className="eyebrow" style={{ marginBottom: "8px" }}>{group.label}</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {group.programs.map(s => {
-                  const isActive = form.brand === s.brand && form.programName === s.program;
+                  const selected = isSelected(s);
                   return (
-                    <button key={s.brand + s.program} type="button" onClick={() => prefill(s)}
-                      style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: isActive ? "#6B2737" : "#5C5248", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: isActive ? "underline" : "none", textDecorationColor: "#6B2737" }}>
+                    <button
+                      key={s.brand + s.program}
+                      type="button"
+                      onClick={() => toggleBrand(s)}
+                      aria-pressed={selected}
+                      style={{
+                        fontFamily: "'Raleway', sans-serif",
+                        fontWeight: 400,
+                        fontSize: "13px",
+                        color: selected ? "#fff" : "#5C5248",
+                        background: selected ? "#6B2737" : "transparent",
+                        border: `1px solid ${selected ? "#6B2737" : "#E5E0D8"}`,
+                        borderRadius: "2px",
+                        padding: "6px 14px",
+                        cursor: "pointer",
+                        transition: "all 150ms ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected(s)) (e.currentTarget as HTMLButtonElement).style.background = "#F5F0E6";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected(s)) (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                      }}
+                    >
                       {s.brand}
                     </button>
                   );
@@ -619,6 +663,8 @@ function LoyaltyForm({ initial, onSubmit, onCancel, loading, suggested }: {
         </div>
       )}
 
+      {!inBulkMode && (
+      <>
       <Field label="Brand">
         <input className="input-underline" required value={form.brand} onChange={e => set("brand", e.target.value)} placeholder="Hyatt" />
       </Field>
@@ -652,6 +698,95 @@ function LoyaltyForm({ initial, onSubmit, onCancel, loading, suggested }: {
           {loading ? "Saving…" : "Save"}
         </button>
       </div>
+      </>
+      )}
+
+      {inBulkMode && (
+        <div
+          style={{
+            position: "sticky",
+            bottom: 0,
+            background: "white",
+            borderTop: "1px solid #E5E0D8",
+            padding: "16px 24px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "16px",
+            marginTop: "8px",
+            marginLeft: "-20px",
+            marginRight: "-20px",
+            marginBottom: "-20px",
+            zIndex: 5,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p
+              style={{
+                fontFamily: "'Raleway', sans-serif",
+                fontWeight: 300,
+                fontStyle: "italic",
+                fontSize: "13px",
+                color: "#5C5248",
+                marginBottom: "2px",
+              }}
+            >
+              {selectedBrands.length} program{selectedBrands.length === 1 ? "" : "s"} selected
+            </p>
+            <p
+              style={{
+                fontFamily: "'Raleway', sans-serif",
+                fontWeight: 300,
+                fontStyle: "italic",
+                fontSize: "12px",
+                color: "#94A39B",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+              title={selectedBrands.map(s => s.brand).join(", ")}
+            >
+              {selectedBrands.map(s => s.brand).join(", ")}
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setSelectedBrands([])}
+              style={{
+                background: "transparent",
+                border: "1px solid #E5E0D8",
+                padding: "10px 16px",
+                cursor: "pointer",
+                fontFamily: "'Raleway', sans-serif",
+                fontWeight: 500,
+                fontSize: "11px",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "#5C5248",
+              }}
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkAdd}
+              disabled={bulkSaving}
+              className="btn-wine"
+              style={{
+                padding: "10px 20px",
+                fontFamily: "'Raleway', sans-serif",
+                fontWeight: 600,
+                fontSize: "11px",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+              }}
+            >
+              {bulkSaving ? "Adding…" : `Add Selected`}
+            </button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
@@ -928,6 +1063,26 @@ export default function StaysPage() {
                     : prefilledLoy ?? undefined
                 }
                 onSubmit={(f) => { handleSaveLoy(f); setPrefilledLoy(null); }}
+                onBulkAdd={async (programs) => {
+                  try {
+                    await Promise.all(
+                      programs.map((p) =>
+                        createLoy.mutateAsync({
+                          brand: p.brand,
+                          programName: p.program,
+                          membershipNumber: "",
+                          tier: "",
+                          notes: "",
+                        })
+                      )
+                    );
+                    toast({ title: `Added ${programs.length} program${programs.length === 1 ? "" : "s"}` });
+                    setShowLoyForm(false);
+                    setPrefilledLoy(null);
+                  } catch {
+                    toast({ title: "Some programs failed to add", variant: "destructive" });
+                  }
+                }}
                 onCancel={() => { setShowLoyForm(false); setEditingLoy(null); setPrefilledLoy(null); }}
                 loading={createLoy.isPending || updateLoy.isPending}
                 suggested={suggested}
