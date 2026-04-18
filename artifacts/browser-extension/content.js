@@ -131,7 +131,19 @@ async function fillGoogleHotels(profile) {
   return true;
 }
 
-const API_BASE = "https://workspace.agrifluencer.repl.co/api";
+const CONFIG_KEY = "tripprofile_config";
+const DEFAULT_API_BASE = "https://travel-companion.replit.app/api";
+
+async function getApiBase() {
+  const result = await chrome.storage.local.get(CONFIG_KEY);
+  return (result[CONFIG_KEY] && result[CONFIG_KEY].apiBase) || DEFAULT_API_BASE;
+}
+
+function detectSource(hostname) {
+  if (hostname.includes("google.com")) return "google";
+  /* `/reviews/score` only accepts "tripadvisor" | "google" — default to google for everything else */
+  return "google";
+}
 
 async function scoreAndBadgeReviews(profile) {
   const reviewEls = document.querySelectorAll(
@@ -141,13 +153,16 @@ async function scoreAndBadgeReviews(profile) {
 
   const reviews = Array.from(reviewEls).map((el) => el.textContent.trim());
   const propertyId = encodeURIComponent(window.location.pathname + window.location.search);
+  const apiBase = await getApiBase();
+  const source = detectSource(window.location.hostname);
 
   let scored;
   try {
-    const resp = await fetch(`${API_BASE}/reviews/score`, {
+    const resp = await fetch(`${apiBase}/reviews/score`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ propertyId, source: "page", reviews }),
+      body: JSON.stringify({ propertyId, source, reviews }),
     });
     if (!resp.ok) return;
     scored = await resp.json();

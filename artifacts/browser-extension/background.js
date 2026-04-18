@@ -1,21 +1,48 @@
-const API_BASE = "https://workspace.agrifluencer.repl.co/api";
-const DASHBOARD_URL = "https://workspace.agrifluencer.repl.co/";
-const USER_ID = "user_1";
 const STORAGE_KEY = "tripprofile";
+const CONFIG_KEY = "tripprofile_config";
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 
-async function fetchAndStore() {
+const DEFAULT_CONFIG = {
+  apiBase: "https://travel-companion.replit.app/api",
+  userId: "",
+};
+
+async function getConfig() {
+  const result = await chrome.storage.local.get(CONFIG_KEY);
+  return { ...DEFAULT_CONFIG, ...(result[CONFIG_KEY] || {}) };
+}
+
+async function setBadge(text, color) {
   try {
-    const response = await fetch(`${API_BASE}/summary/${USER_ID}`, {
+    await chrome.action.setBadgeText({ text });
+    if (color) await chrome.action.setBadgeBackgroundColor({ color });
+  } catch {
+    /* noop */
+  }
+}
+
+async function fetchAndStore() {
+  const { apiBase, userId } = await getConfig();
+
+  if (!userId) {
+    console.warn("[TripProfile] No userId configured — open the popup to set up");
+    await setBadge("!", "#A07840");
+    return { ok: false, error: "no_user" };
+  }
+
+  try {
+    const response = await fetch(`${apiBase}/summary/${encodeURIComponent(userId)}`, {
       credentials: "include",
       headers: { "Content-Type": "application/json" },
     });
-    if (response.status === 401) {
-      console.warn("[TripProfile] Not authenticated — opening dashboard to log in");
-      chrome.tabs.create({ url: DASHBOARD_URL });
-      return;
+
+    if (response.status === 401 || response.status === 404) {
+      console.warn("[TripProfile] User not found / not authenticated");
+      await setBadge("!", "#6B2737");
+      return { ok: false, error: "auth" };
     }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
     const data = await response.json();
     await chrome.storage.local.set({
       [STORAGE_KEY]: {
@@ -23,9 +50,13 @@ async function fetchAndStore() {
         _syncedAt: new Date().toISOString(),
       },
     });
+    await setBadge("", "#00000000");
     console.log("[TripProfile] Profile synced at", new Date().toISOString());
+    return { ok: true };
   } catch (err) {
     console.error("[TripProfile] Sync failed:", err);
+    await setBadge("!", "#6B2737");
+    return { ok: false, error: String(err) };
   }
 }
 
@@ -44,7 +75,11 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "RESYNC") {
-    fetchAndStore().then(() => sendResponse({ ok: true }));
+    fetchAndStore().then((result) => sendResponse(result));
+    return true;
+  }
+  if (message.type === "GET_CONFIG") {
+    getConfig().then((cfg) => sendResponse(cfg));
     return true;
   }
 });
