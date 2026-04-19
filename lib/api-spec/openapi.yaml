@@ -499,6 +499,28 @@ components:
         priceValueWeight:
           type: integer
           nullable: true
+        budgetPerNightMin:
+          type: integer
+          nullable: true
+        budgetPerNightMax:
+          type: integer
+          nullable: true
+        budgetFlexibility:
+          type: string
+          nullable: true
+        valuePhilosophy:
+          type: string
+          nullable: true
+        worthSplurgingOn:
+          type: array
+          items:
+            type: string
+          nullable: true
+        happyToSaveOn:
+          type: array
+          items:
+            type: string
+          nullable: true
         notes:
           type: string
           nullable: true
@@ -563,6 +585,28 @@ components:
           nullable: true
         priceValueWeight:
           type: integer
+          nullable: true
+        budgetPerNightMin:
+          type: integer
+          nullable: true
+        budgetPerNightMax:
+          type: integer
+          nullable: true
+        budgetFlexibility:
+          type: string
+          nullable: true
+        valuePhilosophy:
+          type: string
+          nullable: true
+        worthSplurgingOn:
+          type: array
+          items:
+            type: string
+          nullable: true
+        happyToSaveOn:
+          type: array
+          items:
+            type: string
           nullable: true
         notes:
           type: string

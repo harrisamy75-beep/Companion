@@ -21,6 +21,12 @@ export interface TravelPreferences {
   luxuryIndexMin?: number | null;
   luxuryIndexMax?: number | null;
   priceValueWeight?: number | null;
+  budgetPerNightMin?: number | null;
+  budgetPerNightMax?: number | null;
+  budgetFlexibility?: string | null;
+  valuePhilosophy?: string | null;
+  worthSplurgingOn?: string[] | null;
+  happyToSaveOn?: string[] | null;
   notes?: string | null;
   consentGivenAt?: Date | null;
   consentVersion?: string | null;

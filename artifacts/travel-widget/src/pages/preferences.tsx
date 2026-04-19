@@ -14,6 +14,44 @@ import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TRAVEL_STYLE_GROUPS } from "@/lib/travel-styles";
 
+// ---------------------------------------------------------------------------
+// Budget & Value option lists
+// ---------------------------------------------------------------------------
+const VALUE_PHILOSOPHIES: Array<{ id: string; label: string; description: string }> = [
+  { id: "value_hunter", label: "Value Hunter", description: "Best possible experience for the price" },
+  { id: "selective_splurger", label: "Selective Splurger", description: "Budget-conscious but will spend on what matters" },
+  { id: "luxury_on_a_budget", label: "Luxury on a Budget", description: "Want premium feel without premium price tags" },
+  { id: "considered_spender", label: "Considered Spender", description: "Quality over quantity, fewer but better trips" },
+  { id: "special_occasion", label: "Special Occasion", description: "Save up and go all out for milestone trips" },
+  { id: "no_budget", label: "No Budget", description: "Price is not a consideration" },
+];
+
+const WORTH_SPLURGING_OPTIONS = [
+  { id: "the_room", label: "The Room" },
+  { id: "the_food", label: "The Food" },
+  { id: "the_location", label: "The Location" },
+  { id: "the_pool_spa", label: "The Pool & Spa" },
+  { id: "the_experience", label: "The Experience" },
+  { id: "the_service", label: "The Service" },
+  { id: "the_views", label: "The Views" },
+  { id: "the_activities", label: "The Activities" },
+];
+
+const HAPPY_TO_SAVE_OPTIONS = [
+  { id: "room_size", label: "Room Size" },
+  { id: "breakfast_included", label: "Breakfast Included" },
+  { id: "minibar", label: "Minibar" },
+  { id: "gym_access", label: "Gym Access" },
+  { id: "airport_transfer", label: "Airport Transfer" },
+  { id: "parking", label: "Parking" },
+];
+
+const BUDGET_MIN = 50;
+const BUDGET_MAX = 2000;
+
+// ---------------------------------------------------------------------------
+// Form schema
+// ---------------------------------------------------------------------------
 const formSchema = z.object({
   seatPreference: z.string().optional(),
   mealPreference: z.string().optional(),
@@ -24,6 +62,12 @@ const formSchema = z.object({
   travelInsuranceNotes: z.string().optional(),
   additionalNotes: z.string().optional(),
   travelStyles: z.array(z.string()).optional(),
+  budgetPerNightMin: z.number().nullable().optional(),
+  budgetPerNightMax: z.number().nullable().optional(),
+  budgetFlexibility: z.string().optional(),
+  valuePhilosophy: z.string().nullable().optional(),
+  worthSplurgingOn: z.array(z.string()).optional(),
+  happyToSaveOn: z.array(z.string()).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -37,6 +81,139 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
+// ---------------------------------------------------------------------------
+// Underline-toggle button — same visual treatment as travel styles
+// ---------------------------------------------------------------------------
+function ToggleButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        fontFamily: selected ? "'Playfair Display', serif" : "'Raleway', sans-serif",
+        fontStyle: selected ? "italic" : "normal",
+        fontWeight: 400,
+        fontSize: "15px",
+        color: selected ? "#6B2737" : "#5C5248",
+        background: "none",
+        border: "none",
+        borderBottom: selected ? "2px solid #6B2737" : "2px solid transparent",
+        paddingBottom: "4px",
+        cursor: "pointer",
+        transition: "color 0.15s, border-color 0.15s",
+        lineHeight: 2,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dual-handle budget slider
+// ---------------------------------------------------------------------------
+function DualRangeSlider({
+  min,
+  max,
+  value,
+  onChange,
+}: {
+  min: number;
+  max: number;
+  value: [number, number];
+  onChange: (next: [number, number]) => void;
+}) {
+  const [lo, hi] = value;
+  const loPct = ((lo - min) / (max - min)) * 100;
+  const hiPct = ((hi - min) / (max - min)) * 100;
+
+  const handleLo = (v: number) => {
+    const safe = Math.min(v, hi - 50);
+    onChange([Math.max(min, safe), hi]);
+  };
+  const handleHi = (v: number) => {
+    const safe = Math.max(v, lo + 50);
+    onChange([lo, Math.min(max, safe)]);
+  };
+
+  return (
+    <div style={{ position: "relative", height: "44px", marginTop: "8px" }}>
+      {/* Track */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "20px",
+          height: "2px",
+          background: "#E5E0D8",
+        }}
+      />
+      {/* Selected fill */}
+      <div
+        style={{
+          position: "absolute",
+          top: "20px",
+          height: "2px",
+          left: `${loPct}%`,
+          right: `${100 - hiPct}%`,
+          background: "#6B2737",
+        }}
+      />
+      {/* Two stacked inputs */}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={50}
+        value={lo}
+        onChange={(e) => handleLo(Number(e.target.value))}
+        className="dual-range"
+        style={{ position: "absolute", left: 0, right: 0, top: 0, width: "100%", pointerEvents: "auto", zIndex: 2 }}
+      />
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={50}
+        value={hi}
+        onChange={(e) => handleHi(Number(e.target.value))}
+        className="dual-range"
+        style={{ position: "absolute", left: 0, right: 0, top: 0, width: "100%", pointerEvents: "auto", zIndex: 3 }}
+      />
+      <style>{`
+        .dual-range { -webkit-appearance: none; appearance: none; background: transparent; height: 44px; outline: none; }
+        .dual-range::-webkit-slider-runnable-track { background: transparent; height: 44px; }
+        .dual-range::-moz-range-track { background: transparent; height: 44px; }
+        .dual-range::-webkit-slider-thumb {
+          -webkit-appearance: none; appearance: none;
+          width: 18px; height: 18px; border-radius: 50%;
+          background: #FAFAF8; border: 2px solid #6B2737;
+          cursor: pointer; margin-top: 12px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+          pointer-events: auto;
+        }
+        .dual-range::-moz-range-thumb {
+          width: 18px; height: 18px; border-radius: 50%;
+          background: #FAFAF8; border: 2px solid #6B2737;
+          cursor: pointer; pointer-events: auto;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 export default function PreferencesPage() {
   const { data: preferences, isLoading } = useGetPreferences();
   const upsertPreferences = useUpsertPreferences();
@@ -49,6 +226,9 @@ export default function PreferencesPage() {
       seatPreference: "", mealPreference: "", frequentFlyerNumbers: "",
       passportNotes: "", accessibilityNeeds: "", hotelPreferences: "",
       travelInsuranceNotes: "", additionalNotes: "", travelStyles: [],
+      budgetPerNightMin: 200, budgetPerNightMax: 600,
+      budgetFlexibility: "moderate", valuePhilosophy: null,
+      worthSplurgingOn: [], happyToSaveOn: [],
     },
   });
 
@@ -64,6 +244,12 @@ export default function PreferencesPage() {
         travelInsuranceNotes: preferences.travelInsuranceNotes || "",
         additionalNotes: preferences.additionalNotes || "",
         travelStyles: preferences.travelStyles || [],
+        budgetPerNightMin: preferences.budgetPerNightMin ?? 200,
+        budgetPerNightMax: preferences.budgetPerNightMax ?? 600,
+        budgetFlexibility: preferences.budgetFlexibility || "moderate",
+        valuePhilosophy: preferences.valuePhilosophy ?? null,
+        worthSplurgingOn: preferences.worthSplurgingOn || [],
+        happyToSaveOn: preferences.happyToSaveOn || [],
       });
     }
   }, [preferences, form]);
@@ -81,6 +267,8 @@ export default function PreferencesPage() {
       }
     );
   };
+
+  const formatBudget = (v: number) => (v >= BUDGET_MAX ? `$${BUDGET_MAX}+` : `$${v}`);
 
   return (
     <Layout>
@@ -170,6 +358,175 @@ export default function PreferencesPage() {
                   );
                 }}
               />
+            </section>
+
+            <span className="section-rule" />
+
+            {/* Budget & Value */}
+            <section>
+              <p className="eyebrow" style={{ marginBottom: "10px", color: "#A07840" }}>Budget &amp; Value</p>
+              <p
+                className="font-playfair"
+                style={{
+                  fontStyle: "italic",
+                  fontSize: "18px",
+                  color: "#5C5248",
+                  marginBottom: "32px",
+                  lineHeight: 1.4,
+                }}
+              >
+                How do you think about value when you travel?
+              </p>
+
+              {/* Nightly budget slider */}
+              <div style={{ marginBottom: "44px" }}>
+                <p className="eyebrow" style={{ marginBottom: "8px", color: "#5C5248", letterSpacing: "0.16em" }}>
+                  Typical Nightly Budget (USD)
+                </p>
+                <Controller
+                  control={form.control}
+                  name="budgetPerNightMin"
+                  render={({ field: minField }) => (
+                    <Controller
+                      control={form.control}
+                      name="budgetPerNightMax"
+                      render={({ field: maxField }) => {
+                        const lo = minField.value ?? 200;
+                        const hi = maxField.value ?? 600;
+                        return (
+                          <>
+                            <p
+                              className="font-playfair"
+                              style={{
+                                fontStyle: "italic",
+                                fontSize: "22px",
+                                color: "#1C1C1C",
+                                marginTop: "6px",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              {formatBudget(lo)} <span style={{ color: "#94A39B" }}>—</span> {formatBudget(hi)}
+                              <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: "#5C5248", fontStyle: "normal", marginLeft: "10px" }}>
+                                per night
+                              </span>
+                            </p>
+                            <DualRangeSlider
+                              min={BUDGET_MIN}
+                              max={BUDGET_MAX}
+                              value={[lo, hi]}
+                              onChange={([newLo, newHi]) => {
+                                minField.onChange(newLo);
+                                maxField.onChange(newHi);
+                              }}
+                            />
+                            <p
+                              style={{
+                                fontFamily: "'Raleway', sans-serif",
+                                fontStyle: "italic",
+                                fontSize: "12px",
+                                color: "#94A39B",
+                                marginTop: "6px",
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              Used to filter review match scores — properties outside your range score lower.
+                            </p>
+                          </>
+                        );
+                      }}
+                    />
+                  )}
+                />
+              </div>
+
+              {/* Value philosophy */}
+              <div style={{ marginBottom: "44px" }}>
+                <p className="eyebrow" style={{ marginBottom: "16px", color: "#5C5248", letterSpacing: "0.16em" }}>
+                  Value Philosophy
+                </p>
+                <Controller
+                  control={form.control}
+                  name="valuePhilosophy"
+                  render={({ field }) => (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {VALUE_PHILOSOPHIES.map((opt) => {
+                        const isSelected = field.value === opt.id;
+                        return (
+                          <div key={opt.id} style={{ display: "flex", alignItems: "baseline", gap: "12px", flexWrap: "wrap" }}>
+                            <ToggleButton
+                              selected={isSelected}
+                              onClick={() => field.onChange(isSelected ? null : opt.id)}
+                            >
+                              {opt.label}
+                            </ToggleButton>
+                            <span
+                              style={{
+                                fontFamily: "'Raleway', sans-serif",
+                                fontWeight: 300,
+                                fontSize: "13px",
+                                color: "#94A39B",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              — {opt.description}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                />
+              </div>
+
+              {/* Worth Splurging On */}
+              <div style={{ marginBottom: "32px" }}>
+                <p className="eyebrow" style={{ marginBottom: "16px", color: "#5C5248", letterSpacing: "0.16em" }}>
+                  Worth Splurging On
+                </p>
+                <Controller
+                  control={form.control}
+                  name="worthSplurgingOn"
+                  render={({ field }) => {
+                    const selected = field.value || [];
+                    const toggle = (id: string) =>
+                      field.onChange(selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id]);
+                    return (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 28px" }}>
+                        {WORTH_SPLURGING_OPTIONS.map((opt) => (
+                          <ToggleButton key={opt.id} selected={selected.includes(opt.id)} onClick={() => toggle(opt.id)}>
+                            {opt.label}
+                          </ToggleButton>
+                        ))}
+                      </div>
+                    );
+                  }}
+                />
+              </div>
+
+              {/* Happy to Save On */}
+              <div>
+                <p className="eyebrow" style={{ marginBottom: "16px", color: "#5C5248", letterSpacing: "0.16em" }}>
+                  Happy to Save On
+                </p>
+                <Controller
+                  control={form.control}
+                  name="happyToSaveOn"
+                  render={({ field }) => {
+                    const selected = field.value || [];
+                    const toggle = (id: string) =>
+                      field.onChange(selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id]);
+                    return (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 28px" }}>
+                        {HAPPY_TO_SAVE_OPTIONS.map((opt) => (
+                          <ToggleButton key={opt.id} selected={selected.includes(opt.id)} onClick={() => toggle(opt.id)}>
+                            {opt.label}
+                          </ToggleButton>
+                        ))}
+                      </div>
+                    );
+                  }}
+                />
+              </div>
             </section>
 
             <span className="section-rule" />

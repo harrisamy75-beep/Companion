@@ -1,0 +1,77 @@
+Add budget and value preferences to the app.
+
+PART 1 — Add to preferences schema:
+In lib/db/src/schema/preferences.ts add:
+- budgetPerNightMin: integer nullable (USD)
+- budgetPerNightMax: integer nullable (USD)  
+- budgetFlexibility: text default "moderate"
+  -- "strict" | "moderate" | "flexible"
+- valuePhilosophy: text nullable
+  -- stores their value approach as freeform text
+
+Run drizzle-kit push.
+
+PART 2 — Add budget section to preferences page:
+
+After the travel styles section, add a new section:
+
+Label: "BUDGET & VALUE" in gold ALL CAPS Raleway
+
+Subheading in Playfair Display italic 18px muted:
+"How do you think about value when you travel?"
+
+1. Nightly budget range slider (dual handle):
+   Label: "TYPICAL NIGHTLY BUDGET (USD)"
+   Min: $50, Max: $2000+
+   Default: $200 - $600
+   Show selected range: "$200 — $600 per night"
+   Note below in italic muted: 
+   "Used to filter review match scores — 
+   properties outside your range score lower."
+
+2. Value philosophy — styled as the same 
+   text toggle used for travel styles:
+   
+   Label: "VALUE PHILOSOPHY"
+   Options (select one):
+   
+   "Value Hunter" 
+   — Best possible experience for the price
+   
+   "Selective Splurger"
+   — Budget-conscious but will spend on what matters
+   
+   "Luxury on a Budget"  
+   — Want premium feel without premium price tags
+   
+   "Considered Spender"
+   — Quality over quantity, fewer but better trips
+   
+   "Special Occasion"
+   — Save up and go all out for milestone trips
+   
+   "No Budget"
+   — Price is not a consideration
+
+   Selected: Playfair Display italic, wine underline
+   Unselected: Raleway 400, muted
+
+3. What matters most — multi-select:
+   Label: "WORTH SPLURGING ON"
+   
+   Options:
+   The Room · The Food · The Location · The Pool & Spa
+   The Experience · The Service · The Views · The Activities
+   
+   Same underline toggle treatment.
+   User can select multiple.
+   
+   Label: "HAPPY TO SAVE ON"
+   
+   Options:
+   Room Size · Breakfast Included · Minibar · 
+   Gym Access · Airport Transfer · Parking
+
+PART 3 — Add budget to review scoring:
+
+Update the Claude SYSTEM_PRO
