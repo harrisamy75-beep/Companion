@@ -9,93 +9,6 @@ import { Heart } from "lucide-react";
 import { TRAVEL_STYLE_GROUPS } from "@/lib/travel-styles";
 import ReviewSorter from "@/components/review-sorter";
 
-/* ─── Temporary debug banner: shows the Clerk user ID for data migration. Remove after migration. ─── */
-function ClerkIdDebugBanner() {
-  const { user } = useUser();
-  const [copied, setCopied] = useState(false);
-  const id = user?.id ?? "(loading)";
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(id);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* noop */
-    }
-  }
-
-  return (
-    <div
-      style={{
-        background: "#F5F0E6",
-        border: "1px solid #A07840",
-        borderLeft: "4px solid #A07840",
-        padding: "16px 20px",
-        borderRadius: "6px",
-        fontFamily: "'Raleway', sans-serif",
-      }}
-      data-testid="clerk-id-debug-banner"
-    >
-      <div
-        style={{
-          fontSize: "10px",
-          fontWeight: 600,
-          letterSpacing: "0.16em",
-          textTransform: "uppercase",
-          color: "#A07840",
-          marginBottom: "8px",
-        }}
-      >
-        Temporary — your Clerk user ID
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-        <code
-          style={{
-            background: "#FAFAF8",
-            border: "1px solid #E5E0D8",
-            padding: "8px 12px",
-            borderRadius: "4px",
-            fontSize: "13px",
-            color: "#1C1C1C",
-            wordBreak: "break-all",
-            flex: "1 1 280px",
-          }}
-        >
-          {id}
-        </code>
-        <button
-          onClick={copy}
-          style={{
-            background: "#6B2737",
-            color: "#fff",
-            border: "none",
-            padding: "8px 14px",
-            borderRadius: "4px",
-            fontSize: "11px",
-            fontWeight: 600,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            cursor: "pointer",
-          }}
-        >
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-      <div
-        style={{
-          fontSize: "12px",
-          color: "#5C5248",
-          fontStyle: "italic",
-          marginTop: "10px",
-        }}
-      >
-        Send this ID back so we can re-key your existing data under your account.
-      </div>
-    </div>
-  );
-}
-
 /* ─── Helpers ─── */
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -590,8 +503,6 @@ export default function Home() {
           </p>
           <div style={{ height: "1px", background: "#E5E0D8", marginTop: "28px" }} />
         </div>
-
-        <ClerkIdDebugBanner />
 
         {/* ── Section 1: Travel party (full width) ── */}
         <Card>
