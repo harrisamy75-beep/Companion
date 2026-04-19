@@ -33,9 +33,9 @@
         cursor: pointer; text-align: center; text-decoration: none; border: none;
         transition: background 0.15s;
       }
-      button.primary, button#resync { background: #6B2737; color: #fff; }
-      button.primary:hover, button#resync:hover { background: #5A1F2D; }
-      button.primary:disabled, button#resync:disabled { background: #B89098; cursor: not-allowed; }
+      button.primary, button#resync, button#fill-page { background: #6B2737; color: #fff; }
+      button.primary:hover, button#resync:hover, button#fill-page:hover { background: #5A1F2D; }
+      button.primary:disabled, button#resync:disabled, button#fill-page:disabled { background: #B89098; cursor: not-allowed; }
 
       a.btn { background: #F5F0E6; color: #1C1C1C; border: 1px solid #E5E0D8; }
       a.btn:hover { background: #ECE4D4; }
@@ -88,6 +88,7 @@
       <div class="actions">
         <div id="status"></div>
         <button id="resync" class="primary">Re-sync profile</button>
+        <button id="fill-page" class="primary" style="font-family: 'Raleway', system-ui, sans-serif; font-weight: 600;">Fill this page</button>
         <a class="btn" id="dashboard-link" href="https://travelcompaniontool.replit.app/" target="_blank">
           Open dashboard
         </a>

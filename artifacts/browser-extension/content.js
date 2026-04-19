@@ -186,10 +186,13 @@ async function scoreAndBadgeReviews(profile) {
   });
 }
 
-async function run() {
+async function attemptAutoFill({ manual = false } = {}) {
   const result = await chrome.storage.local.get(STORAGE_KEY);
   const profile = result[STORAGE_KEY];
-  if (!profile) return;
+  if (!profile) {
+    if (manual) showToast("No profile yet — open the extension and re-sync.");
+    return false;
+  }
 
   const hostname = window.location.hostname;
   const { adults, children } = profile.autoFillPayload;
@@ -201,16 +204,34 @@ async function run() {
     filled = await fillBooking(profile);
   } else if (hostname.includes("google.com")) {
     filled = await fillGoogleHotels(profile);
+  } else if (manual) {
+    showToast("Auto-fill not supported on this site.");
+    return false;
   }
 
   if (filled) {
     showToast(
       `TripProfile filled — ${adults} adult${adults !== 1 ? "s" : ""}, ${children} kid${children !== 1 ? "s" : ""}`
     );
+  } else if (manual) {
+    showToast("Couldn't find the guest picker on this page.");
   }
-
-  await scoreAndBadgeReviews(profile);
+  return filled;
 }
+
+async function run() {
+  await attemptAutoFill({ manual: false });
+  const result = await chrome.storage.local.get(STORAGE_KEY);
+  const profile = result[STORAGE_KEY];
+  if (profile) await scoreAndBadgeReviews(profile);
+}
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg && msg.type === "MANUAL_FILL") {
+    attemptAutoFill({ manual: true }).then((ok) => sendResponse({ ok }));
+    return true;
+  }
+});
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", run);

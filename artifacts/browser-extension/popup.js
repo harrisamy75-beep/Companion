@@ -58,8 +58,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadProfile();
 
   const resyncBtn = document.getElementById("resync");
+  const fillBtn = document.getElementById("fill-page");
   const statusEl = document.getElementById("status");
   const signinBanner = document.getElementById("signin-banner");
+
+  fillBtn.addEventListener("click", () => {
+    fillBtn.disabled = true;
+    const originalLabel = fillBtn.textContent;
+    fillBtn.textContent = "Filling…";
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs[0];
+      if (!tab || !tab.id) {
+        fillBtn.disabled = false;
+        fillBtn.textContent = originalLabel;
+        return;
+      }
+      chrome.tabs.sendMessage(tab.id, { type: "MANUAL_FILL" }, () => {
+        if (chrome.runtime.lastError) {
+          statusEl.textContent = "Open a supported travel site first.";
+          statusEl.classList.add("error");
+          setTimeout(() => {
+            statusEl.textContent = "";
+            statusEl.classList.remove("error");
+          }, 3500);
+        }
+        fillBtn.disabled = false;
+        fillBtn.textContent = originalLabel;
+        window.close();
+      });
+    });
+  });
 
   resyncBtn.addEventListener("click", () => {
     resyncBtn.disabled = true;
