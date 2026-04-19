@@ -18,3 +18,9 @@ id = "YIPIX3sSm6vuh_NM-RsD2"
 uri = "file://TripProfile-latest.zip"
 type = "unspecified"
 title = "TripProfile-latest.zip — v0.5.0 (Bearer token auth)"
+
+[[outputs]]
+id = "AVmGpqmzqfVKK0SIE0qjE"
+uri = "file://tripProfile-new-zip.zip"
+type = "unspecified"
+title = "tripProfile-new-zip"
