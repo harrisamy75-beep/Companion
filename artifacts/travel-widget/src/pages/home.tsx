@@ -272,11 +272,14 @@ function ReviewMatchCard() {
   return (
     <div style={{ background: "#1C1C1C", padding: "28px 28px 32px", display: "flex", flexDirection: "column", flex: 1 }}>
       <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#B8963E", marginBottom: "18px" }}>
-        Review Intelligence
+        AI Review Match
       </p>
-      <h3 style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 400, fontSize: "18px", color: "white", marginBottom: "24px", lineHeight: 1.4 }}>
-        Paste a hotel URL or name
+      <h3 style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 400, fontSize: "18px", color: "white", marginBottom: "8px", lineHeight: 1.4 }}>
+        Does this hotel match your style?
       </h3>
+      <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 400, fontSize: "14px", color: "rgba(255,255,255,0.7)", marginBottom: "24px", lineHeight: 1.5 }}>
+        We read the reviews so you don't have to — scored against your exact travel preferences.
+      </p>
 
       {/* Input + button */}
       <div style={{ display: "flex", gap: "10px", alignItems: "flex-end", marginBottom: "28px" }}>
@@ -284,7 +287,7 @@ function ReviewMatchCard() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleMatch()}
-          placeholder="Try: Rosewood Miramar"
+          placeholder="e.g. Rosewood Miramar, Palm Beach"
           style={{ flex: 1, background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.25)", color: "white", fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "14px", padding: "8px 0", outline: "none", caretColor: "#B8963E" }}
         />
         <button
@@ -397,8 +400,8 @@ function ReviewMatchCard() {
       )}
 
       {!result && !loading && (
-        <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "13px", color: "rgba(255,255,255,0.3)" }}>
-          Enter any hotel, resort, or destination above.
+        <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "13px", color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>
+          Type any hotel name and we'll score it against your travel style, family needs and past favourites.
         </p>
       )}
     </div>
