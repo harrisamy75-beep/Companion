@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
 import { Heart, Minus, Star } from "lucide-react";
 import { TRAVEL_STYLE_GROUPS } from "@/lib/travel-styles";
@@ -144,6 +145,8 @@ function Step1({ userId, travelers, setTravelers }: {
   travelers: TravelerEntry[];
   setTravelers: React.Dispatch<React.SetStateAction<TravelerEntry[]>>;
 }) {
+  const { user } = useUser();
+  const displayName = user?.firstName ?? user?.fullName ?? "You";
   const [addForm, setAddForm] = useState<"adult" | "child" | null>(null);
   const [formName, setFormName] = useState("");
   const [formRelationship, setFormRelationship] = useState("partner");
@@ -179,10 +182,10 @@ function Step1({ userId, travelers, setTravelers }: {
       {/* Self card (pre-populated) */}
       <div style={{ padding: "14px 18px", background: "white", border: "1px solid #E5E0D8", marginBottom: "12px", display: "flex", alignItems: "center", gap: "14px" }}>
         <div style={{ width: "36px", height: "36px", background: "#6B2737", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span className="font-playfair" style={{ fontStyle: "italic", fontWeight: 700, fontSize: "16px", color: "white" }}>{userId.charAt(0).toUpperCase()}</span>
+          <span className="font-playfair" style={{ fontStyle: "italic", fontWeight: 700, fontSize: "16px", color: "white" }}>{displayName.charAt(0).toUpperCase()}</span>
         </div>
         <div>
-          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "14px", color: "#1C1C1C" }}>{userId}</span>
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "14px", color: "#1C1C1C" }}>{displayName}</span>
           <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248", marginLeft: "10px" }}>Adult · Self</span>
         </div>
       </div>
@@ -448,6 +451,8 @@ function Step4({ userId, travelers, travelStyles, properties }: {
   travelStyles: string[];
   properties: PropertyEntry[];
 }) {
+  const { user } = useUser();
+  const displayName = user?.firstName ?? user?.fullName ?? "You";
   const [personality, setPersonality] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -459,7 +464,7 @@ function Step4({ userId, travelers, travelStyles, properties }: {
           method: "POST",
           
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: userId, travelers, travelStyles, favoriteProperties: properties }),
+          body: JSON.stringify({ name: displayName, travelers, travelStyles, favoriteProperties: properties }),
         });
         if (res.ok) {
           const d = await res.json();
@@ -501,10 +506,10 @@ function Step4({ userId, travelers, travelStyles, properties }: {
       <div style={{ background: "white", border: "1px solid #E5E0D8", padding: "28px 32px", marginBottom: "32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px" }}>
           <div style={{ width: "44px", height: "44px", background: "#6B2737", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <span className="font-playfair" style={{ fontStyle: "italic", fontWeight: 700, fontSize: "20px", color: "white" }}>{userId.charAt(0).toUpperCase()}</span>
+            <span className="font-playfair" style={{ fontStyle: "italic", fontWeight: 700, fontSize: "20px", color: "white" }}>{displayName.charAt(0).toUpperCase()}</span>
           </div>
           <div>
-            <span className="font-playfair" style={{ fontWeight: 700, fontSize: "20px", color: "#1C1C1C" }}>{userId}</span>
+            <span className="font-playfair" style={{ fontWeight: 700, fontSize: "20px", color: "#1C1C1C" }}>{displayName}</span>
             <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248", marginLeft: "10px" }}>Adult · Self</span>
           </div>
         </div>
