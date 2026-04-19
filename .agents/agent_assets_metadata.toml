@@ -12,3 +12,9 @@ id = "gkN42WV-ptnh8qXMumHj7"
 uri = "file://artifacts/browser-extension/TripProfile.zip"
 type = "unspecified"
 title = "TripProfile extension v0.2.0 (Clerk auth)"
+
+[[outputs]]
+id = "YIPIX3sSm6vuh_NM-RsD2"
+uri = "file://TripProfile-latest.zip"
+type = "unspecified"
+title = "TripProfile-latest.zip — v0.4.0 (newest)"

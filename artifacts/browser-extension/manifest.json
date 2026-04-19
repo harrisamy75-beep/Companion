@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TripProfile",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "Auto-fills your family profile on travel sites and filters reviews by relevance",
   "permissions": ["activeTab", "storage", "scripting", "tabs", "alarms"],
   "host_permissions": [
