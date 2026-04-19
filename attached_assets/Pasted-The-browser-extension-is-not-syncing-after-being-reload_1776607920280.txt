@@ -1,0 +1,63 @@
+The browser extension is not syncing after being reloaded.
+The popup shows dashes for travelers and auto-fill preview.
+
+The issue is the extension calls GET /api/summary with 
+credentials: "include" but after reloading the extension 
+the Clerk session may not be recognized.
+
+Please check and fix:
+
+1. In background.js, add better error logging:
+   Log the full response status and body when sync fails:
+   
+   const response = await fetch(`${apiBase}/summary`, {
+     credentials: "include",
+     headers: { "Content-Type": "application/json" },
+   });
+   console.log("[TripProfile] Sync response status:", response.status);
+   const text = await response.text();
+   console.log("[TripProfile] Sync response body:", text.slice(0, 200));
+
+2. The real fix: Clerk uses __session cookie which has 
+   SameSite=Lax. Chrome extensions making fetch() calls 
+   are treated as cross-site requests so the cookie 
+   may not be sent.
+
+   Fix this by adding the Clerk session token to the 
+   extension differently:
+
+   In popup.js, when the user clicks RE-SYNC:
+   - Open travelcompaniontool.replit.app/api/summary 
+     in a new tab briefly to get fresh data
+   
+   OR better: use chrome.cookies API to read the 
+   __session or __clerk_db_jwt cookie:
+   
+   In manifest.json add "cookies" to permissions.
+   
+   In background.js:
+   async function getClerkToken() {
+     return new Promise((resolve) => {
+       chrome.cookies.get({
+         url: "https://travelcompaniontool.replit.app",
+         name: "__session"
+       }, (cookie) => {
+         resolve(cookie?.value ?? null);
+       });
+     });
+   }
+   
+   Then pass it as a header:
+   const token = await getClerkToken();
+   fetch(`${apiBase}/summary`, {
+     credentials: "include",
+     headers: {
+       "Content-Type": "application/json",
+       ...(token ? { "Cookie": `__session=${token}` } : {})
+     }
+   });
+
+3. Also try reading __clerk_db_jwt cookie as fallback.
+
+4. After changes re-zip:
+   cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip .
