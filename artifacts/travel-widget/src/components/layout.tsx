@@ -309,6 +309,17 @@ export function Layout({ children }: LayoutProps) {
               Terms
             </Link>
           </div>
+          <div
+            style={{
+              marginTop: "14px",
+              fontFamily: "'Raleway', sans-serif",
+              fontWeight: 300,
+              fontSize: "10px",
+              color: "rgba(255,255,255,0.25)",
+            }}
+          >
+            © 2026 Companion Travel. All rights reserved.
+          </div>
         </div>
       </aside>
 

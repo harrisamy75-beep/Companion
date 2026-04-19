@@ -154,6 +154,18 @@ function SignInPage() {
           path={`${basePath}/sign-in`}
           signUpUrl={`${basePath}/sign-up`}
         />
+        <div
+          style={{
+            marginTop: "24px",
+            textAlign: "center",
+            fontFamily: "'Raleway', sans-serif",
+            fontWeight: 300,
+            fontSize: "10px",
+            color: "rgba(28,28,28,0.4)",
+          }}
+        >
+          © 2026 Companion Travel. All rights reserved.
+        </div>
       </div>
     </div>
   );
@@ -173,6 +185,18 @@ function SignUpPage() {
           path={`${basePath}/sign-up`}
           signInUrl={`${basePath}/sign-in`}
         />
+        <div
+          style={{
+            marginTop: "24px",
+            textAlign: "center",
+            fontFamily: "'Raleway', sans-serif",
+            fontWeight: 300,
+            fontSize: "10px",
+            color: "rgba(28,28,28,0.4)",
+          }}
+        >
+          © 2026 Companion Travel. All rights reserved.
+        </div>
       </div>
     </div>
   );
