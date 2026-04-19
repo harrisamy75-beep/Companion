@@ -202,6 +202,10 @@ function AutoFillPreview({
 type CategoryDetail = { score: number; reason: string; weight: number; contribution: number };
 type QuickMatchResult = {
   score: number;
+  displayName?: string;
+  lovedPropertyMatch?: boolean;
+  matchTier?: "strong" | "good" | "weak";
+  matchTierLabel?: string;
   tags: string[];
   headline: string;
   scoreExplanation?: string;
@@ -308,6 +312,27 @@ function ReviewMatchCard() {
 
       {result && !loading && (
         <div>
+          {/* Cleaned display name (e.g. URL → "Villa Agrippina Gran Melia") */}
+          {result.displayName && (
+            <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 400, fontSize: "16px", color: "rgba(255,255,255,0.85)", textAlign: "center", marginBottom: "10px", lineHeight: 1.4 }}>
+              {result.displayName}
+            </p>
+          )}
+
+          {/* Loved-property indicator */}
+          {result.lovedPropertyMatch && (
+            <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#B8963E", textAlign: "center", marginBottom: "6px" }}>
+              ♥ You loved this property
+            </p>
+          )}
+
+          {/* Match-tier label */}
+          {result.matchTierLabel && (
+            <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#A8324A", textAlign: "center", marginBottom: "10px" }}>
+              {result.matchTierLabel}
+            </p>
+          )}
+
           {/* Score */}
           <div style={{ textAlign: "center", marginBottom: "8px" }}>
             <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "72px", color: "white", lineHeight: 1 }}>
