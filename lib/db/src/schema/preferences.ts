@@ -24,7 +24,7 @@ export const preferencesTable = pgTable("travel_preferences", {
   valuePhilosophy: text("value_philosophy"),
   worthSplurgingOn: text("worth_splurging_on").array().default([]),
   happyToSaveOn: text("happy_to_save_on").array().default([]),
-  extensionApiKey: text("extension_api_key").unique(),
+  extensionApiKey: text("extension_api_key"),
   notes: text("notes"),
   consentGivenAt: timestamp("consent_given_at", { withTimezone: true }),
   consentVersion: text("consent_version"),
