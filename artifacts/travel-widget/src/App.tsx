@@ -29,6 +29,7 @@ import PreferencesPage from "@/pages/preferences";
 import StaysPage from "@/pages/stays";
 import PricingPage from "@/pages/pricing";
 import SettingsPage from "@/pages/settings";
+import ExtensionConnectPage from "@/pages/extension-connect";
 import PrivacyPage from "@/pages/privacy";
 import TermsPage from "@/pages/terms";
 import { OnboardingWizard } from "@/components/onboarding";
@@ -381,6 +382,7 @@ function AuthenticatedApp() {
         <Route path="/preferences" component={PreferencesPage} />
         <Route path="/pricing" component={PricingPage} />
         <Route path="/settings" component={SettingsPage} />
+        <Route path="/extension-connect" component={ExtensionConnectPage} />
         <Route component={NotFound} />
       </Switch>
     </LogoutContext.Provider>

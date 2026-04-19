@@ -12,6 +12,7 @@ import personalityRouter from "./personality";
 import quickMatchRouter from "./quick-match";
 import planRouter from "./plan";
 import accountRouter from "./account";
+import extensionTokenRouter from "./extension-token";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(personalityRouter);
 router.use(quickMatchRouter);
 router.use(planRouter);
 router.use(accountRouter);
+router.use(extensionTokenRouter);
 
 export default router;

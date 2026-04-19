@@ -60,7 +60,25 @@
 
     <!-- ========== SIGN-IN PROMPT (shown when 401) ========== -->
     <div id="signin-banner" class="signin-banner hidden">
-      Open the dashboard and sign in, then come back and tap Re-sync.
+      Tap <strong>Connect extension</strong> below to link your account.
+      Your token stays valid for 7 days.
+    </div>
+
+    <!-- ========== CONNECT FLOW ========== -->
+    <div class="section" id="connect-section">
+      <div class="label">Account link</div>
+      <div class="sub" id="connect-status">Not connected</div>
+      <div class="actions" style="padding: 10px 0 0;">
+        <button id="open-connect" class="primary">Connect extension</button>
+        <input
+          id="token-input"
+          type="text"
+          placeholder="Paste token here…"
+          style="width: 100%; padding: 9px 10px; font-size: 11px; font-family: ui-monospace, monospace; border: 1px solid #E5E0D8; background: #FAFAF8; color: #1C1C1C;"
+        />
+        <button id="save-token" class="primary">Save token</button>
+        <button id="clear-token" class="primary hidden" style="background: #94A39B;">Disconnect</button>
+      </div>
     </div>
 
     <!-- ========== PROFILE VIEW ========== -->

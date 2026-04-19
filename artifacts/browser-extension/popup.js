@@ -1,4 +1,5 @@
 const STORAGE_KEY = "tripprofile";
+const TOKEN_KEY = "tripprofile_token";
 
 function formatSyncTime(isoString) {
   if (!isoString) return "Never synced";
@@ -11,7 +12,7 @@ function renderProfile(profile) {
     document.getElementById("traveler-count").textContent = "No profile yet";
     document.getElementById("children-detail").textContent = "";
     document.getElementById("autofill-preview").textContent = "—";
-    document.getElementById("sync-time").textContent = "Sign in to Companion, then tap Re-sync";
+    document.getElementById("sync-time").textContent = "Connect the extension, then tap Re-sync";
     return;
   }
 
@@ -63,13 +64,79 @@ async function loadProfile() {
   renderProfile(result[STORAGE_KEY] || null);
 }
 
+async function loadConnectionState() {
+  const { [TOKEN_KEY]: token } = await chrome.storage.local.get(TOKEN_KEY);
+  const statusEl = document.getElementById("connect-status");
+  const clearBtn = document.getElementById("clear-token");
+  if (token) {
+    statusEl.textContent = "Connected — token stored locally.";
+    statusEl.style.color = "#2D6A4F";
+    clearBtn.classList.remove("hidden");
+  } else {
+    statusEl.textContent = "Not connected.";
+    statusEl.style.color = "#5C5248";
+    clearBtn.classList.add("hidden");
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   await loadProfile();
+  await loadConnectionState();
 
   const resyncBtn = document.getElementById("resync");
   const fillBtn = document.getElementById("fill-page");
   const statusEl = document.getElementById("status");
   const signinBanner = document.getElementById("signin-banner");
+  const openConnectBtn = document.getElementById("open-connect");
+  const tokenInput = document.getElementById("token-input");
+  const saveTokenBtn = document.getElementById("save-token");
+  const clearTokenBtn = document.getElementById("clear-token");
+
+  openConnectBtn.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: "OPEN_CONNECT" }, () => {
+      window.close();
+    });
+  });
+
+  saveTokenBtn.addEventListener("click", () => {
+    const token = tokenInput.value.trim();
+    if (!token) {
+      statusEl.textContent = "Paste a token first.";
+      statusEl.classList.add("error");
+      return;
+    }
+    saveTokenBtn.disabled = true;
+    saveTokenBtn.textContent = "Saving…";
+    chrome.runtime.sendMessage({ type: "SET_TOKEN", token }, async (response) => {
+      saveTokenBtn.disabled = false;
+      saveTokenBtn.textContent = "Save token";
+      if (response?.ok) {
+        tokenInput.value = "";
+        statusEl.textContent = "Connected. Profile synced.";
+        statusEl.classList.remove("error");
+        signinBanner.classList.add("hidden");
+        await loadConnectionState();
+        await loadProfile();
+      } else if (response?.error === "invalid_token") {
+        statusEl.textContent = "That doesn't look like a valid token.";
+        statusEl.classList.add("error");
+      } else if (response?.error === "auth") {
+        statusEl.textContent = "Token rejected — get a fresh one.";
+        statusEl.classList.add("error");
+      } else {
+        statusEl.textContent = "Couldn't save token — try again.";
+        statusEl.classList.add("error");
+      }
+    });
+  });
+
+  clearTokenBtn.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: "CLEAR_TOKEN" }, async () => {
+      await loadConnectionState();
+      statusEl.textContent = "Disconnected.";
+      statusEl.classList.remove("error");
+    });
+  });
 
   fillBtn.addEventListener("click", () => {
     fillBtn.disabled = true;
@@ -110,7 +177,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         statusEl.textContent = "Profile updated.";
         loadProfile();
       } else if (response?.error === "auth") {
-        statusEl.textContent = "Please sign in first.";
+        statusEl.textContent = "Connect the extension first.";
         statusEl.classList.add("error");
         signinBanner.classList.remove("hidden");
       } else if (response?.error === "no_profile") {

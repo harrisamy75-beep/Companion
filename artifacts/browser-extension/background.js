@@ -1,6 +1,8 @@
 const STORAGE_KEY = "tripprofile";
+const TOKEN_KEY = "tripprofile_token";
 const API_BASE = "https://travelcompaniontool.replit.app/api";
 const APP_URL = "https://travelcompaniontool.replit.app";
+const CONNECT_URL = `${APP_URL}/extension-connect`;
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 
 async function setBadge(text, color) {
@@ -12,38 +14,51 @@ async function setBadge(text, color) {
   }
 }
 
-// Clerk's __session cookie value is itself a signed JWT — Clerk's
-// server middleware accepts it as a Bearer token. We read the cookie
-// via chrome.cookies (requires "cookies" permission + host permission)
-// and forward it as Authorization: Bearer to bypass any SameSite issues
-// that may strip the cookie on extension-originated cross-site fetches.
-async function getClerkToken() {
-  const candidates = ["__session", "__clerk_db_jwt"];
-  for (const name of candidates) {
+async function getStoredToken() {
+  const result = await chrome.storage.local.get(TOKEN_KEY);
+  return result[TOKEN_KEY] || null;
+}
+
+async function setStoredToken(token) {
+  if (token) {
+    await chrome.storage.local.set({ [TOKEN_KEY]: token });
+  } else {
+    await chrome.storage.local.remove(TOKEN_KEY);
+  }
+}
+
+// Legacy fallback: try Clerk's __session cookie if no stored token.
+// Kept so that users who installed an older build don't have to
+// reconnect immediately — they'll still sync when the cookie is reachable.
+async function getLegacyClerkCookie() {
+  for (const name of ["__session", "__clerk_db_jwt"]) {
     try {
       const cookie = await new Promise((resolve) => {
         chrome.cookies.get({ url: APP_URL, name }, (c) => resolve(c));
       });
-      if (cookie && cookie.value) {
-        console.log(`[TripProfile] Found cookie '${name}' (len=${cookie.value.length})`);
-        return cookie.value;
-      }
-    } catch (e) {
-      console.warn(`[TripProfile] cookies.get('${name}') failed:`, e);
+      if (cookie && cookie.value) return cookie.value;
+    } catch {
+      /* noop */
     }
   }
-  console.warn("[TripProfile] No Clerk session cookie found at", APP_URL);
   return null;
 }
 
 async function fetchAndStore() {
   try {
-    const token = await getClerkToken();
-    const headers = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const storedToken = await getStoredToken();
+    const fallbackToken = storedToken ? null : await getLegacyClerkCookie();
+    const bearer = storedToken || fallbackToken;
 
-    console.log("[TripProfile] Sync request →", `${API_BASE}/summary`,
-      "withToken:", Boolean(token));
+    const headers = { "Content-Type": "application/json" };
+    if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
+
+    console.log(
+      "[TripProfile] Sync →",
+      `${API_BASE}/summary`,
+      "tokenSource:",
+      storedToken ? "stored" : fallbackToken ? "legacy-cookie" : "none"
+    );
 
     const response = await fetch(`${API_BASE}/summary`, {
       credentials: "include",
@@ -59,22 +74,18 @@ async function fetchAndStore() {
       return { ok: false, error: "auth" };
     }
     if (response.status === 404) {
-      console.warn("[TripProfile] No profile found yet");
       await setBadge("!", "#A07840");
       return { ok: false, error: "no_profile" };
     }
     if (!response.ok) {
       const body = await response.text();
-      console.error("[TripProfile] HTTP", response.status, "body:", body.slice(0, 200));
+      console.error("[TripProfile] HTTP", response.status, body.slice(0, 200));
       throw new Error(`HTTP ${response.status}`);
     }
 
     const data = await response.json();
     await chrome.storage.local.set({
-      [STORAGE_KEY]: {
-        ...data,
-        _syncedAt: new Date().toISOString(),
-      },
+      [STORAGE_KEY]: { ...data, _syncedAt: new Date().toISOString() },
     });
     await setBadge("", "#00000000");
     console.log("[TripProfile] Profile synced at", new Date().toISOString());
@@ -105,7 +116,29 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message.type === "GET_APP_URL") {
-    sendResponse({ apiBase: API_BASE, appUrl: APP_URL });
+    sendResponse({ apiBase: API_BASE, appUrl: APP_URL, connectUrl: CONNECT_URL });
+    return false;
+  }
+  if (message.type === "SET_TOKEN") {
+    (async () => {
+      const token = (message.token || "").trim();
+      if (!token || token.split(".").length !== 3) {
+        sendResponse({ ok: false, error: "invalid_token" });
+        return;
+      }
+      await setStoredToken(token);
+      const result = await fetchAndStore();
+      sendResponse(result);
+    })();
+    return true;
+  }
+  if (message.type === "CLEAR_TOKEN") {
+    setStoredToken(null).then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (message.type === "OPEN_CONNECT") {
+    chrome.tabs.create({ url: CONNECT_URL });
+    sendResponse({ ok: true });
     return false;
   }
 });
