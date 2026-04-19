@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /pricing
+Disallow: /dashboard
+Disallow: /travelers
+Disallow: /stays
+Disallow: /preferences
+Disallow: /settings
+Disallow: /extension-connect
+Disallow: /api/
+
+Sitemap: https://travelcompaniontool.replit.app/sitemap.xml
