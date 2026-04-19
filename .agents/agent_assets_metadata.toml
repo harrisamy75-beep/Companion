@@ -6,3 +6,9 @@ id = "hzaP9_gnFVX_UgkmYx2Mq"
 uri = "file://TripProfile.zip"
 type = "unspecified"
 title = "TripProfile.zip — Browser Extension"
+
+[[outputs]]
+id = "gkN42WV-ptnh8qXMumHj7"
+uri = "file://artifacts/browser-extension/TripProfile.zip"
+type = "unspecified"
+title = "TripProfile extension v0.2.0 (Clerk auth)"

@@ -33,40 +33,23 @@
         cursor: pointer; text-align: center; text-decoration: none; border: none;
         transition: background 0.15s;
       }
-      button.primary, button#resync, button#save-settings { background: #6B2737; color: #fff; }
-      button.primary:hover, button#resync:hover, button#save-settings:hover { background: #5A1F2D; }
+      button.primary, button#resync { background: #6B2737; color: #fff; }
+      button.primary:hover, button#resync:hover { background: #5A1F2D; }
       button.primary:disabled, button#resync:disabled { background: #B89098; cursor: not-allowed; }
 
-      a.btn, button.secondary { background: #F5F0E6; color: #1C1C1C; border: 1px solid #E5E0D8; }
-      a.btn:hover, button.secondary:hover { background: #ECE4D4; }
+      a.btn { background: #F5F0E6; color: #1C1C1C; border: 1px solid #E5E0D8; }
+      a.btn:hover { background: #ECE4D4; }
 
       #status { font-size: 11px; color: #2D6A4F; text-align: center; min-height: 16px; font-style: italic; }
       #status.error { color: #6B2737; }
 
-      .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
-      .field label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #A07840; }
-      .field input {
-        background: #FAFAF8; border: 1px solid #E5E0D8; padding: 8px 10px;
-        font-size: 13px; color: #1C1C1C; font-family: inherit;
-      }
-      .field input:focus { outline: none; border-color: #A07840; }
-      .field .hint { font-size: 11px; color: #5C5248; font-style: italic; }
-
-      .setup-banner {
+      .signin-banner {
         background: #F5F0E6; border-left: 3px solid #A07840;
-        padding: 10px 14px; margin: 12px 16px;
-        font-size: 12px; color: #5C5248; font-style: italic;
+        padding: 12px 16px; margin: 0;
+        font-size: 12px; color: #5C5248; font-style: italic; line-height: 1.5;
       }
 
       .hidden { display: none !important; }
-
-      .toggle-link {
-        display: block; text-align: center; padding: 8px;
-        font-size: 11px; color: #6B2737; text-decoration: none;
-        background: #fff; border-top: 1px solid #E5E0D8;
-        cursor: pointer; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-      }
-      .toggle-link:hover { background: #FAFAF8; }
     </style>
   </head>
   <body>
@@ -75,30 +58,9 @@
       <p>Your family travel profile, everywhere.</p>
     </header>
 
-    <!-- ========== SETUP / SETTINGS VIEW ========== -->
-    <div id="settings-view" class="hidden">
-      <div class="setup-banner" id="setup-banner">
-        Welcome — let's connect this extension to your Companion account.
-      </div>
-
-      <div class="section">
-        <div class="field">
-          <label for="cfg-userid">Your name (lowercase, no spaces)</label>
-          <input type="text" id="cfg-userid" placeholder="e.g. amy-harris" autocomplete="off" />
-          <span class="hint">The same name you used to log into Companion.</span>
-        </div>
-
-        <div class="field">
-          <label for="cfg-api">App URL</label>
-          <input type="text" id="cfg-api" placeholder="https://travelcompaniontool.replit.app" autocomplete="off" />
-          <span class="hint">Where your Companion app is hosted.</span>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button id="save-settings" class="primary">Save & sync</button>
-        <button id="back-to-profile" class="secondary hidden">Back</button>
-      </div>
+    <!-- ========== SIGN-IN PROMPT (shown when 401) ========== -->
+    <div id="signin-banner" class="signin-banner hidden">
+      Open the dashboard and sign in, then come back and tap Re-sync.
     </div>
 
     <!-- ========== PROFILE VIEW ========== -->
@@ -126,12 +88,10 @@
       <div class="actions">
         <div id="status"></div>
         <button id="resync" class="primary">Re-sync profile</button>
-        <a class="btn" id="dashboard-link" href="#" target="_blank">
+        <a class="btn" id="dashboard-link" href="https://travelcompaniontool.replit.app/" target="_blank">
           Open dashboard
         </a>
       </div>
-
-      <a class="toggle-link" id="open-settings">Settings</a>
     </div>
 
     <script src="popup.js"></script>

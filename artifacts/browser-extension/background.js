@@ -1,16 +1,7 @@
 const STORAGE_KEY = "tripprofile";
-const CONFIG_KEY = "tripprofile_config";
+const API_BASE = "https://travelcompaniontool.replit.app/api";
+const APP_URL = "https://travelcompaniontool.replit.app";
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
-
-const DEFAULT_CONFIG = {
-  apiBase: "https://travelcompaniontool.replit.app/api",
-  userId: "",
-};
-
-async function getConfig() {
-  const result = await chrome.storage.local.get(CONFIG_KEY);
-  return { ...DEFAULT_CONFIG, ...(result[CONFIG_KEY] || {}) };
-}
 
 async function setBadge(text, color) {
   try {
@@ -22,24 +13,21 @@ async function setBadge(text, color) {
 }
 
 async function fetchAndStore() {
-  const { apiBase, userId } = await getConfig();
-
-  if (!userId) {
-    console.warn("[TripProfile] No userId configured — open the popup to set up");
-    await setBadge("!", "#A07840");
-    return { ok: false, error: "no_user" };
-  }
-
   try {
-    const response = await fetch(`${apiBase}/summary/${encodeURIComponent(userId)}`, {
+    const response = await fetch(`${API_BASE}/summary`, {
       credentials: "include",
       headers: { "Content-Type": "application/json" },
     });
 
-    if (response.status === 401 || response.status === 404) {
-      console.warn("[TripProfile] User not found / not authenticated");
+    if (response.status === 401 || response.status === 403) {
+      console.warn("[TripProfile] Not signed in to Companion");
       await setBadge("!", "#6B2737");
       return { ok: false, error: "auth" };
+    }
+    if (response.status === 404) {
+      console.warn("[TripProfile] No profile found yet");
+      await setBadge("!", "#A07840");
+      return { ok: false, error: "no_profile" };
     }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
@@ -78,8 +66,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     fetchAndStore().then((result) => sendResponse(result));
     return true;
   }
-  if (message.type === "GET_CONFIG") {
-    getConfig().then((cfg) => sendResponse(cfg));
-    return true;
+  if (message.type === "GET_APP_URL") {
+    sendResponse({ apiBase: API_BASE, appUrl: APP_URL });
+    return false;
   }
 });

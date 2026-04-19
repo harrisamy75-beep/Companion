@@ -131,13 +131,7 @@ async function fillGoogleHotels(profile) {
   return true;
 }
 
-const CONFIG_KEY = "tripprofile_config";
-const DEFAULT_API_BASE = "https://travelcompaniontool.replit.app/api";
-
-async function getApiBase() {
-  const result = await chrome.storage.local.get(CONFIG_KEY);
-  return (result[CONFIG_KEY] && result[CONFIG_KEY].apiBase) || DEFAULT_API_BASE;
-}
+const API_BASE = "https://travelcompaniontool.replit.app/api";
 
 function detectSource(hostname) {
   if (hostname.includes("google.com")) return "google";
@@ -153,12 +147,11 @@ async function scoreAndBadgeReviews(profile) {
 
   const reviews = Array.from(reviewEls).map((el) => el.textContent.trim());
   const propertyId = encodeURIComponent(window.location.pathname + window.location.search);
-  const apiBase = await getApiBase();
   const source = detectSource(window.location.hostname);
 
   let scored;
   try {
-    const resp = await fetch(`${apiBase}/reviews/score`, {
+    const resp = await fetch(`${API_BASE}/reviews/score`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
