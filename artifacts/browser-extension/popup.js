@@ -1,5 +1,5 @@
 const STORAGE_KEY = "tripprofile";
-const TOKEN_KEY = "tripprofile_token";
+const KEY_KEY = "companion_api_key";
 
 function formatSyncTime(isoString) {
   if (!isoString) return "Never synced";
@@ -12,7 +12,7 @@ function renderProfile(profile) {
     document.getElementById("traveler-count").textContent = "No profile yet";
     document.getElementById("children-detail").textContent = "";
     document.getElementById("autofill-preview").textContent = "—";
-    document.getElementById("sync-time").textContent = "Connect the extension, then tap Re-sync";
+    document.getElementById("sync-time").textContent = "Connect, then tap Re-sync";
     return;
   }
 
@@ -29,9 +29,7 @@ function renderProfile(profile) {
   tagsEl.innerHTML = "";
   const tags = (preferences && (preferences.travelStyleTags || preferences.travelStyles)) || [];
   const formatTag = (s) =>
-    String(s)
-      .replace(/[-_]+/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    String(s).replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   if (tags.length === 0) {
     const span = document.createElement("span");
     span.style.cssText = "font-style: italic; color: #94A39B; font-size: 12px;";
@@ -65,11 +63,12 @@ async function loadProfile() {
 }
 
 async function loadConnectionState() {
-  const { [TOKEN_KEY]: token } = await chrome.storage.local.get(TOKEN_KEY);
+  const { [KEY_KEY]: key } = await chrome.storage.local.get(KEY_KEY);
   const statusEl = document.getElementById("connect-status");
-  const clearBtn = document.getElementById("clear-token");
-  if (token) {
-    statusEl.textContent = "Connected — token stored locally.";
+  const clearBtn = document.getElementById("clear-key");
+  if (key) {
+    const masked = key.slice(0, 8) + "…" + key.slice(-4);
+    statusEl.textContent = `Connected (${masked})`;
     statusEl.style.color = "#2D6A4F";
     clearBtn.classList.remove("hidden");
   } else {
@@ -86,55 +85,54 @@ document.addEventListener("DOMContentLoaded", async () => {
   const resyncBtn = document.getElementById("resync");
   const fillBtn = document.getElementById("fill-page");
   const statusEl = document.getElementById("status");
-  const signinBanner = document.getElementById("signin-banner");
-  const openConnectBtn = document.getElementById("open-connect");
-  const tokenInput = document.getElementById("token-input");
-  const saveTokenBtn = document.getElementById("save-token");
-  const clearTokenBtn = document.getElementById("clear-token");
+  const openSettingsBtn = document.getElementById("open-settings");
+  const keyInput = document.getElementById("key-input");
+  const saveKeyBtn = document.getElementById("save-key");
+  const clearKeyBtn = document.getElementById("clear-key");
+  const keyStatusEl = document.getElementById("key-status");
 
-  openConnectBtn.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ type: "OPEN_CONNECT" }, () => {
+  openSettingsBtn.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: "OPEN_SETTINGS" }, () => {
       window.close();
     });
   });
 
-  saveTokenBtn.addEventListener("click", () => {
-    const token = tokenInput.value.trim();
-    if (!token) {
-      statusEl.textContent = "Paste a token first.";
-      statusEl.classList.add("error");
+  saveKeyBtn.addEventListener("click", () => {
+    const key = keyInput.value.trim();
+    if (!key) {
+      keyStatusEl.textContent = "Paste a key first.";
+      keyStatusEl.classList.add("error");
       return;
     }
-    saveTokenBtn.disabled = true;
-    saveTokenBtn.textContent = "Saving…";
-    chrome.runtime.sendMessage({ type: "SET_TOKEN", token }, async (response) => {
-      saveTokenBtn.disabled = false;
-      saveTokenBtn.textContent = "Save token";
+    saveKeyBtn.disabled = true;
+    saveKeyBtn.textContent = "Saving…";
+    chrome.runtime.sendMessage({ type: "SET_KEY", key }, async (response) => {
+      saveKeyBtn.disabled = false;
+      saveKeyBtn.textContent = "Save & Sync";
       if (response?.ok) {
-        tokenInput.value = "";
-        statusEl.textContent = "Connected. Profile synced.";
-        statusEl.classList.remove("error");
-        signinBanner.classList.add("hidden");
+        keyInput.value = "";
+        keyStatusEl.textContent = "Connected. Profile synced.";
+        keyStatusEl.classList.remove("error");
         await loadConnectionState();
         await loadProfile();
-      } else if (response?.error === "invalid_token") {
-        statusEl.textContent = "That doesn't look like a valid token.";
-        statusEl.classList.add("error");
+      } else if (response?.error === "invalid_key") {
+        keyStatusEl.textContent = "Key should start with cpn_";
+        keyStatusEl.classList.add("error");
       } else if (response?.error === "auth") {
-        statusEl.textContent = "Token rejected — get a fresh one.";
-        statusEl.classList.add("error");
+        keyStatusEl.textContent = "Key rejected — get a fresh one.";
+        keyStatusEl.classList.add("error");
       } else {
-        statusEl.textContent = "Couldn't save token — try again.";
-        statusEl.classList.add("error");
+        keyStatusEl.textContent = "Couldn't save key — try again.";
+        keyStatusEl.classList.add("error");
       }
     });
   });
 
-  clearTokenBtn.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ type: "CLEAR_TOKEN" }, async () => {
+  clearKeyBtn.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: "CLEAR_KEY" }, async () => {
       await loadConnectionState();
-      statusEl.textContent = "Disconnected.";
-      statusEl.classList.remove("error");
+      keyStatusEl.textContent = "Disconnected.";
+      keyStatusEl.classList.remove("error");
     });
   });
 
@@ -170,16 +168,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     resyncBtn.textContent = "Syncing…";
     statusEl.textContent = "";
     statusEl.classList.remove("error");
-    signinBanner.classList.add("hidden");
 
     chrome.runtime.sendMessage({ type: "RESYNC" }, (response) => {
       if (response?.ok) {
         statusEl.textContent = "Profile updated.";
         loadProfile();
-      } else if (response?.error === "auth") {
-        statusEl.textContent = "Connect the extension first.";
+      } else if (response?.error === "no_key") {
+        statusEl.textContent = "Paste your API key above first.";
         statusEl.classList.add("error");
-        signinBanner.classList.remove("hidden");
+      } else if (response?.error === "auth") {
+        statusEl.textContent = "Key rejected — get a fresh one.";
+        statusEl.classList.add("error");
       } else if (response?.error === "no_profile") {
         statusEl.textContent = "No profile saved yet.";
         statusEl.classList.add("error");

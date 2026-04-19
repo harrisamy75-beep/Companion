@@ -2,27 +2,21 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware, getAuth } from "@clerk/express";
-import { jwtVerify } from "jose";
+import { eq } from "drizzle-orm";
+import { db, preferencesTable } from "@workspace/db";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
-const EXT_TOKEN_SECRET = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? "dev-secret"
-);
-
-async function userIdFromExtensionToken(req: Request): Promise<string | null> {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.toLowerCase().startsWith("bearer ")) return null;
-  const token = auth.slice(7).trim();
-  if (!token) return null;
-  try {
-    const { payload } = await jwtVerify(token, EXT_TOKEN_SECRET);
-    if (payload.kind !== "extension") return null;
-    return typeof payload.userId === "string" ? payload.userId : null;
-  } catch {
-    return null;
-  }
+async function userIdFromCompanionKey(req: Request): Promise<string | null> {
+  const key = (req.headers["x-companion-key"] as string | undefined)?.trim();
+  if (!key) return null;
+  const [pref] = await db
+    .select({ userId: preferencesTable.userId })
+    .from(preferencesTable)
+    .where(eq(preferencesTable.extensionApiKey, key))
+    .limit(1);
+  return pref?.userId ?? null;
 }
 
 const app: Express = express();
@@ -65,10 +59,10 @@ app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
     return next();
   }
 
-  // 2) Extension JWT fallback (HS256, signed with SESSION_SECRET).
-  //    Used by the browser extension where Clerk's __session cookie
-  //    isn't reliably available to the service worker.
-  const extUserId = await userIdFromExtensionToken(req);
+  // 2) Companion API key (x-companion-key header) — browser extension auth.
+  //    The key is generated per-user from /api/extension/key and stored in
+  //    the preferences row. Maps key → userId for downstream routes.
+  const extUserId = await userIdFromCompanionKey(req);
   if (extUserId) {
     (req as any).userId = extUserId;
     return next();

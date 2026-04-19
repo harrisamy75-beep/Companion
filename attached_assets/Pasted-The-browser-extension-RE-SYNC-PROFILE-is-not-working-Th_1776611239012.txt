@@ -1,0 +1,89 @@
+The browser extension RE-SYNC PROFILE is not working.
+The popup shows dashes for travelers and auto-fill preview.
+
+Please diagnose and fix completely:
+
+1. First, check what GET /api/summary currently returns 
+   for an authenticated request. Does it require Clerk auth?
+   If so, the extension cannot authenticate because it 
+   cannot access Clerk session cookies.
+
+2. Check the current background.js — is it using:
+   a) credentials: "include" (cookie-based)
+   b) Authorization: Bearer token
+   c) The old /api/summary/:userId pattern
+   
+   Print the current fetch call in background.js.
+
+3. The most reliable fix for extension auth is a 
+   dedicated API key approach. Implement this:
+
+   a) Add to preferences table: extensionApiKey text nullable
+   
+   b) New endpoint GET /api/extension/key
+      - Authenticated via Clerk
+      - Generates a random API key if none exists:
+        const key = "cpn_" + crypto.randomUUID().replace(/-/g, "")
+      - Saves to preferences table for this userId
+      - Returns { apiKey: "cpn_..." }
+   
+   c) New endpoint GET /api/extension/sync
+      - Authenticated via API key in header:
+        x-companion-key: cpn_...
+      - Looks up userId from preferences where extensionApiKey = key
+      - Returns same payload as /api/summary/:userId:
+        { family, preferences, autoFillPayload, reviewProfile }
+      - NO Clerk auth needed — key is the auth
+   
+   d) Update popup.html:
+      - Remove username input
+      - Add "GET MY API KEY" button that opens 
+        travelcompaniontool.replit.app/settings/extension
+        in a new tab
+      - Add API key input field:
+        Label: "API KEY"
+        Placeholder: "cpn_..."
+        Help text: "Get your key from Companion Settings"
+      - Save & Sync button stores key and fetches profile
+
+   e) Update background.js fetchAndStore():
+      const { companion_api_key } = await 
+        chrome.storage.local.get("companion_api_key");
+      if (!companion_api_key) {
+        await setBadge("!", "#A07840");
+        return { ok: false, error: "no_key" };
+      }
+      const response = await fetch(`${apiBase}/extension/sync`, {
+        headers: {
+          "x-companion-key": companion_api_key,
+          "Content-Type": "application/json"
+        }
+      });
+
+   f) Update popup.js to save companion_api_key:
+      chrome.storage.local.set({ companion_api_key: keyValue });
+      Then trigger fetchAndStore().
+
+   g) Add settings/extension page to frontend:
+      Route: /settings/extension
+      
+      Shows:
+      - "BROWSER EXTENSION" eyebrow
+      - Heading: "Connect your extension" Playfair italic
+      - Your API key in a code box with Copy button
+      - Wine bordered, monospace font
+      - "Regenerate key" link below (invalidates old key)
+      - Step by step instructions:
+        1. Copy your API key above
+        2. Click the Companion icon in Chrome
+        3. Paste your key and click Save & Sync
+      - Link back to Settings
+
+   h) Add "Extension" link to Settings page sidebar section.
+
+4. Run drizzle-kit push for the new extensionApiKey column.
+
+5. Re-zip the extension:
+   cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip .
+
+6. Republish the app.

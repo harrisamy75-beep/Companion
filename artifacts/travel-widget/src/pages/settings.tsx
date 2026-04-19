@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useUser, useClerk } from "@clerk/react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { apiFetch } from "@/lib/api";
 
@@ -471,6 +471,35 @@ export default function SettingsPage() {
                 disabled={!prefs || savingToggle === "personalityEnabled"}
                 onChange={(v) => updatePref("personalityEnabled", v)}
               />
+            }
+          />
+        </section>
+
+        <section style={sectionStyle}>
+          <div style={sectionHeading}>Browser extension</div>
+          <Row
+            label="Connect your extension"
+            help="Get an API key for the Companion Chrome extension to auto-fill booking forms."
+            right={
+              <Link
+                href="/settings/extension"
+                style={{
+                  fontFamily: "'Raleway', sans-serif",
+                  fontWeight: 600,
+                  fontSize: 11,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  background: "transparent",
+                  border: "1px solid #E5E0D8",
+                  color: "#1C1C1C",
+                  padding: "8px 16px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  display: "inline-block",
+                }}
+              >
+                Manage →
+              </Link>
             }
           />
         </section>
