@@ -78,7 +78,9 @@ Scoring guidelines:
 - adventurous_menu_score (1-10): High = unusual ingredients, global cuisine, not safe options. Low = plain/predictable.
 - sentiment: overall tone of the review.
 - one_line_summary: max 12 words, plain English, no quotes.
-- score_explanation: 1-2 sentences explaining the overall pattern. Be specific about what drove scores up and what held them back. e.g. "Strong marks for exceptional food and local sourcing, but pulled back by mentions of inconsistent service and limited beach access."
+- score_explanation: 1-2 sentences explaining the overall pattern. Be specific about what drove scores up and what held them back. e.g. "Strong marks for exceptional food and local sourcing, but pulled back by mentions of inconsistent service and limited beach access." Never mention missing amenities that are irrelevant to the property type or destination (e.g. don't fault a ski lodge for lacking a beach, or a city hotel for lacking a garden).
+
+Amenity preferences like pools, beaches, and views are bonus signals — score higher when reviews mention them matching the user's preferences, but do not reduce scores for their absence. A ski resort without a beach should not be penalized for lacking beach access if the user selected "Sandy Beach" as a preference — context matters. Only reduce scores for amenities when their absence is contextually relevant (e.g. a beach resort with no pool when the user selected "Stunning Pool").
 - score_breakdown: For each of the four categories, mirror the score above and add a short reason (max 8 words). e.g. "Chef-driven menu, locally sourced ingredients noted" or "Generic buffet, no mention of local cuisine".
 
 Return only the JSON object. No explanation, no markdown.`;

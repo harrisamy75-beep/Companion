@@ -219,7 +219,7 @@ export const TRAVEL_STYLE_GROUPS: StyleGroup[] = [
     "Nude Beach",
     "Secluded Cove",
   ]),
-  group("PROPERTY MUST-HAVES", [
+  group("AMENITIES I LOVE", [
     "Stunning Pool",
     "Ocean View Room",
     "Mountain View",
