@@ -106,27 +106,49 @@ async function fillBooking(profile) {
     await sleep(600);
   }
 
-  function findStepperForLabel(labelText) {
-    const allEls = document.querySelectorAll("*");
-    for (const el of allEls) {
-      if (el.children.length === 0 && el.textContent.trim() === labelText) {
-        const container = el.closest("[class]");
-        if (container) {
-          const buttons = container.querySelectorAll("button");
-          if (buttons.length >= 2) {
-            return {
-              decrease: buttons[0],
-              increase: buttons[buttons.length - 1],
-            };
-          }
+  function findStepperByAria(label) {
+    const lower = label.toLowerCase();
+    const all = Array.from(document.querySelectorAll("button"));
+    const matching = all.filter((b) =>
+      (b.getAttribute("aria-label") || "").toLowerCase().includes(lower)
+    );
+    const inc = matching.find((b) =>
+      /increase|add|plus/i.test(b.getAttribute("aria-label") || "")
+    );
+    const dec = matching.find((b) =>
+      /decrease|remove|subtract|minus/i.test(b.getAttribute("aria-label") || "")
+    );
+    return inc && dec ? { increase: inc, decrease: dec } : null;
+  }
+
+  function findStepperByLabel(labelText) {
+    const labels = Array.from(document.querySelectorAll("*")).filter(
+      (el) => el.children.length === 0 && el.textContent.trim() === labelText
+    );
+    for (const label of labels) {
+      let node = label;
+      for (let i = 0; i < 8; i++) {
+        node = node.parentElement;
+        if (!node) break;
+        const buttons = node.querySelectorAll("button");
+        if (buttons.length === 2) {
+          return { decrease: buttons[0], increase: buttons[1] };
         }
       }
     }
     return null;
   }
 
-  const adultStepper = findStepperForLabel("Adults");
-  const childStepper = findStepperForLabel("Children");
+  function findStepper(label) {
+    return findStepperByAria(label) || findStepperByLabel(label);
+  }
+
+  const adultStepper = findStepper("Adults");
+  const childStepper = findStepper("Children");
+  console.log("[TripProfile] Stepper detection:", {
+    adult: !!adultStepper,
+    child: !!childStepper,
+  });
 
   if (adultStepper) {
     for (let i = 0; i < 8; i++) adultStepper.decrease.click();
