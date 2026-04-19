@@ -69,7 +69,7 @@ const SYSTEM_PROMPT = `You are a travel review classifier. Given a hotel or rest
   }
 }
 
-Tags must come only from this list: luxury_value, overpriced, tourist_trap, foodie, adventurous_menu, kids_menu_only, eco_certified, vegetarian_friendly, hiking_nearby, family_friendly, romantic, business, pretentious, worth_every_penny, hidden_gem.
+Tags must come only from this list: luxury_value, overpriced, tourist_trap, foodie, adventurous_menu, kids_menu_only, eco_certified, vegetarian_friendly, hiking_nearby, family_friendly, romantic, business, pretentious, worth_every_penny, hidden_gem, stunning_pool, beach_access, private_beach, infinity_pool, ocean_view, mountain_view, garden_grounds, historic_building.
 
 Scoring guidelines:
 - luxury_value_score (1-10): High = excellent quality for price (think Rosewood, Palm House). Low = overpriced or budget.
