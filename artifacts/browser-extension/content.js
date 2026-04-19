@@ -85,30 +85,80 @@ async function fillExpedia(profile) {
 async function fillBooking(profile) {
   const { adults, children, childAges } = profile.autoFillPayload;
 
-  const adultsInput = document.querySelector(
-    ".sb-group__input--adults, input[name='group_adults']"
+  const guestTrigger = document.querySelector(
+    '[data-testid="occupancy-config"],' +
+    '.b2b7952bac,' +
+    '[aria-label*="adults"],' +
+    'button[data-component*="occupancy"]'
   );
-  const childrenInput = document.querySelector(
-    ".sb-group__input--children, input[name='group_children']"
-  );
-  if (!adultsInput && !childrenInput) return false;
+  if (guestTrigger) {
+    guestTrigger.click();
+    await sleep(600);
+  }
 
-  if (adultsInput) setNativeValue(adultsInput, adults);
-  if (childrenInput) setNativeValue(childrenInput, children);
-  await sleep(400);
+  function findStepperForLabel(labelText) {
+    const allEls = document.querySelectorAll("*");
+    for (const el of allEls) {
+      if (el.children.length === 0 && el.textContent.trim() === labelText) {
+        const container = el.closest("[class]");
+        if (container) {
+          const buttons = container.querySelectorAll("button");
+          if (buttons.length >= 2) {
+            return {
+              decrease: buttons[0],
+              increase: buttons[buttons.length - 1],
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }
 
-  const ageSelects = document.querySelectorAll(
-    "select[name*='age_child'], .sb-group__field--age select"
+  const adultStepper = findStepperForLabel("Adults");
+  const childStepper = findStepperForLabel("Children");
+
+  if (adultStepper) {
+    for (let i = 0; i < 8; i++) adultStepper.decrease.click();
+    await sleep(100);
+    for (let i = 1; i < adults; i++) adultStepper.increase.click();
+    await sleep(200);
+  }
+
+  if (childStepper) {
+    for (let i = 0; i < 8; i++) childStepper.decrease.click();
+    await sleep(100);
+    for (let i = 0; i < children; i++) childStepper.increase.click();
+    await sleep(800);
+  }
+
+  const ageSelects = document.querySelectorAll("select");
+  const childAgeSelects = Array.from(ageSelects).filter(
+    (s) =>
+      s.closest("[class]")?.textContent.toLowerCase().includes("age") ||
+      s.getAttribute("aria-label")?.toLowerCase().includes("age")
   );
-  ageSelects.forEach((select, i) => {
-    const age = childAges[i];
-    if (age !== undefined) {
-      select.value = String(age);
+
+  childAgeSelects.forEach((select, i) => {
+    if (childAges[i] !== undefined) {
+      select.value = String(childAges[i]);
       select.dispatchEvent(new Event("change", { bubbles: true }));
     }
   });
 
-  return true;
+  console.log("[TripProfile] Booking fill:", {
+    adultStepper: !!adultStepper,
+    childStepper: !!childStepper,
+    ageSelects: childAgeSelects.length,
+  });
+
+  showToast(
+    adultStepper
+      ? `Filled: ${adults} adults, ${children} children`
+      : "Could not find guest fields — try opening the picker first"
+  );
+
+  return !!(adultStepper || childStepper);
 }
 
 async function fillGoogleHotels(profile) {

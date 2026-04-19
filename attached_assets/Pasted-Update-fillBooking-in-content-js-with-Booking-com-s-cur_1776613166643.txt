@@ -1,0 +1,98 @@
+Update fillBooking in content.js with Booking.com's 
+current DOM structure. Based on inspection, Booking.com 
+uses these patterns:
+
+The guest picker shows Adults/Children/Rooms with +/- buttons.
+The number display uses span.e32aa465fd (obfuscated class).
+
+Use this approach instead — find buttons by their 
+position relative to the Adults/Children text labels:
+
+async function fillBooking(profile) {
+  const { adults, children, childAges } = profile.autoFillPayload;
+  
+  // Open the guest picker first
+  const guestTrigger = document.querySelector(
+    '[data-testid="occupancy-config"],' +
+    '.b2b7952bac,' +
+    '[aria-label*="adults"],' +
+    'button[data-component*="occupancy"]'
+  );
+  if (guestTrigger) { guestTrigger.click(); await sleep(600); }
+
+  // Find all +/- button pairs on the page
+  // Booking.com renders label + decrease + count + increase
+  // Find by looking for elements containing "Adults" text
+  
+  function findStepperForLabel(labelText) {
+    // Find all text nodes containing the label
+    const allEls = document.querySelectorAll('*');
+    for (const el of allEls) {
+      if (el.children.length === 0 && 
+          el.textContent.trim() === labelText) {
+        // Found the label — look for sibling buttons
+        const container = el.closest('[class]');
+        if (container) {
+          const buttons = container.querySelectorAll('button');
+          if (buttons.length >= 2) {
+            return {
+              decrease: buttons[0],
+              increase: buttons[buttons.length - 1]
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }
+  
+  const adultStepper = findStepperForLabel('Adults');
+  const childStepper = findStepperForLabel('Children');
+  
+  if (adultStepper) {
+    // Reset to 1
+    for (let i = 0; i < 8; i++) adultStepper.decrease.click();
+    await sleep(100);
+    // Add to desired count (starts at 1 minimum)
+    for (let i = 1; i < adults; i++) adultStepper.increase.click();
+    await sleep(200);
+  }
+  
+  if (childStepper) {
+    for (let i = 0; i < 8; i++) childStepper.decrease.click();
+    await sleep(100);
+    for (let i = 0; i < children; i++) childStepper.increase.click();
+    await sleep(800);
+  }
+  
+  // Fill child ages
+  const ageSelects = document.querySelectorAll('select');
+  const childAgeSelects = Array.from(ageSelects).filter(s => 
+    s.closest('[class]')?.textContent.toLowerCase().includes('age') ||
+    s.getAttribute('aria-label')?.toLowerCase().includes('age')
+  );
+  
+  childAgeSelects.forEach((select, i) => {
+    if (childAges[i] !== undefined) {
+      select.value = String(childAges[i]);
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  
+  console.log('[TripProfile] Booking fill:', {
+    adultStepper: !!adultStepper,
+    childStepper: !!childStepper,
+    ageSelects: childAgeSelects.length
+  });
+  
+  showToast(
+    adultStepper 
+      ? `Filled: ${adults} adults, ${children} children`
+      : 'Could not find guest fields — try opening the picker first'
+  );
+  
+  return !!(adultStepper || childStepper);
+}
+
+After updating re-zip:
+cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip .
