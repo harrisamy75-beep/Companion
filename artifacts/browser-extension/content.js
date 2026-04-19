@@ -83,6 +83,16 @@ async function fillExpedia(profile) {
 }
 
 async function fillBooking(profile) {
+  console.log("[TripProfile] fillBooking called");
+  console.log(
+    "[TripProfile] All buttons on page:",
+    Array.from(document.querySelectorAll("button")).map((b) => ({
+      text: b.textContent.trim().slice(0, 20),
+      aria: b.getAttribute("aria-label"),
+      class: (b.className || "").slice(0, 30),
+    }))
+  );
+
   const { adults, children, childAges } = profile.autoFillPayload;
 
   const guestTrigger = document.querySelector(
@@ -237,9 +247,16 @@ async function scoreAndBadgeReviews(profile) {
 }
 
 async function attemptAutoFill({ manual = false } = {}) {
+  console.log(
+    "[TripProfile] attemptAutoFill called, hostname:",
+    window.location.hostname,
+    "manual:",
+    manual
+  );
   const result = await chrome.storage.local.get(STORAGE_KEY);
   const profile = result[STORAGE_KEY];
   if (!profile) {
+    console.log("[TripProfile] No profile in storage");
     if (manual) showToast("No profile yet — open the extension and re-sync.");
     return false;
   }
@@ -277,11 +294,14 @@ async function run() {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  console.log("[TripProfile] Message received:", msg && msg.type);
   if (msg && msg.type === "MANUAL_FILL") {
     attemptAutoFill({ manual: true }).then((ok) => sendResponse({ ok }));
     return true;
   }
 });
+
+console.log("[TripProfile] content.js loaded on", window.location.hostname);
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", run);
