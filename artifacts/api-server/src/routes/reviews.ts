@@ -420,9 +420,10 @@ router.get("/reviews/match", async (req, res): Promise<void> => {
     .limit(1);
   const prefs = prefRows[0] ?? null;
 
-  const styleTags: string[] = Array.isArray(prefs?.travelStyleTags)
-    ? (prefs.travelStyleTags as string[])
-    : [];
+  const styleTags: string[] = Array.from(new Set([
+    ...(Array.isArray(prefs?.travelStyleTags) ? (prefs!.travelStyleTags as string[]) : []),
+    ...(Array.isArray(prefs?.travelStyles) ? (prefs!.travelStyles as string[]) : []),
+  ])).filter(Boolean);
   const priceValueWeight = prefs?.priceValueWeight ?? 8;
 
   const luxWeight = priceValueWeight / 10;

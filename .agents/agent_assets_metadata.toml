@@ -5,7 +5,7 @@ generated = []
 id = "hzaP9_gnFVX_UgkmYx2Mq"
 uri = "file://TripProfile.zip"
 type = "unspecified"
-title = "TripProfile extension v0.3.0 — adds Fill This Page button"
+title = "TripProfile extension v0.4.0 — styles fix"
 
 [[outputs]]
 id = "gkN42WV-ptnh8qXMumHj7"

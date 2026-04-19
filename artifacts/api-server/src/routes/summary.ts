@@ -84,7 +84,14 @@ router.get("/summary", async (req, res): Promise<void> => {
     ? allTravelers.filter((t) => travelerIdSet!.has(t.id))
     : allTravelers;
 
-  const preferences = prefRows.length > 0 ? prefRows[0] : null;
+  const rawPref = prefRows.length > 0 ? prefRows[0] : null;
+  const mergedTags = rawPref
+    ? Array.from(new Set([
+        ...(Array.isArray(rawPref.travelStyleTags) ? (rawPref.travelStyleTags as string[]) : []),
+        ...(Array.isArray(rawPref.travelStyles) ? (rawPref.travelStyles as string[]) : []),
+      ])).filter(Boolean)
+    : [];
+  const preferences = rawPref ? { ...rawPref, travelStyleTags: mergedTags, travelStyles: mergedTags } : null;
   const hasPreferences = preferences !== null && preferences.id !== 0;
   const children = travelersRows.filter((t) => t.travelerType === "child");
 
@@ -137,9 +144,10 @@ router.get("/summary/:userId", async (req, res): Promise<void> => {
   ]);
 
   const prefs = prefRows[0] ?? null;
-  const styleTags: string[] = Array.isArray(prefs?.travelStyleTags)
-    ? (prefs.travelStyleTags as string[])
-    : [];
+  const styleTags: string[] = Array.from(new Set([
+    ...(Array.isArray(prefs?.travelStyleTags) ? (prefs!.travelStyleTags as string[]) : []),
+    ...(Array.isArray(prefs?.travelStyles) ? (prefs!.travelStyles as string[]) : []),
+  ])).filter(Boolean);
   const luxuryIndexMin = prefs?.luxuryIndexMin ?? 6;
   const luxuryIndexMax = prefs?.luxuryIndexMax ?? 9;
   const priceValueWeight = prefs?.priceValueWeight ?? 8;

@@ -26,19 +26,28 @@ function renderProfile(profile) {
 
   const tagsEl = document.getElementById("style-tags");
   tagsEl.innerHTML = "";
-  const tags = (preferences && preferences.travelStyleTags) || [];
+  const tags = (preferences && (preferences.travelStyleTags || preferences.travelStyles)) || [];
+  const formatTag = (s) =>
+    String(s)
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   if (tags.length === 0) {
     const span = document.createElement("span");
-    span.className = "tag empty";
+    span.style.cssText = "font-style: italic; color: #94A39B; font-size: 12px;";
     span.textContent = "Not set";
     tagsEl.appendChild(span);
   } else {
-    tags.forEach((tag) => {
-      const span = document.createElement("span");
-      span.className = "tag";
-      span.textContent = tag.replace(/_/g, " ");
-      tagsEl.appendChild(span);
-    });
+    const top3 = tags.slice(0, 3).map(formatTag).join(", ");
+    const span = document.createElement("span");
+    span.style.cssText = "font-size: 13px; color: #1C1C1C; font-weight: 500; line-height: 1.4;";
+    span.textContent = top3;
+    tagsEl.appendChild(span);
+    if (tags.length > 3) {
+      const more = document.createElement("span");
+      more.style.cssText = "font-size: 11px; color: #5C5248; font-style: italic; margin-left: 6px;";
+      more.textContent = `+${tags.length - 3} more`;
+      tagsEl.appendChild(more);
+    }
   }
 
   const { adults, children, childAges } = autoFillPayload;

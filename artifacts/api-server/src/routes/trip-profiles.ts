@@ -130,7 +130,10 @@ router.get("/trip-profiles/:id/summary", async (req, res): Promise<void> => {
 
   const travelersRows = allTravelers.filter((t) => travelerIdSet.has(t.id));
   const prefs = prefRows[0] ?? null;
-  const styleTags: string[] = Array.isArray(prefs?.travelStyleTags) ? (prefs.travelStyleTags as string[]) : [];
+  const styleTags: string[] = Array.from(new Set([
+    ...(Array.isArray(prefs?.travelStyleTags) ? (prefs!.travelStyleTags as string[]) : []),
+    ...(Array.isArray(prefs?.travelStyles) ? (prefs!.travelStyles as string[]) : []),
+  ])).filter(Boolean);
 
   const adults = travelersRows.filter((t) => t.travelerType === "adult");
   const children = travelersRows.filter((t) => t.travelerType === "child");
