@@ -100,14 +100,29 @@ function isLovedPropertyMatch(query: string, favorites: FavoriteLike[]): boolean
 // Match tier — copy that sits above the big score number on the dashboard.
 // ---------------------------------------------------------------------------
 function tierFromScore(score: number): { tier: "strong" | "good" | "weak"; label: string } {
-  if (score >= 80) return { tier: "strong", label: "Strong match for your travel style" };
-  if (score >= 60) return { tier: "good", label: "Good match with some gaps" };
-  return { tier: "weak", label: "May not suit your style" };
+  if (score >= 95) return { tier: "strong", label: "Exceptional match" };
+  if (score >= 85) return { tier: "strong", label: "Strong match" };
+  if (score >= 70) return { tier: "good", label: "Good match with some gaps" };
+  if (score >= 50) return { tier: "good", label: "Partial match" };
+  return { tier: "weak", label: "Poor match for your style" };
 }
 
 router.post("/reviews/quick-match", async (req, res): Promise<void> => {
   const userId: string = (req as any).userId;
-  const { query } = req.body as { query?: string };
+  const { query, hotelStarRating, guestScore } = req.body as {
+    query?: string;
+    hotelStarRating?: number | string | null;
+    guestScore?: number | string | null;
+  };
+
+  const parsedStar = (() => {
+    const n = parseInt(String(hotelStarRating ?? ""), 10);
+    return Number.isFinite(n) && n >= 1 && n <= 5 ? n : null;
+  })();
+  const parsedGuestScore = (() => {
+    const n = parseFloat(String(guestScore ?? ""));
+    return Number.isFinite(n) && n >= 1 && n <= 10 ? n : null;
+  })();
 
   if (!query?.trim()) {
     res.status(400).json({ error: "query required" });
@@ -175,11 +190,51 @@ Score luxury_value_score and overall match strictly using this hotel-class ladde
 - 2-star / budget chains (Holiday Inn, Holiday Inn Express, Comfort Inn, Comfort Suites, Motel 6, Days Inn, Super 8, Howard Johnson, Rodeway Inn, Econo Lodge, Travelodge, Best Western non-Premier, Quality Inn, La Quinta, Red Roof, Knights Inn, America's Best Value, Microtel, Sleep Inn): luxury_value 1-2. Overall 25-45 for luxury-leaning travelers, regardless of price.
 - Boutique independent: judge on signals (design language, service, materials, food program, location).
 - Hollywood / Las Vegas Strip / Times Square budget hotels in noisy tourist zones score lower for travelers seeking refined, quiet, or design-led stays — call out the location-vs-style mismatch in score_explanation.
-- Do not inflate scores out of politeness. A clear mismatch is a clear mismatch.`,
+- Do not inflate scores out of politeness. A clear mismatch is a clear mismatch.
+
+Review-score calibration when an average guest score is provided:
+- 9.0–10.0: boost luxury_value by +1 and overall by +3
+- 8.0–8.9: neutral
+- 7.0–7.9: reduce luxury_value by -1 and overall by -3
+- below 7.0: reduce luxury_value by -2 and overall by -6
+
+Location calibration:
+- Hollywood Blvd corridor, airport, highway, strip-mall locations: -2 luxury_value, -5 overall
+- Premium locations (Beverly Hills, Malibu, Palm Beach, Aspen, Hamptons, Mayfair, St-Germain): +1 luxury_value, +3 overall
+- Beach / mountain / destination resort: neutral to +1`,
       messages: [
         {
           role: "user",
-          content: `Hotel or destination: ${displayName}\nTraveler's style: ${styleDesc}${personality ? `\nPersonality: ${personality}` : ""}`,
+          content: (() => {
+            const lines: string[] = [
+              `Hotel or destination: ${displayName}`,
+              `Traveler's style: ${styleDesc}`,
+            ];
+            if (personality) lines.push(`Personality: ${personality}`);
+            if (parsedStar !== null) lines.push(`Hotel star rating: ${parsedStar} stars`);
+            if (parsedGuestScore !== null) lines.push(`Guest review score: ${parsedGuestScore.toFixed(1)}/10`);
+            if (parsedStar !== null || parsedGuestScore !== null) {
+              lines.push("Use the star rating and guest score to calibrate your luxury_value_score and overall match.");
+            }
+
+            const lovedBench = favorites
+              .filter((f) => f.tier === "loved" && (f.starRating || f.pricePerNight))
+              .slice(0, 6)
+              .map((f) => {
+                const bits: string[] = [];
+                if (f.starRating) bits.push(`${f.starRating} star${f.starRating === 1 ? "" : "s"}`);
+                if (f.pricePerNight) bits.push(`~$${f.pricePerNight}/night`);
+                return `- ${f.propertyName}${f.location ? ` (${f.location})` : ""}${bits.length ? ` — ${bits.join(", ")}` : ""}`;
+              });
+            if (lovedBench.length > 0) {
+              lines.push("");
+              lines.push("This user's loved properties (use as a benchmark for what they consider a strong match):");
+              lines.push(...lovedBench);
+              lines.push("Score the new property relative to this benchmark.");
+            }
+
+            return lines.join("\n");
+          })(),
         },
       ],
     });

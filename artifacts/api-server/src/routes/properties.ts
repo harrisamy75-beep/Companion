@@ -35,10 +35,16 @@ router.get("/properties/brands", async (req, res): Promise<void> => {
   res.json(brands);
 });
 
+function toIntOrNull(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = parseInt(String(v), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 // POST /properties
 router.post("/properties", async (req, res): Promise<void> => {
   const userId: string = (req as any).userId;
-  const { propertyName, brand, location, category, tier, tags, notes, visitedAt } = req.body;
+  const { propertyName, brand, location, category, tier, tags, notes, visitedAt, starRating, guestScore, pricePerNight } = req.body;
   if (!propertyName) {
     res.status(400).json({ error: "propertyName is required" });
     return;
@@ -60,6 +66,9 @@ router.post("/properties", async (req, res): Promise<void> => {
       tags: Array.isArray(tags) ? tags : [],
       notes: notes || null,
       visitedAt: visitedAt || null,
+      starRating: toIntOrNull(starRating),
+      guestScore: guestScore ? String(guestScore).slice(0, 8) : null,
+      pricePerNight: toIntOrNull(pricePerNight),
     })
     .returning();
   res.status(201).json(row);
@@ -70,7 +79,7 @@ router.put("/properties/:id", async (req, res): Promise<void> => {
   const userId: string = (req as any).userId;
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const { propertyName, brand, location, category, tier, tags, notes, visitedAt } = req.body;
+  const { propertyName, brand, location, category, tier, tags, notes, visitedAt, starRating, guestScore, pricePerNight } = req.body;
   const [row] = await db
     .update(favoritePropertiesTable)
     .set({
@@ -82,6 +91,9 @@ router.put("/properties/:id", async (req, res): Promise<void> => {
       tags: Array.isArray(tags) ? tags : [],
       notes: notes || null,
       visitedAt: visitedAt || null,
+      starRating: toIntOrNull(starRating),
+      guestScore: guestScore ? String(guestScore).slice(0, 8) : null,
+      pricePerNight: toIntOrNull(pricePerNight),
     })
     .where(and(eq(favoritePropertiesTable.id, id), eq(favoritePropertiesTable.userId, userId)))
     .returning();

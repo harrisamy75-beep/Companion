@@ -18,6 +18,9 @@ interface FavoriteProperty {
   tags: string[];
   notes: string | null;
   visitedAt: string | null;
+  starRating: number | null;
+  guestScore: string | null;
+  pricePerNight: number | null;
   createdAt: string;
 }
 
@@ -195,7 +198,12 @@ function PropertyCard({ property, onEdit, onDelete }: {
             </span>
           </div>
 
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "4px" }}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "4px", alignItems: "baseline" }}>
+            {property.starRating && (
+              <span style={{ color: "#6B2737", fontSize: "13px", letterSpacing: "0.04em" }}>
+                {"★".repeat(property.starRating)}
+              </span>
+            )}
             {property.brand && (
               <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248" }}>
                 {property.brand}
@@ -204,6 +212,11 @@ function PropertyCard({ property, onEdit, onDelete }: {
             {property.location && (
               <span className="font-playfair" style={{ fontStyle: "italic", fontSize: "13px", color: "#5C5248" }}>
                 {property.brand ? "· " : ""}{property.location}
+              </span>
+            )}
+            {property.pricePerNight && (
+              <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248" }}>
+                · ~${property.pricePerNight}/night
               </span>
             )}
             {property.visitedAt && (
@@ -435,9 +448,10 @@ function PlacesAutocomplete({ value, onChange, onSelect, placeholder }: PlacesAu
 type PropForm = {
   propertyName: string; brand: string; location: string; category: string;
   tier: string; tags: string[]; notes: string; visitedAt: string; placeId: string;
+  starRating: number | null; pricePerNight: string;
 };
 
-const EMPTY_PROP: PropForm = { propertyName: "", brand: "", location: "", category: "hotel", tier: "liked", tags: [], notes: "", visitedAt: "", placeId: "" };
+const EMPTY_PROP: PropForm = { propertyName: "", brand: "", location: "", category: "hotel", tier: "liked", tags: [], notes: "", visitedAt: "", placeId: "", starRating: null, pricePerNight: "" };
 
 function PropertyForm({ initial, onSubmit, onCancel, loading }: {
   initial?: PropForm; onSubmit: (f: PropForm) => void; onCancel: () => void; loading: boolean;
@@ -483,6 +497,41 @@ function PropertyForm({ initial, onSubmit, onCancel, loading }: {
 
       <Field label="Visited">
         <input className="input-underline" value={form.visitedAt} onChange={e => set("visitedAt", e.target.value)} placeholder="Summer 2023" />
+      </Field>
+
+      <Field label="Star rating">
+        <div style={{ display: "flex", gap: "4px", paddingTop: "4px" }}>
+          {[1, 2, 3, 4, 5].map(n => {
+            const active = form.starRating !== null && n <= form.starRating;
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => set("starRating", form.starRating === n ? null : n)}
+                aria-label={`${n} star${n === 1 ? "" : "s"}`}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: active ? "#6B2737" : "#DDD8CE", fontSize: "22px", lineHeight: 1 }}
+              >
+                ★
+              </button>
+            );
+          })}
+        </div>
+      </Field>
+
+      <Field label="Typical price per night">
+        <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "14px", color: "#5C5248" }}>$</span>
+          <input
+            className="input-underline"
+            type="number"
+            min={0}
+            value={form.pricePerNight}
+            onChange={e => set("pricePerNight", e.target.value)}
+            placeholder="500"
+            style={{ width: "100px" }}
+          />
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "13px", color: "#5C5248" }}>/ night</span>
+        </div>
       </Field>
 
       {/* Category */}
@@ -966,7 +1015,7 @@ export default function StaysPage() {
                 <button onClick={() => { setShowPropForm(false); setEditingProp(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248" }}><X size={16} /></button>
               </div>
               <PropertyForm
-                initial={editingProp ? { propertyName: editingProp.propertyName, brand: editingProp.brand ?? "", location: editingProp.location ?? "", category: editingProp.category ?? "hotel", tier: editingProp.tier ?? "liked", tags: editingProp.tags ?? [], notes: editingProp.notes ?? "", visitedAt: editingProp.visitedAt ?? "" } : undefined}
+                initial={editingProp ? { propertyName: editingProp.propertyName, brand: editingProp.brand ?? "", location: editingProp.location ?? "", category: editingProp.category ?? "hotel", tier: editingProp.tier ?? "liked", tags: editingProp.tags ?? [], notes: editingProp.notes ?? "", visitedAt: editingProp.visitedAt ?? "", placeId: "", starRating: editingProp.starRating, pricePerNight: editingProp.pricePerNight ? String(editingProp.pricePerNight) : "" } : undefined}
                 onSubmit={handleSaveProp}
                 onCancel={() => { setShowPropForm(false); setEditingProp(null); }}
                 loading={createProp.isPending || updateProp.isPending}

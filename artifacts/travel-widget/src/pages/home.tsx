@@ -249,8 +249,19 @@ function BreakdownBar({ label, score, weight }: { label: string; score: number; 
   );
 }
 
+const TIER_COLORS: Record<string, string> = {
+  "Exceptional match": "#B8963E",
+  "Strong match": "#7CB67C",
+  "Good match with some gaps": "rgba(255,255,255,0.55)",
+  "Partial match": "#D9A24A",
+  "Poor match for your style": "#A8324A",
+};
+
 function ReviewMatchCard() {
   const [query, setQuery] = useState("");
+  const [hotelStar, setHotelStar] = useState<number | null>(null);
+  const [guestScoreInput, setGuestScoreInput] = useState("");
+  const [submittedStar, setSubmittedStar] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<QuickMatchResult | null>(null);
   const [inputError, setInputError] = useState<string | null>(null);
@@ -277,11 +288,17 @@ function ReviewMatchCard() {
     setLoading(true);
     setResult(null);
     try {
+      const guestScoreNum = parseFloat(guestScoreInput);
+      const payload: Record<string, unknown> = { query: q };
+      if (hotelStar) payload.hotelStarRating = hotelStar;
+      if (Number.isFinite(guestScoreNum) && guestScoreNum >= 1 && guestScoreNum <= 10) {
+        payload.guestScore = guestScoreNum;
+      }
+      setSubmittedStar(hotelStar);
       const res = await apiFetch("/api/reviews/quick-match", {
         method: "POST",
-        
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: q }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) setResult(await res.json());
     } catch {
@@ -330,6 +347,50 @@ function ReviewMatchCard() {
         </p>
       )}
 
+      {/* Optional metadata: star rating + guest score */}
+      <div style={{ display: "flex", gap: "32px", flexWrap: "wrap", marginBottom: "24px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "9.5px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#B8963E" }}>
+            Star rating (optional)
+          </span>
+          <div style={{ display: "flex", gap: "4px" }}>
+            {[1, 2, 3, 4, 5].map((n) => {
+              const active = hotelStar !== null && n <= hotelStar;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setHotelStar(hotelStar === n ? null : n)}
+                  aria-label={`${n} star${n === 1 ? "" : "s"}`}
+                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: active ? "#6B2737" : "#DDD8CE", fontSize: "20px", lineHeight: 1 }}
+                >
+                  ★
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "9.5px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#B8963E" }}>
+            Guest score (optional)
+          </span>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            step={0.1}
+            value={guestScoreInput}
+            onChange={(e) => setGuestScoreInput(e.target.value)}
+            placeholder="e.g. 8.5"
+            style={{ width: "80px", background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.25)", color: "white", fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "14px", padding: "4px 0", outline: "none", caretColor: "#B8963E" }}
+          />
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>
+            From Booking.com, TripAdvisor etc.
+          </span>
+        </div>
+      </div>
+
       {/* Result */}
       {loading && (
         <div style={{ textAlign: "center", paddingTop: "16px" }}>
@@ -355,8 +416,18 @@ function ReviewMatchCard() {
 
           {/* Match-tier label */}
           {result.matchTierLabel && (
-            <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#A8324A", textAlign: "center", marginBottom: "10px" }}>
+            <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: TIER_COLORS[result.matchTierLabel] ?? "#A8324A", textAlign: "center", marginBottom: "10px" }}>
               {result.matchTierLabel}
+            </p>
+          )}
+
+          {/* Star rating echo (if user provided) */}
+          {submittedStar !== null && (
+            <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "13px", color: "rgba(255,255,255,0.7)", textAlign: "center", marginBottom: "10px", letterSpacing: "0.04em" }}>
+              <span style={{ color: "#B8963E", letterSpacing: "0.05em" }}>{"★".repeat(submittedStar)}</span>
+              <span style={{ color: "rgba(255,255,255,0.2)", letterSpacing: "0.05em" }}>{"★".repeat(5 - submittedStar)}</span>
+              <span style={{ margin: "0 8px", color: "rgba(255,255,255,0.4)" }}>·</span>
+              {submittedStar}-star · {result.score}/100 match
             </p>
           )}
 

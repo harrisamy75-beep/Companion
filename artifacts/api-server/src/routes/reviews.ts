@@ -90,6 +90,17 @@ Hotel classification guide for luxury_value_score (use the property name and any
 - 2-star / budget chains (Holiday Inn Express, Comfort Inn, Motel 6, Days Inn, Super 8, Howard Johnson, Rodeway, Econo Lodge, budget Hollywood / Vegas Strip / Times Square hotels): score 1-2
 - Boutique independents: judge on review quality signals (design language, service mentions, materials, food program, price-per-night signals).
 
+Review-score signals (when an average guest score is mentioned in the review or known from metadata):
+- 9.0–10.0: boost luxury_value_score by +1
+- 8.0–8.9: neutral
+- 7.0–7.9: reduce luxury_value_score by -1
+- below 7.0: reduce luxury_value_score by -2
+
+Location signals:
+- Hollywood Blvd budget corridor, airport hotels, highway motels, generic strip-mall locations: reduce score by -2
+- Premium city locations (Beverly Hills, Malibu, Palm Beach, Aspen, the Hamptons, Mayfair, St-Germain): boost +1
+- Beach / mountain / destination resort locations: neutral to +1
+
 Budget and value context: when the user has indicated a typical nightly budget range or a value philosophy (e.g. "Value Hunter", "Selective Splurger", "Luxury on a Budget", "Considered Spender", "Special Occasion", "No Budget"), use it to interpret the luxury_value_score. Reviews praising "great value", "worth every penny", or "exceptional for the price" should boost luxury_value_score for value-conscious philosophies. Reviews complaining about being "overpriced" or "not worth it" should reduce luxury_value_score, especially harshly for "Value Hunter" / "Luxury on a Budget" users. For "No Budget" or "Special Occasion" users, weight quality and experience signals higher than price-sensitivity signals — do not penalize properties for being expensive if reviews still rave about the experience. Never assume a property is out of budget without explicit price signals in the review.
 - score_breakdown: For each of the four categories, mirror the score above and add a short reason (max 8 words). e.g. "Chef-driven menu, locally sourced ingredients noted" or "Generic buffet, no mention of local cuisine".
 

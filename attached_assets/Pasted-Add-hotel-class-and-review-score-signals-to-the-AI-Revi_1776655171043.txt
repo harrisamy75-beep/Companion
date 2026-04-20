@@ -1,0 +1,94 @@
+Add hotel class and review score signals to the 
+AI Review Match system.
+
+PART 1 — Update the review scoring Claude prompt:
+
+Add to SYSTEM_PROMPT context:
+
+"Hotel classification guide for luxury_value_score:
+
+STAR RATING signals (from property name, reviews, or metadata):
+- 5-star luxury brand (Aman, Rosewood, Four Seasons, 
+  Ritz-Carlton, St. Regis, Park Hyatt, Bvlgari): score 9-10
+- 5-star upscale (Waldorf Astoria, Conrad, JW Marriott, 
+  Grand Hyatt, W Hotels): score 7-8
+- 4-star full service (Marriott, Hilton, Hyatt Regency, 
+  Westin, Sheraton, Renaissance): score 5-6
+- 3-star select service (Courtyard, Hampton Inn, 
+  Hyatt Place, Aloft): score 3-4
+- 2-star/budget (Holiday Inn Express, Comfort Inn, 
+  Motel 6, Days Inn, budget Hollywood hotel): score 1-2
+- Boutique independent: judge on review quality signals
+
+REVIEW SCORE signals (from review text or metadata):
+- Average guest score 9.0-10.0: boost luxury_value_score +1
+- Average guest score 8.0-8.9: neutral
+- Average guest score 7.0-7.9: reduce luxury_value_score -1
+- Average guest score below 7.0: reduce luxury_value_score -2
+
+LOCATION signals:
+- Hollywood Blvd budget corridor, airport hotels, 
+  highway motels: reduce score -2
+- Premium city location (Beverly Hills, Malibu, 
+  Palm Beach, Aspen, Hamptons): boost +1
+- Beach/mountain/destination resort location: neutral to +1"
+
+PART 2 — Add hotel metadata to the Review Match card UI:
+
+After the hotel name input, add two optional fields:
+
+1. STAR RATING — styled as clickable stars:
+   ★ ★ ★ ★ ★ (1-5 stars, click to select)
+   Selected stars: wine color #6B2737
+   Unselected: muted #DDD8CE
+   Label: "STAR RATING (optional)" in gold ALL CAPS
+
+2. GUEST SCORE — number input:
+   Label: "GUEST SCORE (optional)" in gold ALL CAPS  
+   Input: number, min 1, max 10, step 0.1
+   Placeholder: "e.g. 8.5"
+   Bottom-border only input, 80px wide
+   Help text: "From Booking.com, TripAdvisor etc."
+   Raleway 300 11px muted
+
+3. When these are provided, include in the Claude prompt:
+   "Hotel star rating: [X] stars
+    Guest review score: [X]/10
+    Use these to calibrate your luxury_value_score."
+
+PART 3 — Add star rating to the Stays/favourite 
+properties section:
+
+In lib/db/src/schema/favorite-properties.ts add:
+- starRating: integer nullable (1-5)
+- guestScore: text nullable (e.g. "9.2")
+- pricePerNight: integer nullable (approximate USD)
+
+In the Add Property form on the Stays page, add:
+- Star rating selector (same ★ star UI as above)
+- Typical price per night input: "$[___] /night"
+  Bottom-border only, Raleway 300
+
+In the review scoring, when a user has a loved property 
+saved with star rating, use it as calibration:
+"This user's loved properties include:
+- Rosewood Mayakoba (5 stars, ~$900/night) 
+- Palm House (5 stars, ~$500/night)
+- Hotel Le Calette (4 stars, ~$300/night)
+Score new properties relative to this benchmark."
+
+PART 4 — Update the match score label:
+
+Below the score number, change the label based on score:
+
+95-100: "Exceptional match" in gold
+85-94:  "Strong match" in green  
+70-84:  "Good match with some gaps" in muted
+50-69:  "Partial match" in amber
+Below 50: "Poor match for your style" in wine/red
+
+Also show star rating if available:
+"★★★★★ · 5-star luxury · 94/100 match"
+
+Run drizzle-kit push for schema changes.
+Republish after all changes.
