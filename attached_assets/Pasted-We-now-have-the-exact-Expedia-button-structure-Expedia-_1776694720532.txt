@@ -1,0 +1,94 @@
+We now have the exact Expedia button structure.
+Expedia's guest picker container is:
+[data-stid="rooms-traveler-selector-menu-container"]
+
+Buttons inside (in order):
+1. "Decrease t..." (adults decrease)
+2. "Increase t..." (adults increase)
+3. "Decrease t..." (children decrease)
+4. "Increase t..." (children increase)
+5. "Add anothe..." (add room)
+6. "Done"
+
+No data-stid or aria-label on the buttons.
+They are identified purely by position.
+
+Replace fillExpedia in content.js with:
+
+async function fillExpedia(profile) {
+  const { adults, children, childAges } = profile.autoFillPayload;
+  
+  // Open the picker
+  const trigger = document.querySelector('[data-stid="open-room-picker"]');
+  if (trigger) {
+    trigger.click();
+    await sleep(800);
+  }
+  
+  // Get the picker container
+  const container = document.querySelector(
+    '[data-stid="rooms-traveler-selector-menu-container"]'
+  );
+  
+  if (!container) {
+    console.log('[TripProfile] Expedia picker container not found');
+    showToast('Open the guest picker first, then click Fill This Page');
+    return false;
+  }
+  
+  const buttons = Array.from(container.querySelectorAll('button'));
+  console.log('[TripProfile] Expedia buttons:', 
+    buttons.map(b => b.textContent.trim().slice(0,15))
+  );
+  
+  // Buttons in order: adultDec, adultInc, childDec, childInc, addRoom, done
+  const adultDec = buttons[0];
+  const adultInc = buttons[1];
+  const childDec = buttons[2];
+  const childInc = buttons[3];
+  
+  if (!adultInc) {
+    console.log('[TripProfile] Expedia stepper buttons not found');
+    showToast('Could not find guest fields');
+    return false;
+  }
+  
+  // Set adults (minimum is 1)
+  for (let i = 0; i < 8; i++) adultDec?.click();
+  await sleep(300);
+  for (let i = 1; i < adults; i++) adultInc.click();
+  await sleep(300);
+  
+  // Set children
+  for (let i = 0; i < 8; i++) childDec?.click();
+  await sleep(300);
+  for (let i = 0; i < children; i++) childInc.click();
+  await sleep(800);
+  
+  // Fill child ages - Expedia shows age dropdowns after adding children
+  await sleep(500);
+  const ageSelects = container.querySelectorAll('select');
+  console.log('[TripProfile] Age selects found:', ageSelects.length);
+  ageSelects.forEach((select, i) => {
+    if (childAges[i] !== undefined) {
+      select.value = String(childAges[i]);
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  
+  // Click Done
+  const doneBtn = buttons.find(b => b.textContent.trim() === 'Done');
+  if (doneBtn) {
+    await sleep(500);
+    doneBtn.click();
+  }
+  
+  showToast(`Filled: ${adults} adults, ${children} children`);
+  return true;
+}
+
+Also update the site detection to use fillExpedia for expedia:
+if (hostname.includes('expedia.com')) return fillExpedia(profile);
+
+Re-zip:
+cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip .

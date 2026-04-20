@@ -47,40 +47,95 @@ function sleep(ms) {
 
 async function fillExpedia(profile) {
   const { adults, children, childAges } = profile.autoFillPayload;
-  const picker = document.querySelector(
-    '[data-stid="open-hotel-guest-picker"]'
-  );
-  if (!picker) return false;
-  picker.click();
-  await sleep(600);
 
-  const minusButtons = document.querySelectorAll(
-    '[data-stid="stepper-decrease"]'
-  );
-  const plusButtons = document.querySelectorAll(
-    '[data-stid="stepper-increase"]'
-  );
-
-  if (minusButtons.length >= 2 && plusButtons.length >= 2) {
-    for (let i = 0; i < 10; i++) minusButtons[0].click();
-    for (let i = 0; i < adults; i++) plusButtons[0].click();
-    await sleep(200);
-    for (let i = 0; i < 10; i++) minusButtons[1].click();
-    for (let i = 0; i < children; i++) plusButtons[1].click();
-    await sleep(400);
-
-    const ageSelects = document.querySelectorAll(
-      'select[data-stid*="age"], select[name*="childAge"]'
-    );
-    ageSelects.forEach((select, i) => {
-      const age = childAges[i];
-      if (age !== undefined) {
-        select.value = String(age);
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-    });
+  // Open the picker (try the new selector first, fall back to legacy).
+  const trigger =
+    document.querySelector('[data-stid="open-room-picker"]') ||
+    document.querySelector('[data-stid="open-hotel-guest-picker"]');
+  if (trigger) {
+    trigger.click();
+    await sleep(800);
   }
 
+  // Get the picker container (positional buttons inside).
+  const container = document.querySelector(
+    '[data-stid="rooms-traveler-selector-menu-container"]'
+  );
+
+  if (!container) {
+    console.log("[TripProfile] Expedia picker container not found");
+    showToast("Open the guest picker first, then click Fill This Page");
+    return false;
+  }
+
+  const buttons = Array.from(container.querySelectorAll("button"));
+  console.log(
+    "[TripProfile] Expedia buttons:",
+    buttons.map((b) => b.textContent.trim().slice(0, 15))
+  );
+
+  // Buttons in order: adultDec, adultInc, childDec, childInc, addRoom, done
+  const adultDec = buttons[0];
+  const adultInc = buttons[1];
+  const childDec = buttons[2];
+  const childInc = buttons[3];
+
+  if (!adultInc) {
+    console.log("[TripProfile] Expedia stepper buttons not found");
+    showToast("Could not find guest fields");
+    return false;
+  }
+
+  // ADULTS — floor is 1, so 9 decrements then climb to target.
+  if (adultDec) {
+    for (let i = 0; i < 9; i++) {
+      adultDec.click();
+      await sleep(40);
+    }
+  }
+  for (let i = 1; i < adults; i++) {
+    adultInc.click();
+    await sleep(40);
+  }
+  await sleep(200);
+
+  // CHILDREN — floor is 0.
+  if (childDec) {
+    for (let i = 0; i < 10; i++) {
+      childDec.click();
+      await sleep(40);
+    }
+  }
+  if (childInc) {
+    for (let i = 0; i < children; i++) {
+      childInc.click();
+      await sleep(40);
+    }
+  }
+  await sleep(500); // wait for child age <select>s to render
+
+  // Fill child age dropdowns. Re-query inside the container; selectors
+  // vary between Expedia builds so try a few patterns.
+  const ageSelects = Array.from(
+    container.querySelectorAll(
+      'select[data-stid*="age"], select[name*="childAge"], select[id*="age"], select'
+    )
+  );
+  ageSelects.slice(0, children).forEach((select, i) => {
+    const age = childAges[i];
+    if (age === undefined || age === null) return;
+    setNativeValue(select, String(age));
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  // Click Done to close the picker and commit the values.
+  const doneBtn = buttons.find((b) => b.textContent.trim() === "Done");
+  if (doneBtn) {
+    await sleep(400);
+    doneBtn.click();
+  }
+
+  showToast(`Filled: ${adults} adult${adults !== 1 ? "s" : ""}, ${children} child${children !== 1 ? "ren" : ""}`);
   return true;
 }
 
