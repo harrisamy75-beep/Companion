@@ -1,13 +1,17 @@
 {
   "manifest_version": 3,
   "name": "TripProfile",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Auto-fills your family profile on travel sites and filters reviews by relevance",
   "permissions": ["activeTab", "storage", "scripting", "tabs", "alarms", "cookies"],
   "host_permissions": [
     "https://*.expedia.com/*",
     "https://*.booking.com/*",
     "https://*.hotels.com/*",
+    "https://*.britishairways.com/*",
+    "https://*.united.com/*",
+    "https://*.delta.com/*",
+    "https://*.aa.com/*",
     "https://www.google.com/travel/*",
     "https://*.airbnb.com/*",
     "https://travelcompaniontool.replit.app/*"
@@ -20,7 +24,12 @@
         "https://*.expedia.com/*",
         "https://*.booking.com/*",
         "https://*.hotels.com/*",
-        "https://www.google.com/travel/*"
+        "https://*.britishairways.com/*",
+        "https://*.united.com/*",
+        "https://*.delta.com/*",
+        "https://*.aa.com/*",
+        "https://www.google.com/travel/*",
+        "https://*.airbnb.com/*"
       ],
       "js": ["content.js"]
     }

@@ -1,3 +1,5 @@
+console.log("[TripProfile] Content script loaded on:", window.location.hostname);
+
 const STORAGE_KEY = "tripprofile";
 
 function showToast(message) {
@@ -322,8 +324,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
 });
-
-console.log("[TripProfile] content.js loaded on", window.location.hostname);
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", run);
