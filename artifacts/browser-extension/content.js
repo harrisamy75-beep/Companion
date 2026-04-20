@@ -112,28 +112,46 @@ async function fillExpedia(profile) {
       await sleep(40);
     }
   }
-  await sleep(500); // wait for child age <select>s to render
+  // Age dropdowns render only after children are added — wait longer.
+  await sleep(1200);
 
-  // Fill child age dropdowns. Re-query inside the container; selectors
-  // vary between Expedia builds so try a few patterns.
-  const ageSelects = Array.from(
-    container.querySelectorAll(
-      'select[data-stid*="age"], select[name*="childAge"], select[id*="age"], select'
-    )
+  // Find age selects INSIDE the container.
+  const ageSelects = Array.from(container.querySelectorAll("select"));
+  console.log(
+    "[TripProfile] Age selects after wait:",
+    ageSelects.length,
+    ageSelects.map((s) => ({ id: s.id, name: s.name }))
   );
-  ageSelects.slice(0, children).forEach((select, i) => {
-    const age = childAges[i];
-    if (age === undefined || age === null) return;
-    setNativeValue(select, String(age));
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-  });
 
-  // Click Done to close the picker and commit the values.
-  const doneBtn = buttons.find((b) => b.textContent.trim() === "Done");
-  if (doneBtn) {
-    await sleep(400);
-    doneBtn.click();
+  const nativeSelectSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLSelectElement.prototype,
+    "value"
+  ).set;
+
+  for (let i = 0; i < ageSelects.length; i++) {
+    const select = ageSelects[i];
+    const age = childAges[i];
+    if (age === undefined || age === null) continue;
+
+    // First pass — direct assignment + change/input events.
+    select.value = String(age);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    select.dispatchEvent(new Event("input", { bubbles: true }));
+    await sleep(200);
+
+    // Second pass — native setter to bypass React's controlled input shim.
+    nativeSelectSetter.call(select, String(age));
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+
+    console.log("[TripProfile] Set age", age, "result:", select.value);
   }
+
+  // Click Done only after ages are filled.
+  await sleep(300);
+  const doneBtn = Array.from(container.querySelectorAll("button")).find(
+    (b) => b.textContent.trim() === "Done"
+  );
+  if (doneBtn) doneBtn.click();
 
   showToast(`Filled: ${adults} adult${adults !== 1 ? "s" : ""}, ${children} child${children !== 1 ? "ren" : ""}`);
   return true;
