@@ -346,13 +346,203 @@ async function run() {
   if (profile) await scoreAndBadgeReviews(profile);
 }
 
+// ─── Floating reference panel ──────────────────────────────────────────────
+// Always-visible card pinned top-right that surfaces the user's profile so
+// they can fill any travel form by sight, without us touching the DOM.
+const PANEL_ID = "tripprofile-floating-panel";
+
+function buildPanelLines(profile) {
+  if (!profile) return null;
+  const af = profile.autoFillPayload || {};
+  const adults = af.adults ?? 0;
+  const children = af.children ?? 0;
+  const childAges = Array.isArray(af.childAges) ? af.childAges : [];
+  const loyalty = Array.isArray(profile.loyaltyPrograms) ? profile.loyaltyPrograms : [];
+
+  const partyLine = `${adults} adult${adults !== 1 ? "s" : ""}` +
+    (children > 0 ? ` · ${children} child${children !== 1 ? "ren" : ""}` : "");
+  const ageLine = childAges.length > 0 ? `Ages: ${childAges.join(", ")}` : null;
+
+  return { partyLine, ageLine, loyalty };
+}
+
+function injectFloatingPanel(profile) {
+  const existing = document.getElementById(PANEL_ID);
+  if (existing) existing.remove();
+
+  const data = buildPanelLines(profile);
+  if (!data) return false;
+
+  const panel = document.createElement("div");
+  panel.id = PANEL_ID;
+  Object.assign(panel.style, {
+    position: "fixed",
+    top: "16px",
+    right: "16px",
+    zIndex: "2147483647",
+    width: "280px",
+    background: "#FAFAF8",
+    border: "1px solid #E5E0D8",
+    borderRadius: "6px",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    color: "#1C1C1C",
+    overflow: "hidden",
+  });
+
+  // Header
+  const header = document.createElement("div");
+  Object.assign(header.style, {
+    background: "#6B2737",
+    color: "#fff",
+    padding: "10px 14px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  });
+  const title = document.createElement("div");
+  title.textContent = "Companion";
+  Object.assign(title.style, {
+    fontFamily: "'Playfair Display', Georgia, serif",
+    fontStyle: "italic",
+    fontSize: "16px",
+    fontWeight: "400",
+  });
+  const close = document.createElement("button");
+  close.setAttribute("aria-label", "Close");
+  close.textContent = "×";
+  Object.assign(close.style, {
+    background: "transparent",
+    border: "none",
+    color: "#fff",
+    fontSize: "20px",
+    lineHeight: "1",
+    cursor: "pointer",
+    padding: "0 4px",
+  });
+  close.addEventListener("click", () => panel.remove());
+  header.appendChild(title);
+  header.appendChild(close);
+  panel.appendChild(header);
+
+  // Body
+  const body = document.createElement("div");
+  Object.assign(body.style, { padding: "12px 14px 14px" });
+
+  const partyEl = document.createElement("div");
+  partyEl.textContent = data.partyLine;
+  Object.assign(partyEl.style, {
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#1C1C1C",
+    marginBottom: data.ageLine ? "2px" : "10px",
+  });
+  body.appendChild(partyEl);
+
+  if (data.ageLine) {
+    const ageEl = document.createElement("div");
+    ageEl.textContent = data.ageLine;
+    Object.assign(ageEl.style, {
+      fontSize: "12.5px",
+      color: "#5C5248",
+      marginBottom: "10px",
+    });
+    body.appendChild(ageEl);
+  }
+
+  if (data.loyalty.length > 0) {
+    const loyaltyTitle = document.createElement("div");
+    loyaltyTitle.textContent = "Loyalty";
+    Object.assign(loyaltyTitle.style, {
+      fontSize: "9.5px",
+      fontWeight: "600",
+      letterSpacing: "0.16em",
+      textTransform: "uppercase",
+      color: "#A07840",
+      marginTop: "6px",
+      marginBottom: "5px",
+      paddingTop: "8px",
+      borderTop: "1px solid #E5E0D8",
+    });
+    body.appendChild(loyaltyTitle);
+
+    data.loyalty.slice(0, 6).forEach((p) => {
+      const row = document.createElement("div");
+      Object.assign(row.style, {
+        display: "flex",
+        justifyContent: "space-between",
+        gap: "8px",
+        fontSize: "12px",
+        color: "#1C1C1C",
+        padding: "3px 0",
+      });
+      const label = document.createElement("span");
+      label.textContent = p.programName || p.brand || "Program";
+      label.style.fontWeight = "500";
+      const num = document.createElement("span");
+      num.textContent = p.membershipNumber || "—";
+      Object.assign(num.style, {
+        fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
+        fontSize: "11px",
+        color: "#5C5248",
+        userSelect: "all",
+      });
+      row.appendChild(label);
+      row.appendChild(num);
+      body.appendChild(row);
+    });
+  }
+
+  const footer = document.createElement("div");
+  footer.textContent = "Reference while you fill the form";
+  Object.assign(footer.style, {
+    marginTop: "10px",
+    paddingTop: "8px",
+    borderTop: "1px solid #E5E0D8",
+    fontFamily: "'Playfair Display', Georgia, serif",
+    fontStyle: "italic",
+    fontSize: "11.5px",
+    color: "#94A39B",
+    textAlign: "center",
+  });
+  body.appendChild(footer);
+
+  panel.appendChild(body);
+  document.body.appendChild(panel);
+  return true;
+}
+
+async function showFloatingPanel() {
+  const result = await chrome.storage.local.get(STORAGE_KEY);
+  const profile = result[STORAGE_KEY];
+  if (!profile) {
+    showToast("Sync your Companion profile first.");
+    return false;
+  }
+  return injectFloatingPanel(profile);
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   console.log("[TripProfile] Message received:", msg && msg.type);
-  if (msg && msg.type === "MANUAL_FILL") {
-    attemptAutoFill({ manual: true }).then((ok) => {
-      try { sendResponse({ ok }); } catch (e) {}
-    });
-    return true;
+  try {
+    if (msg && msg.type === "MANUAL_FILL") {
+      // Legacy path: still try DOM auto-fill on demand.
+      attemptAutoFill({ manual: true }).then((ok) => {
+        try { sendResponse({ ok }); } catch (e) {}
+      });
+      return true;
+    }
+    if (msg && msg.type === "SHOW_PANEL") {
+      // Primary UX: inject the always-visible reference card.
+      // Also kick off DOM auto-fill in the background — best-effort, silent.
+      showFloatingPanel().then((shown) => {
+        attemptAutoFill({ manual: false }).catch(() => {});
+        try { sendResponse({ ok: shown }); } catch (e) {}
+      });
+      return true;
+    }
+  } catch (err) {
+    try { sendResponse({ ok: false, error: String(err) }); } catch (e) {}
   }
 });
 

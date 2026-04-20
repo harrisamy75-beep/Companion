@@ -7,16 +7,43 @@ function formatSyncTime(isoString) {
   return "Last synced: " + d.toLocaleString();
 }
 
+function buildClipboardPayload(profile) {
+  if (!profile) return "";
+  const { autoFillPayload, loyaltyPrograms } = profile;
+  const adults = autoFillPayload?.adults ?? 0;
+  const children = autoFillPayload?.children ?? 0;
+  const childAges = Array.isArray(autoFillPayload?.childAges) ? autoFillPayload.childAges : [];
+
+  const lines = [];
+  lines.push(`Adults: ${adults}`);
+  lines.push(`Children: ${children}`);
+  if (childAges.length > 0) {
+    lines.push(`Child ages: ${childAges.join(", ")}`);
+  }
+
+  if (Array.isArray(loyaltyPrograms) && loyaltyPrograms.length > 0) {
+    const loyaltyStr = loyaltyPrograms
+      .map((p) => {
+        const num = p.membershipNumber ? ` ${p.membershipNumber}` : " [number]";
+        return `${p.programName}${num}`;
+      })
+      .join(", ");
+    lines.push(`Loyalty: ${loyaltyStr}`);
+  }
+
+  return lines.join("\n");
+}
+
 function renderProfile(profile) {
   if (!profile) {
     document.getElementById("traveler-count").textContent = "No profile yet";
     document.getElementById("children-detail").textContent = "";
-    document.getElementById("autofill-preview").textContent = "—";
+    document.getElementById("loyalty-preview").textContent = "—";
     document.getElementById("sync-time").textContent = "Connect, then tap Re-sync";
     return;
   }
 
-  const { family, preferences, autoFillPayload, _syncedAt } = profile;
+  const { family, preferences, loyaltyPrograms, _syncedAt } = profile;
 
   document.getElementById("traveler-count").textContent =
     `${family.travelerCount} traveler${family.travelerCount !== 1 ? "s" : ""}`;
@@ -49,17 +76,21 @@ function renderProfile(profile) {
     }
   }
 
-  const { adults, children, childAges } = autoFillPayload;
-  const agesStr = childAges.length > 0 ? `, ages ${childAges.join(", ")}` : "";
-  document.getElementById("autofill-preview").textContent =
-    `${adults} adult${adults !== 1 ? "s" : ""}, ${children} child${children !== 1 ? "ren" : ""}${agesStr}`;
+  const loyaltyEl = document.getElementById("loyalty-preview");
+  if (Array.isArray(loyaltyPrograms) && loyaltyPrograms.length > 0) {
+    const top = loyaltyPrograms.slice(0, 3).map((p) => p.programName).join(", ");
+    const more = loyaltyPrograms.length > 3 ? ` +${loyaltyPrograms.length - 3} more` : "";
+    loyaltyEl.textContent = top + more;
+  } else {
+    loyaltyEl.textContent = "No loyalty programs added";
+  }
 
   document.getElementById("sync-time").textContent = formatSyncTime(_syncedAt);
 }
 
 async function loadProfile() {
   const result = await chrome.storage.local.get(STORAGE_KEY);
-  renderProfile(result[STORAGE_KEY] || null);
+  return result[STORAGE_KEY] || null;
 }
 
 async function loadConnectionState() {
@@ -78,13 +109,48 @@ async function loadConnectionState() {
   }
 }
 
+function flashStatus(el, message, isError = false, ms = 3500) {
+  el.textContent = message;
+  el.classList.toggle("error", isError);
+  setTimeout(() => {
+    el.textContent = "";
+    el.classList.remove("error");
+  }, ms);
+}
+
+async function copyToClipboard(text) {
+  // Prefer the modern API (works in popup since v3).
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (err) {
+    // Fallback: hidden textarea + execCommand for older Chrome edge cases.
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadProfile();
+  let cachedProfile = await loadProfile();
+  renderProfile(cachedProfile);
   await loadConnectionState();
 
   const resyncBtn = document.getElementById("resync");
-  const fillBtn = document.getElementById("fill-page");
+  const showOnPageBtn = document.getElementById("show-on-page");
+  const copyBtn = document.getElementById("copy-payload");
   const statusEl = document.getElementById("status");
+  const copyStatusEl = document.getElementById("copy-status");
   const openSettingsBtn = document.getElementById("open-settings");
   const keyInput = document.getElementById("key-input");
   const saveKeyBtn = document.getElementById("save-key");
@@ -114,7 +180,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         keyStatusEl.textContent = "Connected. Profile synced.";
         keyStatusEl.classList.remove("error");
         await loadConnectionState();
-        await loadProfile();
+        cachedProfile = await loadProfile();
+        renderProfile(cachedProfile);
       } else if (response?.error === "invalid_key") {
         keyStatusEl.textContent = "Key should start with cpn_";
         keyStatusEl.classList.add("error");
@@ -136,28 +203,55 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  fillBtn.addEventListener("click", () => {
-    fillBtn.disabled = true;
-    const originalLabel = fillBtn.textContent;
-    fillBtn.textContent = "Filling…";
+  // Primary action: copy formatted payload to clipboard.
+  copyBtn.addEventListener("click", async () => {
+    if (!cachedProfile) {
+      flashStatus(copyStatusEl, "Sync your profile first.", true);
+      return;
+    }
+    const text = buildClipboardPayload(cachedProfile);
+    if (!text) {
+      flashStatus(copyStatusEl, "Nothing to copy yet.", true);
+      return;
+    }
+    copyBtn.disabled = true;
+    const original = copyBtn.textContent;
+    copyBtn.textContent = "Copying…";
+    const ok = await copyToClipboard(text);
+    copyBtn.disabled = false;
+    copyBtn.textContent = original;
+    if (ok) {
+      flashStatus(copyStatusEl, "Copied! Paste into any booking form.", false, 4000);
+    } else {
+      flashStatus(copyStatusEl, "Couldn't copy — try again.", true);
+    }
+  });
+
+  // Secondary action: inject floating reference panel on the active tab.
+  // Also asks the content script to attempt DOM auto-fill silently.
+  showOnPageBtn.addEventListener("click", () => {
+    showOnPageBtn.disabled = true;
+    const originalLabel = showOnPageBtn.textContent;
+    showOnPageBtn.textContent = "Loading…";
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0];
       if (!tab || !tab.id) {
-        fillBtn.disabled = false;
-        fillBtn.textContent = originalLabel;
+        showOnPageBtn.disabled = false;
+        showOnPageBtn.textContent = originalLabel;
         return;
       }
-      chrome.tabs.sendMessage(tab.id, { type: "MANUAL_FILL" }, () => {
+      chrome.tabs.sendMessage(tab.id, { type: "SHOW_PANEL" }, () => {
+        showOnPageBtn.disabled = false;
+        showOnPageBtn.textContent = originalLabel;
         if (chrome.runtime.lastError) {
-          statusEl.textContent = "Open a supported travel site first.";
-          statusEl.classList.add("error");
-          setTimeout(() => {
-            statusEl.textContent = "";
-            statusEl.classList.remove("error");
-          }, 3500);
+          flashStatus(
+            statusEl,
+            "This page isn't supported. Try opening Booking, Expedia, an airline, or Airbnb.",
+            true,
+            4500
+          );
+          return;
         }
-        fillBtn.disabled = false;
-        fillBtn.textContent = originalLabel;
         window.close();
       });
     });
@@ -169,29 +263,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     statusEl.textContent = "";
     statusEl.classList.remove("error");
 
-    chrome.runtime.sendMessage({ type: "RESYNC" }, (response) => {
+    chrome.runtime.sendMessage({ type: "RESYNC" }, async (response) => {
       if (response?.ok) {
-        statusEl.textContent = "Profile updated.";
-        loadProfile();
+        cachedProfile = await loadProfile();
+        renderProfile(cachedProfile);
+        flashStatus(statusEl, "Profile updated.", false, 3000);
       } else if (response?.error === "no_key") {
-        statusEl.textContent = "Paste your API key above first.";
-        statusEl.classList.add("error");
+        flashStatus(statusEl, "Paste your API key above first.", true, 4000);
       } else if (response?.error === "auth") {
-        statusEl.textContent = "Key rejected — get a fresh one.";
-        statusEl.classList.add("error");
+        flashStatus(statusEl, "Key rejected — get a fresh one.", true, 4000);
       } else if (response?.error === "no_profile") {
-        statusEl.textContent = "No profile saved yet.";
-        statusEl.classList.add("error");
+        flashStatus(statusEl, "No profile saved yet.", true, 4000);
       } else {
-        statusEl.textContent = "Sync failed — check connection.";
-        statusEl.classList.add("error");
+        flashStatus(statusEl, "Sync failed — check connection.", true, 4000);
       }
       resyncBtn.disabled = false;
       resyncBtn.textContent = "Re-sync profile";
-      setTimeout(() => {
-        statusEl.textContent = "";
-        statusEl.classList.remove("error");
-      }, 4000);
     });
   });
 });
