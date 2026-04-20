@@ -167,10 +167,13 @@ router.post("/reviews/quick-match", async (req, res): Promise<void> => {
 }
 Score 80+ only for strong matches. Be honest — a poor match should score 30-50. Weight your reasoning toward the traveller's PRIMARY styles (listed first), not every tag equally.
 
-Score luxury_value_score and overall match strictly:
-- Generic budget chains (Holiday Inn, Holiday Inn Express, Comfort Inn, Comfort Suites, Motel 6, Days Inn, Super 8, Howard Johnson, Rodeway Inn, Econo Lodge, Travelodge, Best Western (non-Premier), Quality Inn, La Quinta, Red Roof, Knights Inn, America's Best Value, Microtel, Sleep Inn) score luxury_value 2-4 for travelers with Boutique Luxury, Luxury Family, Design Hotels, Five-Star, Resort, or similar premium styles. Overall score for these properties should be 25-45 for luxury-leaning travelers, regardless of price.
-- Mid-tier chains (Hilton Garden Inn, Courtyard, Hampton Inn, Fairfield Inn, Residence Inn, Hyatt Place, Holiday Inn Resort) score luxury_value 4-6 for luxury travelers. Overall 40-60.
-- True boutique, design-forward, or five-star properties (Rosewood, Aman, Four Seasons, Mandarin Oriental, Soho House, Belmond, 1 Hotels, The Standard, NoMad, Faena, Edition, Ace, Design Hotels collection, independent boutiques) earn 7-10 for luxury-leaning travelers.
+Score luxury_value_score and overall match strictly using this hotel-class ladder:
+- 5-star luxury brand (Aman, Rosewood, Four Seasons, Ritz-Carlton, St. Regis, Park Hyatt, Bvlgari, Mandarin Oriental, Belmond, Cheval Blanc, Capella): luxury_value 9-10. Overall 80+ for luxury-leaning travelers.
+- 5-star upscale (Waldorf Astoria, Conrad, JW Marriott, Grand Hyatt, W Hotels, Andaz, EDITION, 1 Hotels, Soho House, NoMad, Faena, The Standard, Ace, Design Hotels collection): luxury_value 7-8. Overall 65-85 for luxury-leaning travelers.
+- 4-star full service (Marriott, Hilton, Hyatt Regency, Westin, Sheraton, Renaissance, Le Méridien, Kimpton): luxury_value 5-6. Overall 50-65.
+- 3-star select service (Courtyard, Hampton Inn, Hyatt Place, Aloft, Hilton Garden Inn, Fairfield Inn, Residence Inn, Holiday Inn Resort): luxury_value 3-4. Overall 40-55.
+- 2-star / budget chains (Holiday Inn, Holiday Inn Express, Comfort Inn, Comfort Suites, Motel 6, Days Inn, Super 8, Howard Johnson, Rodeway Inn, Econo Lodge, Travelodge, Best Western non-Premier, Quality Inn, La Quinta, Red Roof, Knights Inn, America's Best Value, Microtel, Sleep Inn): luxury_value 1-2. Overall 25-45 for luxury-leaning travelers, regardless of price.
+- Boutique independent: judge on signals (design language, service, materials, food program, location).
 - Hollywood / Las Vegas Strip / Times Square budget hotels in noisy tourist zones score lower for travelers seeking refined, quiet, or design-led stays — call out the location-vs-style mismatch in score_explanation.
 - Do not inflate scores out of politeness. A clear mismatch is a clear mismatch.`,
       messages: [
