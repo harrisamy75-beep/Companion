@@ -253,9 +253,27 @@ function ReviewMatchCard() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<QuickMatchResult | null>(null);
+  const [inputError, setInputError] = useState<string | null>(null);
+
+  const looksLikeSearchPage = (q: string): boolean => {
+    const lower = q.toLowerCase();
+    if (!/^https?:\/\/|^www\.|\.(com|net|org|co|io)\//.test(lower)) return false;
+    return /(?:[?&/]|^)(search|hotel-search|results|find|searchresults)(?:[?&/=]|$)|s\.html|\/srp|\/listings/.test(
+      lower
+    );
+  };
 
   const handleMatch = async () => {
-    if (!query.trim()) return;
+    const q = query.trim();
+    if (!q) return;
+    if (looksLikeSearchPage(q)) {
+      setInputError(
+        "That looks like a search results page. Try pasting a specific hotel's URL or just type the name."
+      );
+      setResult(null);
+      return;
+    }
+    setInputError(null);
     setLoading(true);
     setResult(null);
     try {
@@ -263,7 +281,7 @@ function ReviewMatchCard() {
         method: "POST",
         
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: query.trim() }),
+        body: JSON.stringify({ query: q }),
       });
       if (res.ok) setResult(await res.json());
     } catch {
@@ -289,7 +307,10 @@ function ReviewMatchCard() {
       <div style={{ display: "flex", gap: "10px", alignItems: "flex-end", marginBottom: "28px" }}>
         <input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (inputError) setInputError(null);
+          }}
           onKeyDown={(e) => e.key === "Enter" && handleMatch()}
           placeholder="e.g. Rosewood Miramar, Palm Beach"
           style={{ flex: 1, background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.25)", color: "white", fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "14px", padding: "8px 0", outline: "none", caretColor: "#B8963E" }}
@@ -302,6 +323,12 @@ function ReviewMatchCard() {
           {loading ? "…" : "Match"}
         </button>
       </div>
+
+      {inputError && (
+        <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "13px", color: "#A8324A", marginTop: "-18px", marginBottom: "20px", lineHeight: 1.5 }}>
+          {inputError}
+        </p>
+      )}
 
       {/* Result */}
       {loading && (

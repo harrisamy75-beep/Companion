@@ -165,7 +165,14 @@ router.post("/reviews/quick-match", async (req, res): Promise<void> => {
     "adventurous_menu": { "score": number 1-10, "reason": string (max 8 words) }
   }
 }
-Score 80+ only for strong matches. Be honest — a poor match should score 30-50. Weight your reasoning toward the traveller's PRIMARY styles (listed first), not every tag equally.`,
+Score 80+ only for strong matches. Be honest — a poor match should score 30-50. Weight your reasoning toward the traveller's PRIMARY styles (listed first), not every tag equally.
+
+Score luxury_value_score and overall match strictly:
+- Generic budget chains (Holiday Inn, Holiday Inn Express, Comfort Inn, Comfort Suites, Motel 6, Days Inn, Super 8, Howard Johnson, Rodeway Inn, Econo Lodge, Travelodge, Best Western (non-Premier), Quality Inn, La Quinta, Red Roof, Knights Inn, America's Best Value, Microtel, Sleep Inn) score luxury_value 2-4 for travelers with Boutique Luxury, Luxury Family, Design Hotels, Five-Star, Resort, or similar premium styles. Overall score for these properties should be 25-45 for luxury-leaning travelers, regardless of price.
+- Mid-tier chains (Hilton Garden Inn, Courtyard, Hampton Inn, Fairfield Inn, Residence Inn, Hyatt Place, Holiday Inn Resort) score luxury_value 4-6 for luxury travelers. Overall 40-60.
+- True boutique, design-forward, or five-star properties (Rosewood, Aman, Four Seasons, Mandarin Oriental, Soho House, Belmond, 1 Hotels, The Standard, NoMad, Faena, Edition, Ace, Design Hotels collection, independent boutiques) earn 7-10 for luxury-leaning travelers.
+- Hollywood / Las Vegas Strip / Times Square budget hotels in noisy tourist zones score lower for travelers seeking refined, quiet, or design-led stays — call out the location-vs-style mismatch in score_explanation.
+- Do not inflate scores out of politeness. A clear mismatch is a clear mismatch.`,
       messages: [
         {
           role: "user",
