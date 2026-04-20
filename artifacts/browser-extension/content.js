@@ -168,12 +168,13 @@ async function fillBooking(profile) {
   });
 
   if (!adultStepper && !childStepper) {
-    if (stepperButtons.length >= 4) {
-      console.log("[TripProfile] Using position-based approach");
-      const adultDec = stepperButtons[0];
-      const adultInc = stepperButtons[1];
-      const childDec = stepperButtons[2];
-      const childInc = stepperButtons[3];
+    if (stepperButtons.length >= 6) {
+      console.log("[TripProfile] Using position-based approach (last 6)");
+      const len = stepperButtons.length;
+      const adultDec = stepperButtons[len - 6];
+      const adultInc = stepperButtons[len - 5];
+      const childDec = stepperButtons[len - 4];
+      const childInc = stepperButtons[len - 3];
 
       for (let i = 0; i < 8; i++) adultDec.click();
       await sleep(200);
@@ -348,7 +349,9 @@ async function run() {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   console.log("[TripProfile] Message received:", msg && msg.type);
   if (msg && msg.type === "MANUAL_FILL") {
-    attemptAutoFill({ manual: true }).then((ok) => sendResponse({ ok }));
+    attemptAutoFill({ manual: true }).then((ok) => {
+      try { sendResponse({ ok }); } catch (e) {}
+    });
     return true;
   }
 });
