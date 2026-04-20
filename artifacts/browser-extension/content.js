@@ -108,82 +108,110 @@ async function fillBooking(profile) {
     await sleep(600);
   }
 
-  function findStepperByAria(label) {
-    const lower = label.toLowerCase();
-    const all = Array.from(document.querySelectorAll("button"));
-    const matching = all.filter((b) =>
-      (b.getAttribute("aria-label") || "").toLowerCase().includes(lower)
+  const allButtons = Array.from(document.querySelectorAll("button"));
+  const stepperButtons = allButtons.filter((b) => {
+    const text = b.textContent.trim();
+    const hasIcon = b.querySelector('svg, [class*="icon"]');
+    return (
+      text === "+" ||
+      text === "−" ||
+      text === "-" ||
+      text === "–" ||
+      hasIcon
     );
-    const inc = matching.find((b) =>
-      /increase|add|plus/i.test(b.getAttribute("aria-label") || "")
-    );
-    const dec = matching.find((b) =>
-      /decrease|remove|subtract|minus/i.test(b.getAttribute("aria-label") || "")
-    );
-    return inc && dec ? { increase: inc, decrease: dec } : null;
-  }
+  });
+  console.log(
+    "[TripProfile] Stepper buttons found:",
+    stepperButtons.length,
+    stepperButtons.map((b) => b.textContent.trim().slice(0, 5))
+  );
 
-  function findStepperByLabel(labelText) {
-    const labels = Array.from(document.querySelectorAll("*")).filter(
-      (el) => el.children.length === 0 && el.textContent.trim() === labelText
-    );
-    for (const label of labels) {
-      let node = label;
-      for (let i = 0; i < 8; i++) {
-        node = node.parentElement;
-        if (!node) break;
-        const buttons = node.querySelectorAll("button");
-        if (buttons.length === 2) {
-          return { decrease: buttons[0], increase: buttons[1] };
+  function getSteppersNearText(searchText) {
+    const elements = Array.from(document.querySelectorAll("*"));
+    for (const el of elements) {
+      if (
+        el.children.length === 0 &&
+        el.textContent.trim().toLowerCase() === searchText.toLowerCase()
+      ) {
+        let container = el.parentElement;
+        for (let i = 0; i < 5; i++) {
+          if (!container) break;
+          const buttons = container.querySelectorAll("button");
+          if (buttons.length >= 2) {
+            console.log(
+              "[TripProfile] Found",
+              searchText,
+              "container with",
+              buttons.length,
+              "buttons"
+            );
+            return {
+              decrease: buttons[0],
+              increase: buttons[buttons.length - 1],
+            };
+          }
+          container = container.parentElement;
         }
       }
     }
     return null;
   }
 
-  function findStepper(label) {
-    return findStepperByAria(label) || findStepperByLabel(label);
-  }
+  const adultStepper =
+    getSteppersNearText("Adults") || getSteppersNearText("Adult");
+  const childStepper =
+    getSteppersNearText("Children") || getSteppersNearText("Child");
 
-  const adultStepper = findStepper("Adults");
-  const childStepper = findStepper("Children");
-  console.log("[TripProfile] Stepper detection:", {
+  console.log("[TripProfile] Steppers:", {
     adult: !!adultStepper,
     child: !!childStepper,
   });
 
+  if (!adultStepper && !childStepper) {
+    if (stepperButtons.length >= 4) {
+      console.log("[TripProfile] Using position-based approach");
+      const adultDec = stepperButtons[0];
+      const adultInc = stepperButtons[1];
+      const childDec = stepperButtons[2];
+      const childInc = stepperButtons[3];
+
+      for (let i = 0; i < 8; i++) adultDec.click();
+      await sleep(200);
+      for (let i = 1; i < adults; i++) adultInc.click();
+      await sleep(200);
+      for (let i = 0; i < 8; i++) childDec.click();
+      await sleep(200);
+      for (let i = 0; i < children; i++) childInc.click();
+      await sleep(600);
+
+      showToast(`Filled: ${adults} adults, ${children} children`);
+      return true;
+    }
+    showToast("Could not find guest fields");
+    return false;
+  }
+
   if (adultStepper) {
     for (let i = 0; i < 8; i++) adultStepper.decrease.click();
-    await sleep(100);
+    await sleep(300);
     for (let i = 1; i < adults; i++) adultStepper.increase.click();
-    await sleep(200);
+    await sleep(300);
   }
 
   if (childStepper) {
     for (let i = 0; i < 8; i++) childStepper.decrease.click();
-    await sleep(100);
+    await sleep(300);
     for (let i = 0; i < children; i++) childStepper.increase.click();
     await sleep(800);
   }
 
-  const ageSelects = document.querySelectorAll("select");
-  const childAgeSelects = Array.from(ageSelects).filter(
-    (s) =>
-      s.closest("[class]")?.textContent.toLowerCase().includes("age") ||
-      s.getAttribute("aria-label")?.toLowerCase().includes("age")
-  );
-
-  childAgeSelects.forEach((select, i) => {
+  await sleep(500);
+  const allSelects = Array.from(document.querySelectorAll("select"));
+  allSelects.forEach((select, i) => {
     if (childAges[i] !== undefined) {
       select.value = String(childAges[i]);
       select.dispatchEvent(new Event("change", { bubbles: true }));
     }
-  });
-
-  console.log("[TripProfile] Booking fill:", {
-    adultStepper: !!adultStepper,
-    childStepper: !!childStepper,
-    ageSelects: childAgeSelects.length,
   });
 
   showToast(

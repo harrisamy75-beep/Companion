@@ -1,0 +1,123 @@
+The fillBooking function still can't find the stepper buttons 
+even when the picker is open. The picker shows Adults/Children/Rooms 
+with — and + buttons.
+
+Replace the entire approach with this direct method that 
+finds the — and + buttons by their SVG content or 
+by being adjacent to a number input:
+
+async function fillBooking(profile) {
+  const { adults, children, childAges } = profile.autoFillPayload;
+  
+  // Booking.com guest picker has this structure:
+  // [label: "Adults"] [button: —] [span: 2] [button: +]
+  // Find all buttons that contain + or — symbols
+  
+  const allButtons = Array.from(document.querySelectorAll('button'));
+  
+  // Get buttons with — and + text content (stepper buttons)
+  const stepperButtons = allButtons.filter(b => {
+    const text = b.textContent.trim();
+    const hasIcon = b.querySelector('svg, [class*="icon"]');
+    return text === '+' || text === '−' || text === '-' || 
+           text === '–' || hasIcon;
+  });
+  
+  console.log('[TripProfile] Stepper buttons found:', 
+    stepperButtons.length,
+    stepperButtons.map(b => b.textContent.trim().slice(0,5))
+  );
+  
+  // Find by closest container with Adults/Children text
+  function getSteppersNearText(searchText) {
+    // Search all text nodes
+    const elements = Array.from(document.querySelectorAll('*'));
+    for (const el of elements) {
+      if (el.children.length === 0 && 
+          el.textContent.trim().toLowerCase() === searchText.toLowerCase()) {
+        // Go up to find container with buttons
+        let container = el.parentElement;
+        for (let i = 0; i < 5; i++) {
+          if (!container) break;
+          const buttons = container.querySelectorAll('button');
+          if (buttons.length >= 2) {
+            console.log('[TripProfile] Found', searchText, 'container with', 
+              buttons.length, 'buttons');
+            return { 
+              decrease: buttons[0], 
+              increase: buttons[buttons.length - 1] 
+            };
+          }
+          container = container.parentElement;
+        }
+      }
+    }
+    return null;
+  }
+  
+  const adultStepper = getSteppersNearText('Adults') || 
+                        getSteppersNearText('Adult');
+  const childStepper = getSteppersNearText('Children') || 
+                        getSteppersNearText('Child');
+  
+  console.log('[TripProfile] Steppers:', {
+    adult: !!adultStepper,
+    child: !!childStepper
+  });
+  
+  if (!adultStepper && !childStepper) {
+    // Last resort: use position — first pair of buttons is adults, 
+    // second pair is children
+    if (stepperButtons.length >= 4) {
+      console.log('[TripProfile] Using position-based approach');
+      const adultDec = stepperButtons[0];
+      const adultInc = stepperButtons[1];
+      const childDec = stepperButtons[2];
+      const childInc = stepperButtons[3];
+      
+      for (let i = 0; i < 8; i++) adultDec.click();
+      await sleep(200);
+      for (let i = 1; i < adults; i++) adultInc.click();
+      await sleep(200);
+      for (let i = 0; i < 8; i++) childDec.click();
+      await sleep(200);
+      for (let i = 0; i < children; i++) childInc.click();
+      await sleep(600);
+      
+      showToast(`Filled: ${adults} adults, ${children} children`);
+      return true;
+    }
+    showToast('Could not find guest fields');
+    return false;
+  }
+  
+  if (adultStepper) {
+    for (let i = 0; i < 8; i++) adultStepper.decrease.click();
+    await sleep(300);
+    for (let i = 1; i < adults; i++) adultStepper.increase.click();
+    await sleep(300);
+  }
+  
+  if (childStepper) {
+    for (let i = 0; i < 8; i++) childStepper.decrease.click();
+    await sleep(300);
+    for (let i = 0; i < children; i++) childStepper.increase.click();
+    await sleep(800);
+  }
+  
+  // Child ages
+  await sleep(500);
+  const allSelects = Array.from(document.querySelectorAll('select'));
+  allSelects.forEach((select, i) => {
+    if (childAges[i] !== undefined) {
+      select.value = String(childAges[i]);
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  
+  showToast(`Filled: ${adults} adults, ${children} children`);
+  return true;
+}
+
+Re-zip:
+cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip .
