@@ -149,8 +149,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const resyncBtn = document.getElementById("resync");
   const showOnPageBtn = document.getElementById("show-on-page");
   const copyBtn = document.getElementById("copy-payload");
+  const fillBtn = document.getElementById("fill-page");
   const statusEl = document.getElementById("status");
   const copyStatusEl = document.getElementById("copy-status");
+  const fillStatusEl = document.getElementById("fill-status");
   const openSettingsBtn = document.getElementById("open-settings");
   const keyInput = document.getElementById("key-input");
   const saveKeyBtn = document.getElementById("save-key");
@@ -225,6 +227,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       flashStatus(copyStatusEl, "Couldn't copy — try again.", true);
     }
+  });
+
+  // Auto-fill the open guest picker on the active tab.
+  fillBtn.addEventListener("click", () => {
+    fillBtn.disabled = true;
+    const original = fillBtn.textContent;
+    fillBtn.textContent = "Filling…";
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs[0];
+      if (!tab || !tab.id) {
+        fillBtn.disabled = false;
+        fillBtn.textContent = original;
+        return;
+      }
+      chrome.tabs.sendMessage(tab.id, { type: "MANUAL_FILL" }, () => {
+        fillBtn.disabled = false;
+        fillBtn.textContent = original;
+        if (chrome.runtime.lastError) {
+          flashStatus(
+            fillStatusEl,
+            "This page isn't supported. Open a travel site first.",
+            true,
+            4500
+          );
+          return;
+        }
+        flashStatus(fillStatusEl, "Done — check the page.", false, 3000);
+      });
+    });
   });
 
   // Secondary action: inject floating reference panel on the active tab.
