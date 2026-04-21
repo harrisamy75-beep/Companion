@@ -1,0 +1,99 @@
+Two issues:
+
+Children showing 1 instead of 2 — the decrease is resetting to 0 then adding 1 less than needed
+Age selects still 0 — need to wait for the age dropdowns to appear after children are added
+
+Paste this into Replit Agent:
+Two fixes for Expedia fast path:
+
+1. Children count is off by 1. The issue is we reset to 0 
+   by clicking decrease 8 times, then add children count.
+   But Expedia starts at 0 for children, so clicking 
+   decrease on 0 does nothing, then we add `children` clicks.
+   
+   However if there's already 1 child from a previous fill,
+   the decrease resets to 0, then we add `children` = 2 clicks
+   but it only shows 1. 
+   
+   Fix: after decreasing, verify the count is 0 by checking
+   the displayed number, then add exactly `children` clicks:
+   
+   // Reset children to 0
+   for (let i = 0; i < 10; i++) {
+     btns[2].click();
+     await sleep(80);
+   }
+   await sleep(400);
+   
+   // Now add children one by one with longer delays
+   for (let i = 0; i < children; i++) {
+     btns[3].click();
+     await sleep(400); // Longer delay between each click
+   }
+   await sleep(1500); // Wait for age dropdowns to render
+
+2. Age selects are 0 because Expedia renders them 
+   AFTER children are added and needs more time.
+   
+   After the 1500ms wait, search aggressively for age selects:
+   
+   // Try multiple times
+   let ageSelects = [];
+   for (let attempt = 0; attempt < 5; attempt++) {
+     ageSelects = Array.from(document.querySelectorAll('select'));
+     console.log('[TripProfile] Age select attempt', attempt, 
+       ':', ageSelects.length);
+     if (ageSelects.length >= children) break;
+     await sleep(600);
+   }
+   
+   console.log('[TripProfile] Final age selects:', 
+     ageSelects.length,
+     ageSelects.map(s => ({
+       id: s.id, 
+       name: s.name,
+       aria: s.getAttribute('aria-label'),
+       options: s.options.length
+     }))
+   );
+   
+   for (let i = 0; i < ageSelects.length; i++) {
+     if (childAges[i] === undefined) continue;
+     const select = ageSelects[i];
+     const age = String(childAges[i]);
+     
+     const nativeSetter = Object.getOwnPropertyDescriptor(
+       window.HTMLSelectElement.prototype, 'value'
+     ).set;
+     nativeSetter?.call(select, age);
+     select.dispatchEvent(new Event('change', { bubbles: true }));
+     await sleep(300);
+     console.log('[TripProfile] Age', i, 
+       'set to:', age, 'actual:', select.value);
+   }
+
+Re-zip:
+cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip .2graphql.1dd0c13c80efb6f96696.js:2 An error occurred! For more details, see the full error text at https://go.apollo.dev/c/err#%7B%22version%22%3A%223.14.0%22%2C%22message%22%3A78%2C%22args%22%3A%5B%22useLazyQuery%22%2C%22onCompleted%22%2C%22If%20your%20%60onCompleted%60%20callback%20sets%20local%20pastedno, still not working9:24 PMThe log still shows the old code — content.js:120 [TripProfile] Expedia age selects: 0 without the retry loop. The new zip isn't loaded yet.
+Also I notice the profile still shows "No profile in storage" on first load — you need to re-enter the API key each time.
+Let's solve both problems at once. First — re-enter your API key in the extension popup right now so it syncs.
+Then looking at the screenshot — it's showing Children: 1 not 2, and the log shows the OLD version is still running (line 120 vs the new code that would show different line numbers).
+You need to:
+
+Download the NEW zip from Replit
+Go to chrome://extensions → Remove TripProfile → Load unpacked the new folder
+Re-enter API key cpn_34f8e6adbd37470f9742386619f0b8a7
+Click Save & Sync
+Go to Expedia → open picker → Fill This Page
+
+The most important thing right now is confirming the new zip is actually downloaded. Ask Replit Agent:
+Please confirm the latest zip has these exact changes:
+1. Children reset loop with 80ms delays between clicks
+2. Age select retry loop that tries 5 times with 600ms waits
+3. Logs showing "Age select attempt 0/1/2..." 
+
+Print the exact line numbers and code around the 
+age select retry loop in content.js so I can verify
+the right version is being used.
+
+Then re-zip to make absolutely sure:
+cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip . && echo "DONE - $(date)"

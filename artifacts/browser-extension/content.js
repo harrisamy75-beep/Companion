@@ -104,31 +104,73 @@ async function universalFill(profile) {
 
       // Should be: adultDec, adultInc, childDec, childInc
       if (btns.length >= 4) {
-        for (let i = 0; i < 8; i++) btns[0].click();
-        await sleep(200);
-        for (let i = 1; i < adults; i++) btns[1].click();
-        await sleep(200);
-        for (let i = 0; i < 8; i++) btns[2].click();
-        await sleep(200);
-        for (let i = 0; i < children; i++) btns[3].click();
-        await sleep(1200);
+        // Reset adults to floor (1), then climb to target.
+        for (let i = 0; i < 10; i++) {
+          btns[0].click();
+          await sleep(80);
+        }
+        await sleep(400);
+        for (let i = 1; i < adults; i++) {
+          btns[1].click();
+          await sleep(400);
+        }
+        await sleep(300);
 
-        // Child ages
-        const ageSelects = Array.from(
-          expediaContainer.querySelectorAll("select")
+        // Reset children to 0, then add exactly `children` clicks.
+        for (let i = 0; i < 10; i++) {
+          btns[2].click();
+          await sleep(80);
+        }
+        await sleep(400);
+        for (let i = 0; i < children; i++) {
+          btns[3].click();
+          await sleep(400); // longer per-click so React commits each step
+        }
+        await sleep(1500); // wait for age dropdowns to render
+
+        // Aggressively retry finding age selects — Expedia mounts them late.
+        let ageSelects = [];
+        for (let attempt = 0; attempt < 5; attempt++) {
+          ageSelects = Array.from(document.querySelectorAll("select"));
+          console.log(
+            "[TripProfile] Age select attempt",
+            attempt,
+            ":",
+            ageSelects.length
+          );
+          if (ageSelects.length >= children) break;
+          await sleep(600);
+        }
+        console.log(
+          "[TripProfile] Final age selects:",
+          ageSelects.length,
+          ageSelects.map((s) => ({
+            id: s.id,
+            name: s.name,
+            aria: s.getAttribute("aria-label"),
+            options: s.options.length,
+          }))
         );
-        console.log("[TripProfile] Expedia age selects:", ageSelects.length);
+
         const nativeSetter = Object.getOwnPropertyDescriptor(
           window.HTMLSelectElement.prototype,
           "value"
         ).set;
         for (let i = 0; i < ageSelects.length; i++) {
           if (childAges[i] === undefined) continue;
-          nativeSetter?.call(ageSelects[i], String(childAges[i]));
-          ageSelects[i].dispatchEvent(
-            new Event("change", { bubbles: true })
+          const select = ageSelects[i];
+          const age = String(childAges[i]);
+          nativeSetter?.call(select, age);
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+          await sleep(300);
+          console.log(
+            "[TripProfile] Age",
+            i,
+            "set to:",
+            age,
+            "actual:",
+            select.value
           );
-          await sleep(200);
         }
 
         const doneBtn = Array.from(
