@@ -191,36 +191,42 @@ async function bookingFill(adults, children, childAges) {
 }
 
 async function bookingSetStepper(panel, labelPattern, target, minimum) {
-  const walker = document.createTreeWalker(panel, NodeFilter.SHOW_TEXT, null);
-  let node;
-  while ((node = walker.nextNode())) {
-    const text = node.textContent.trim();
-    if (!labelPattern.test(text) || text.length > 20) continue;
-    let el = node.parentElement;
-    for (let i = 0; i < 5; i++) {
-      if (!el || el === panel) break;
-      const btns = Array.from(el.querySelectorAll("button")).filter((b) => {
-        const aria = (b.getAttribute("aria-label") || "").toLowerCase();
-        const txt = b.textContent.trim();
-        const testid = b.getAttribute("data-testid") || "";
-        return (
-          /increase|decrease|add|remove|plus|minus/i.test(aria) ||
-          /^[+\-−]$/.test(txt) ||
-          /increase|decrease|plus|minus/.test(testid)
-        );
-      });
-      if (btns.length >= 2) {
-        const dec = btns[0], inc = btns[btns.length - 1];
-        console.log("[TripProfile] Booking stepper for", text, "dec:", dec.getAttribute("aria-label") || dec.textContent.trim(), "inc:", inc.getAttribute("aria-label") || inc.textContent.trim());
-        for (let j = 0; j < 12; j++) { dec.click(); await sleep(80); }
-        await sleep(350);
-        for (let j = 0; j < Math.max(0, target - minimum); j++) { inc.click(); await sleep(350); }
-        await sleep(300);
-        return true;
+  const allBtns = Array.from(panel.querySelectorAll("button"));
+  const decBtns = allBtns.filter((b) => {
+    const aria = (b.getAttribute("aria-label") || "").toLowerCase();
+    const txt = b.textContent.trim();
+    const testid = (b.getAttribute("data-testid") || "").toLowerCase();
+    return /decrease|minus|subtract|remove/i.test(aria) || txt === "−" || txt === "-" || /decrease|minus/.test(testid);
+  });
+
+  console.log("[TripProfile] Booking dec buttons found:", decBtns.length, decBtns.map(b => b.getAttribute("aria-label") || b.textContent.trim()));
+
+  for (const dec of decBtns) {
+    let row = dec.parentElement;
+    for (let i = 0; i < 6; i++) {
+      if (!row || row === panel) break;
+      const rowText = row.innerText || row.textContent || "";
+      if (labelPattern.test(rowText) && rowText.length < 80) {
+        const rowBtns = Array.from(row.querySelectorAll("button"));
+        const inc = rowBtns.find((b) => {
+          const aria = (b.getAttribute("aria-label") || "").toLowerCase();
+          const txt = b.textContent.trim();
+          const testid = (b.getAttribute("data-testid") || "").toLowerCase();
+          return /increase|plus|add/i.test(aria) || txt === "+" || /increase|plus/.test(testid);
+        });
+        if (inc) {
+          console.log("[TripProfile] Booking stepper for", labelPattern, "dec:", dec.getAttribute("aria-label") || dec.textContent.trim(), "inc:", inc.getAttribute("aria-label") || inc.textContent.trim());
+          for (let j = 0; j < 12; j++) { dec.click(); await sleep(80); }
+          await sleep(350);
+          for (let j = 0; j < Math.max(0, target - minimum); j++) { inc.click(); await sleep(350); }
+          await sleep(300);
+          return true;
+        }
       }
-      el = el.parentElement;
+      row = row.parentElement;
     }
   }
+
   console.log("[TripProfile] Booking stepper not found for", labelPattern);
   return false;
 }

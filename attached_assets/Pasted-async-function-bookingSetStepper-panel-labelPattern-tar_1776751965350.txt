@@ -1,0 +1,50 @@
+async function bookingSetStepper(panel, labelPattern, target, minimum) {
+  // Strategy: find all stepper rows in the panel. Each row has a label on the
+  // left and − / + buttons on the right. Booking.com uses this flat structure:
+  //   <div>  [label text]  <button>−</button>  [count]  <button>+</button>  </div>
+  // We find every − button, walk up to its row container, check if the row
+  // contains a matching label, then operate that row's buttons.
+
+  // Collect all candidate minus/decrease buttons in the panel.
+  const allBtns = Array.from(panel.querySelectorAll("button"));
+  const decBtns = allBtns.filter((b) => {
+    const aria = (b.getAttribute("aria-label") || "").toLowerCase();
+    const txt = b.textContent.trim();
+    const testid = (b.getAttribute("data-testid") || "").toLowerCase();
+    return /decrease|minus|subtract|remove/i.test(aria) || txt === "−" || txt === "-" || /decrease|minus/.test(testid);
+  });
+
+  console.log("[TripProfile] Booking dec buttons found:", decBtns.length, decBtns.map(b => b.getAttribute("aria-label") || b.textContent.trim()));
+
+  for (const dec of decBtns) {
+    // Walk up to find the row that contains both this button and a label.
+    let row = dec.parentElement;
+    for (let i = 0; i < 6; i++) {
+      if (!row || row === panel) break;
+      const rowText = row.innerText || row.textContent || "";
+      if (labelPattern.test(rowText) && rowText.length < 80) {
+        // Find the matching + button in the same row.
+        const rowBtns = Array.from(row.querySelectorAll("button"));
+        const inc = rowBtns.find((b) => {
+          const aria = (b.getAttribute("aria-label") || "").toLowerCase();
+          const txt = b.textContent.trim();
+          const testid = (b.getAttribute("data-testid") || "").toLowerCase();
+          return /increase|plus|add/i.test(aria) || txt === "+" || /increase|plus/.test(testid);
+        });
+        if (inc) {
+          console.log("[TripProfile] Booking stepper for", labelPattern, "dec:", dec.getAttribute("aria-label") || dec.textContent.trim(), "inc:", inc.getAttribute("aria-label") || inc.textContent.trim());
+          for (let j = 0; j < 12; j++) { dec.click(); await sleep(80); }
+          await sleep(350);
+          for (let j = 0; j < Math.max(0, target - minimum); j++) { inc.click(); await sleep(350); }
+          await sleep(300);
+          return true;
+        }
+      }
+      row = row.parentElement;
+    }
+  }
+
+  console.log("[TripProfile] Booking stepper not found for", labelPattern);
+  return false;
+}
+After updating, reload the extension and test again. The key log line to watch for is Booking dec buttons found: 3 — if we see 3 decrease buttons (Adults, Children, Rooms), the fix worked and it'll match each one to its label.
