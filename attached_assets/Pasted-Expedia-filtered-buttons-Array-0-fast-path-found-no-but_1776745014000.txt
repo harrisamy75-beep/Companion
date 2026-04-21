@@ -1,0 +1,97 @@
+Expedia filtered buttons: Array(0)  ← fast path found no buttons
+Found label: Adults parent: SPAN class: uitk-step-input-label
+Found label: Children parent: SPAN class: uitk-step-input-label
+Steppers found: Object  ← universal found them!
+Age selects: 0  ← but no age dropdowns yet
+Two issues:
+
+The fast path isn't finding buttons because the container isn't loaded yet when it runs
+Age selects are 0 because children count is 0 when we look for them — we need to wait for children to be added first
+
+Paste this into Replit Agent:
+Fix Expedia fill based on console logs.
+
+The logs show:
+- Fast path finds container but Array(0) buttons
+- Universal path finds labels with class "uitk-step-input-label"
+- Steppers ARE found but age selects = 0
+
+Two fixes needed:
+
+1. The stepper buttons for Expedia use class "uitk-step-input-button"
+   or similar. Update the button filter to find them:
+
+   In findStepperNearLabel, when looking for buttons,
+   also check for uitk classes:
+   
+   const btns = Array.from(el.querySelectorAll('button'))
+     .filter(b => {
+       const txt = b.textContent.trim().toLowerCase();
+       const cls = b.className || '';
+       return (!['done', 'close', 'apply', 'search', 
+                'cancel', 'ok', 'add another room',
+                'add another', 'save', 'update', 
+                'remove room'].includes(txt)) &&
+              txt.length < 20 &&
+              (b.getAttribute('aria-label')?.match(/increase|decrease|add|remove|plus|minus/i) ||
+               b.textContent.trim().match(/^[+\-−+]$/) ||
+               cls.match(/increment|decrement|stepper|increase|decrease|step-input/i) ||
+               cls.includes('uitk-step'));
+     });
+
+2. Age selects are 0 because we look for them before 
+   children are added. Fix the timing:
+
+   After filling children count, wait longer AND 
+   search the whole document not just container:
+   
+   // After adding children
+   await sleep(1500); // Wait for age dropdowns to render
+   
+   // Search whole document for age selects
+   const allSelects = Array.from(document.querySelectorAll('select'));
+   const ageSelects = allSelects.filter(s => {
+     const label = (s.getAttribute('aria-label') || 
+                    s.getAttribute('name') || 
+                    s.id || '').toLowerCase();
+     const surrounding = s.closest('[class]')?.textContent?.toLowerCase() || '';
+     return label.includes('age') || 
+            surrounding.includes('child') && surrounding.includes('age');
+   });
+   
+   console.log('[TripProfile] Age selects after wait:', 
+     ageSelects.length,
+     ageSelects.map(s => s.id || s.getAttribute('aria-label'))
+   );
+   
+   // Also try: Expedia renders age selects with specific classes
+   const expediaAgeSelects = document.querySelectorAll(
+     '[class*="child-age"] select,' +
+     '[data-stid*="age"] select,' +
+     'select[id*="age"],' +
+     'select[name*="age"]'
+   );
+   console.log('[TripProfile] Expedia specific age selects:', 
+     expediaAgeSelects.length);
+   
+   const finalAgeSelects = ageSelects.length > 0 ? 
+     ageSelects : Array.from(expediaAgeSelects);
+
+3. Also fix the "2 rooms" issue - the fillStepper function
+   is being called for Rooms as well as Children.
+   
+   In universalFill, only fill adults and children steppers,
+   explicitly skip rooms:
+   
+   // Find steppers but exclude "Rooms" label
+   const adultStepper = findStepperNearLabel(container, /^adults?$/i);
+   const childStepper = findStepperNearLabel(container, /^children$|^child$/i);
+   // Do NOT find rooms stepper - leave rooms at default
+   
+   console.log('[TripProfile] Will fill:', {
+     adults: adultStepper?.label,
+     children: childStepper?.label
+   });
+
+Re-zip:
+cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip .

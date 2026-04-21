@@ -73,20 +73,33 @@ async function universalFill(profile) {
       '[data-stid="rooms-traveler-selector-menu-container"]'
     );
     if (expediaContainer) {
-      console.log("[TripProfile] Using Expedia fast path");
-      const btns = Array.from(
-        expediaContainer.querySelectorAll("button")
-      ).filter((b) => {
-        const txt = b.textContent.trim();
-        return (
-          txt !== "Done" &&
-          txt !== "Add another room" &&
-          !txt.toLowerCase().includes("room")
-        );
+      // Wait for buttons to actually render inside the container.
+      let allBtns = [];
+      for (let attempt = 0; attempt < 5; attempt++) {
+        allBtns = Array.from(expediaContainer.querySelectorAll("button"));
+        if (allBtns.length >= 4) break;
+        await sleep(400);
+      }
+      console.log(
+        "[TripProfile] Using Expedia fast path. Total buttons:",
+        allBtns.length,
+        allBtns.map((b) => b.textContent.trim().slice(0, 15))
+      );
+
+      const btns = allBtns.filter((b) => {
+        const txt = b.textContent.trim().toLowerCase();
+        const aria = (b.getAttribute("aria-label") || "").toLowerCase();
+        // Exclude action buttons by text or aria, but keep stepper buttons
+        // even when their visible text mentions "room" (e.g. "+ Add room").
+        if (txt === "done" || aria === "done") return false;
+        if (txt.includes("add another") || aria.includes("add another"))
+          return false;
+        if (txt === "remove room" || aria === "remove room") return false;
+        return true;
       });
       console.log(
         "[TripProfile] Expedia filtered buttons:",
-        btns.map((b) => b.textContent.trim().slice(0, 15))
+        btns.map((b) => b.textContent.trim().slice(0, 15) || b.getAttribute("aria-label"))
       );
 
       // Should be: adultDec, adultInc, childDec, childInc
@@ -238,13 +251,15 @@ async function universalFill(profile) {
             return false;
           }
           if (txt.length >= 20) return false;
+          if (txt === "remove room") return false;
           // Must have stepper signals on aria, text, or class.
           const aria = b.getAttribute("aria-label") || "";
-          const cls = b.className || "";
+          const cls = typeof b.className === "string" ? b.className : "";
           return (
             /increase|decrease|add|remove|plus|minus/i.test(aria) ||
             /^[+\-−]$/.test(b.textContent.trim()) ||
-            /increment|decrement|stepper|increase|decrease/i.test(cls)
+            /increment|decrement|stepper|increase|decrease|step-input/i.test(cls) ||
+            cls.includes("uitk-step")
           );
         });
 
@@ -300,20 +315,49 @@ async function universalFill(profile) {
   const childFilled = await fillStepper(childStepper, children, 0);
 
   // STEP 5: Fill child age dropdowns (rendered after children added).
+  // Search the WHOLE document (not just container) — some sites render the
+  // age dropdowns into a sibling portal. Wait longer for them to mount.
   if (children > 0 && Array.isArray(childAges) && childAges.length > 0) {
-    await sleep(1000);
+    await sleep(1500);
 
-    const allSelects = Array.from(container.querySelectorAll("select"));
-    const ageSelects = allSelects.filter((s) => {
-      const label =
+    const allSelects = Array.from(document.querySelectorAll("select"));
+    const labelMatches = allSelects.filter((s) => {
+      const label = (
         s.getAttribute("aria-label") ||
         s.getAttribute("name") ||
         s.id ||
-        s.closest("[class]")?.textContent ||
-        "";
-      return /age/i.test(label) || allSelects.length <= children;
+        ""
+      ).toLowerCase();
+      const surrounding =
+        s.closest("[class]")?.textContent?.toLowerCase() || "";
+      return (
+        label.includes("age") ||
+        (surrounding.includes("child") && surrounding.includes("age"))
+      );
     });
-    console.log("[TripProfile] Age selects:", ageSelects.length);
+    console.log(
+      "[TripProfile] Age selects after wait:",
+      labelMatches.length,
+      labelMatches.map((s) => s.id || s.getAttribute("aria-label"))
+    );
+
+    // Expedia-specific: age selects often live in [class*="child-age"]
+    // wrappers or have id/name containing "age".
+    const expediaAgeSelects = Array.from(
+      document.querySelectorAll(
+        '[class*="child-age"] select,' +
+          '[data-stid*="age"] select,' +
+          'select[id*="age"],' +
+          'select[name*="age"]'
+      )
+    );
+    console.log(
+      "[TripProfile] Expedia specific age selects:",
+      expediaAgeSelects.length
+    );
+
+    const ageSelects =
+      labelMatches.length > 0 ? labelMatches : expediaAgeSelects;
 
     const nativeSetter = Object.getOwnPropertyDescriptor(
       window.HTMLSelectElement.prototype,
