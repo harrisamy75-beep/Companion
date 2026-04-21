@@ -24,3 +24,9 @@ id = "AVmGpqmzqfVKK0SIE0qjE"
 uri = "file://tripProfile-new-zip.zip"
 type = "unspecified"
 title = "tripProfile-new-zip (v0.7.5 — last-6 stepper fix)"
+
+[[outputs]]
+id = "Gfk6HMyyKvN9PNTNW31lV"
+uri = "file://Companion Tool.zip"
+type = "unspecified"
+title = "Companion Tool"
