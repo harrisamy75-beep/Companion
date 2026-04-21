@@ -1,0 +1,264 @@
+Replace all site-specific fill functions with one universal 
+auto-fill engine that works on any travel site.
+
+Replace the entire fill logic in content.js with:
+
+// ─── UNIVERSAL FILL ENGINE ───────────────────────────────
+
+async function universalFill(profile) {
+  const { adults, children, childAges } = profile.autoFillPayload;
+  
+  // STEP 1: Find and open the guest/traveler picker
+  // Try common trigger patterns across all sites
+  const triggerSelectors = [
+    '[data-stid="open-room-picker"]',
+    '[data-testid="occupancy-config"]',
+    '[data-testid="travelers-field"]',
+    'button[aria-label*="traveler" i]',
+    'button[aria-label*="guest" i]',
+    'button[aria-label*="passenger" i]',
+    'button[aria-label*="occupancy" i]',
+    '[class*="traveler-selector"]',
+    '[class*="guest-picker"]',
+    '[class*="occupancy"]',
+    '[class*="pax-selector"]',
+    '[id*="traveler"]',
+    '[id*="guest"]',
+  ];
+  
+  let opened = false;
+  for (const sel of triggerSelectors) {
+    const el = document.querySelector(sel);
+    if (el && !el.getAttribute('aria-expanded')) {
+      el.click();
+      await sleep(800);
+      opened = true;
+      console.log('[TripProfile] Opened picker with:', sel);
+      break;
+    }
+  }
+  
+  // STEP 2: Find the picker container
+  // Look for a container that has both Adults and Children labels
+  async function findPickerContainer() {
+    // Wait up to 2s for picker to appear
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const allEls = Array.from(document.querySelectorAll(
+        'div, section, form, [role="dialog"], [role="listbox"]'
+      ));
+      
+      for (const el of allEls) {
+        const text = el.innerText || '';
+        const hasAdults = /adults?/i.test(text);
+        const hasChildren = /children|child/i.test(text);
+        const hasButtons = el.querySelectorAll('button').length >= 2;
+        const notTooLarge = el.querySelectorAll('button').length < 30;
+        
+        if (hasAdults && hasChildren && hasButtons && notTooLarge) {
+          return el;
+        }
+      }
+      await sleep(500);
+    }
+    return null;
+  }
+  
+  const container = await findPickerContainer();
+  
+  if (!container) {
+    console.log('[TripProfile] No picker container found');
+    showToast('Open the guest picker first, then try again');
+    return false;
+  }
+  
+  console.log('[TripProfile] Found picker container:', 
+    container.className?.slice(0, 50));
+  
+  // STEP 3: Find stepper pairs for adults and children
+  // Strategy: find text nodes with "Adults"/"Children" labels
+  // then find the nearest buttons
+  
+  function findStepperNearLabel(container, labelPattern) {
+    const walker = document.createTreeWalker(
+      container,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+    
+    let node;
+    while (node = walker.nextNode()) {
+      if (labelPattern.test(node.textContent.trim())) {
+        // Found the label — walk up to find buttons
+        let el = node.parentElement;
+        for (let i = 0; i < 6; i++) {
+          if (!el || el === container) break;
+          const btns = Array.from(el.querySelectorAll('button'))
+            .filter(b => {
+              // Exclude nav/close/submit buttons
+              const txt = b.textContent.trim().toLowerCase();
+              return !['done', 'close', 'apply', 'search', 
+                       'cancel', 'ok', 'add another room',
+                       'add another', 'save'].includes(txt) &&
+                     txt.length < 20;
+            });
+          if (btns.length >= 2) {
+            return {
+              decrease: btns[0],
+              increase: btns[btns.length - 1],
+              label: node.textContent.trim()
+            };
+          }
+          el = el.parentElement;
+        }
+      }
+    }
+    return null;
+  }
+  
+  const adultStepper = findStepperNearLabel(container, /^adults?$/i);
+  const childStepper = findStepperNearLabel(container, /^children$|^child$/i);
+  
+  console.log('[TripProfile] Steppers found:', {
+    adults: !!adultStepper,
+    children: !!childStepper,
+    adultLabel: adultStepper?.label,
+    childLabel: childStepper?.label
+  });
+  
+  // STEP 4: Fill using found steppers
+  async function fillStepper(stepper, targetCount, minimum = 0) {
+    if (!stepper) return false;
+    // Click decrease many times to reset
+    for (let i = 0; i < 10; i++) {
+      stepper.decrease.click();
+      await sleep(50);
+    }
+    await sleep(300);
+    // Click increase to reach target
+    const clicksNeeded = Math.max(0, targetCount - minimum);
+    for (let i = 0; i < clicksNeeded; i++) {
+      stepper.increase.click();
+      await sleep(100);
+    }
+    await sleep(300);
+    return true;
+  }
+  
+  const adultFilled = await fillStepper(adultStepper, adults, 1);
+  const childFilled = await fillStepper(childStepper, children, 0);
+  
+  // STEP 5: Fill child ages
+  // Wait for age dropdowns to appear after adding children
+  if (children > 0 && childAges.length > 0) {
+    await sleep(1000);
+    
+    // Find age selects - look for selects near "age" text
+    const allSelects = Array.from(container.querySelectorAll('select'));
+    const ageSelects = allSelects.filter(s => {
+      const label = s.getAttribute('aria-label') || 
+                    s.getAttribute('name') || 
+                    s.id || 
+                    s.closest('[class]')?.textContent || '';
+      return /age/i.test(label) || allSelects.length <= children;
+    });
+    
+    console.log('[TripProfile] Age selects:', ageSelects.length);
+    
+    for (let i = 0; i < ageSelects.length; i++) {
+      if (childAges[i] === undefined) continue;
+      const select = ageSelects[i];
+      const age = String(childAges[i]);
+      
+      // Try direct value set
+      select.value = age;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      await sleep(100);
+      
+      // If didn't stick, use native setter
+      if (select.value !== age) {
+        const nativeSetter = Object.getOwnPropertyDescriptor(
+          window.HTMLSelectElement.prototype, 'value'
+        ).set;
+        nativeSetter?.call(select, age);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      
+      await sleep(150);
+      console.log('[TripProfile] Age', i, 
+        'target:', age, 'result:', select.value);
+    }
+  }
+  
+  // STEP 6: Close the picker
+  await sleep(400);
+  const closeButtons = Array.from(
+    container.querySelectorAll('button')
+  ).filter(b => /^done$|^apply$|^search$|^close$/i
+    .test(b.textContent.trim())
+  );
+  if (closeButtons.length > 0) {
+    closeButtons[0].click();
+    console.log('[TripProfile] Closed picker');
+  }
+  
+  const success = adultFilled || childFilled;
+  if (success) {
+    showToast(`Filled: ${adults} adults, ${children} children` +
+      (childAges.length > 0 ? `, ages ${childAges.join(', ')}` : '')
+    );
+  } else {
+    showToast('Could not auto-fill — use the profile card to fill manually');
+  }
+  
+  return success;
+}
+
+// Replace ALL site-specific functions with one call:
+async function attemptAutoFill(manual = false) {
+  console.log('[TripProfile] attemptAutoFill called, hostname:', 
+    window.location.hostname, 'manual:', manual);
+  
+  const result = await chrome.storage.local.get('tripprofile');
+  const profile = result.tripprofile;
+  
+  if (!profile) {
+    console.log('[TripProfile] No profile in storage');
+    return;
+  }
+  
+  // Universal fill works on all sites
+  await universalFill(profile);
+  
+  // Also badge reviews on hotel pages
+  await scoreAndBadgeReviews(profile);
+}
+
+// Keep the manifest host_permissions broad:
+// Add these to manifest.json host_permissions:
+"https://*.expedia.com/*",
+"https://*.booking.com/*", 
+"https://*.hotels.com/*",
+"https://*.airbnb.com/*",
+"https://*.marriott.com/*",
+"https://*.hilton.com/*",
+"https://*.hyatt.com/*",
+"https://*.ihg.com/*",
+"https://*.accor.com/*",
+"https://*.fourseasons.com/*",
+"https://*.rosewoodhotels.com/*",
+"https://*.united.com/*",
+"https://*.delta.com/*",
+"https://*.aa.com/*",
+"https://*.britishairways.com/*",
+"https://*.emirates.com/*",
+"https://*.lufthansa.com/*",
+"https://www.google.com/travel/*",
+"https://*.kayak.com/*",
+"https://*.priceline.com/*",
+"https://*.tripadvisor.com/*"
+
+Also update content_scripts matches with the same list.
+
+Re-zip:
+cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip .
+This universal engine works by finding the pattern — "a container with Adults and Children labels and stepper buttons" — rather than targeting specific sites. It will work on Booking.com, Expedia, Hotels.com, Marriott.com, Hyatt.com, and any other travel site that follows the same basic UI pattern.

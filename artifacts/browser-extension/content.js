@@ -45,283 +45,220 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fillExpedia(profile) {
+// ─── UNIVERSAL FILL ENGINE ─────────────────────────────────────────────────
+// Finds the pattern — "a container with Adults and Children labels and stepper
+// buttons" — rather than targeting specific sites. Works on Booking, Expedia,
+// Hotels.com, Marriott, Hyatt, and any travel site that follows the pattern.
+
+const API_BASE = "https://travelcompaniontool.replit.app/api";
+
+async function universalFill(profile) {
   const { adults, children, childAges } = profile.autoFillPayload;
 
-  // Open the picker (try the new selector first, fall back to legacy).
-  const trigger =
-    document.querySelector('[data-stid="open-room-picker"]') ||
-    document.querySelector('[data-stid="open-hotel-guest-picker"]');
-  if (trigger) {
-    trigger.click();
-    await sleep(800);
+  // STEP 1: Find and open the guest/traveler picker.
+  const triggerSelectors = [
+    '[data-stid="open-room-picker"]',
+    '[data-testid="occupancy-config"]',
+    '[data-testid="travelers-field"]',
+    'button[aria-label*="traveler" i]',
+    'button[aria-label*="guest" i]',
+    'button[aria-label*="passenger" i]',
+    'button[aria-label*="occupancy" i]',
+    '[class*="traveler-selector"]',
+    '[class*="guest-picker"]',
+    '[class*="occupancy"]',
+    '[class*="pax-selector"]',
+    '[id*="traveler"]',
+    '[id*="guest"]',
+  ];
+
+  for (const sel of triggerSelectors) {
+    const el = document.querySelector(sel);
+    if (el && !el.getAttribute("aria-expanded")) {
+      el.click();
+      await sleep(800);
+      console.log("[TripProfile] Opened picker with:", sel);
+      break;
+    }
   }
 
-  // Get the picker container (positional buttons inside).
-  const container = document.querySelector(
-    '[data-stid="rooms-traveler-selector-menu-container"]'
-  );
+  // STEP 2: Find the picker container (has both Adults and Children labels).
+  async function findPickerContainer() {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const allEls = Array.from(
+        document.querySelectorAll(
+          'div, section, form, [role="dialog"], [role="listbox"]'
+        )
+      );
+      for (const el of allEls) {
+        const text = el.innerText || "";
+        const hasAdults = /adults?/i.test(text);
+        const hasChildren = /children|child/i.test(text);
+        const buttonCount = el.querySelectorAll("button").length;
+        if (hasAdults && hasChildren && buttonCount >= 2 && buttonCount < 30) {
+          return el;
+        }
+      }
+      await sleep(500);
+    }
+    return null;
+  }
 
+  const container = await findPickerContainer();
   if (!container) {
-    console.log("[TripProfile] Expedia picker container not found");
-    showToast("Open the guest picker first, then click Fill This Page");
+    console.log("[TripProfile] No picker container found");
+    showToast("Open the guest picker first, then try again");
     return false;
   }
-
-  const buttons = Array.from(container.querySelectorAll("button"));
   console.log(
-    "[TripProfile] Expedia buttons:",
-    buttons.map((b) => b.textContent.trim().slice(0, 15))
+    "[TripProfile] Found picker container:",
+    container.className?.slice(0, 50)
   );
 
-  // Buttons in order: adultDec, adultInc, childDec, childInc, addRoom, done
-  const adultDec = buttons[0];
-  const adultInc = buttons[1];
-  const childDec = buttons[2];
-  const childInc = buttons[3];
-
-  if (!adultInc) {
-    console.log("[TripProfile] Expedia stepper buttons not found");
-    showToast("Could not find guest fields");
-    return false;
-  }
-
-  // ADULTS — floor is 1, so 9 decrements then climb to target.
-  if (adultDec) {
-    for (let i = 0; i < 9; i++) {
-      adultDec.click();
-      await sleep(40);
-    }
-  }
-  for (let i = 1; i < adults; i++) {
-    adultInc.click();
-    await sleep(40);
-  }
-  await sleep(200);
-
-  // CHILDREN — floor is 0.
-  if (childDec) {
-    for (let i = 0; i < 10; i++) {
-      childDec.click();
-      await sleep(40);
-    }
-  }
-  if (childInc) {
-    for (let i = 0; i < children; i++) {
-      childInc.click();
-      await sleep(40);
-    }
-  }
-  // Age dropdowns render only after children are added — wait longer.
-  await sleep(1200);
-
-  // Find age selects INSIDE the container.
-  const ageSelects = Array.from(container.querySelectorAll("select"));
-  console.log(
-    "[TripProfile] Age selects after wait:",
-    ageSelects.length,
-    ageSelects.map((s) => ({ id: s.id, name: s.name }))
-  );
-
-  const nativeSelectSetter = Object.getOwnPropertyDescriptor(
-    window.HTMLSelectElement.prototype,
-    "value"
-  ).set;
-
-  for (let i = 0; i < ageSelects.length; i++) {
-    const select = ageSelects[i];
-    const age = childAges[i];
-    if (age === undefined || age === null) continue;
-
-    // First pass — direct assignment + change/input events.
-    select.value = String(age);
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-    select.dispatchEvent(new Event("input", { bubbles: true }));
-    await sleep(200);
-
-    // Second pass — native setter to bypass React's controlled input shim.
-    nativeSelectSetter.call(select, String(age));
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-
-    console.log("[TripProfile] Set age", age, "result:", select.value);
-  }
-
-  // Click Done only after ages are filled.
-  await sleep(300);
-  const doneBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent.trim() === "Done"
-  );
-  if (doneBtn) doneBtn.click();
-
-  showToast(`Filled: ${adults} adult${adults !== 1 ? "s" : ""}, ${children} child${children !== 1 ? "ren" : ""}`);
-  return true;
-}
-
-async function fillBooking(profile) {
-  console.log("[TripProfile] fillBooking called");
-  console.log(
-    "[TripProfile] All buttons on page:",
-    Array.from(document.querySelectorAll("button")).map((b) => ({
-      text: b.textContent.trim().slice(0, 20),
-      aria: b.getAttribute("aria-label"),
-      class: (b.className || "").slice(0, 30),
-    }))
-  );
-
-  const { adults, children, childAges } = profile.autoFillPayload;
-
-  const guestTrigger = document.querySelector(
-    '[data-testid="occupancy-config"],' +
-    '.b2b7952bac,' +
-    '[aria-label*="adults"],' +
-    'button[data-component*="occupancy"]'
-  );
-  if (guestTrigger) {
-    guestTrigger.click();
-    await sleep(600);
-  }
-
-  const allButtons = Array.from(document.querySelectorAll("button"));
-  const stepperButtons = allButtons.filter((b) => {
-    const text = b.textContent.trim();
-    const hasIcon = b.querySelector('svg, [class*="icon"]');
-    return (
-      text === "+" ||
-      text === "−" ||
-      text === "-" ||
-      text === "–" ||
-      hasIcon
-    );
-  });
-  console.log(
-    "[TripProfile] Stepper buttons found:",
-    stepperButtons.length,
-    stepperButtons.map((b) => b.textContent.trim().slice(0, 5))
-  );
-
-  function getSteppersNearText(searchText) {
-    const elements = Array.from(document.querySelectorAll("*"));
-    for (const el of elements) {
-      if (
-        el.children.length === 0 &&
-        el.textContent.trim().toLowerCase() === searchText.toLowerCase()
-      ) {
-        let container = el.parentElement;
-        for (let i = 0; i < 5; i++) {
-          if (!container) break;
-          const buttons = container.querySelectorAll("button");
-          if (buttons.length >= 2) {
-            console.log(
-              "[TripProfile] Found",
-              searchText,
-              "container with",
-              buttons.length,
-              "buttons"
+  // STEP 3: Find stepper pairs by walking up from the label text.
+  function findStepperNearLabel(root, labelPattern) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (labelPattern.test(node.textContent.trim())) {
+        let el = node.parentElement;
+        for (let i = 0; i < 6; i++) {
+          if (!el || el === root) break;
+          const btns = Array.from(el.querySelectorAll("button")).filter((b) => {
+            const txt = b.textContent.trim().toLowerCase();
+            return (
+              ![
+                "done",
+                "close",
+                "apply",
+                "search",
+                "cancel",
+                "ok",
+                "add another room",
+                "add another",
+                "save",
+              ].includes(txt) && txt.length < 20
             );
+          });
+          if (btns.length >= 2) {
             return {
-              decrease: buttons[0],
-              increase: buttons[buttons.length - 1],
+              decrease: btns[0],
+              increase: btns[btns.length - 1],
+              label: node.textContent.trim(),
             };
           }
-          container = container.parentElement;
+          el = el.parentElement;
         }
       }
     }
     return null;
   }
 
-  const adultStepper =
-    getSteppersNearText("Adults") || getSteppersNearText("Adult");
-  const childStepper =
-    getSteppersNearText("Children") || getSteppersNearText("Child");
+  const adultStepper = findStepperNearLabel(container, /^adults?$/i);
+  const childStepper = findStepperNearLabel(container, /^children$|^child$/i);
 
-  console.log("[TripProfile] Steppers:", {
-    adult: !!adultStepper,
-    child: !!childStepper,
+  console.log("[TripProfile] Steppers found:", {
+    adults: !!adultStepper,
+    children: !!childStepper,
+    adultLabel: adultStepper?.label,
+    childLabel: childStepper?.label,
   });
 
-  if (!adultStepper && !childStepper) {
-    if (stepperButtons.length >= 6) {
-      console.log("[TripProfile] Using position-based approach (last 6)");
-      const len = stepperButtons.length;
-      const adultDec = stepperButtons[len - 6];
-      const adultInc = stepperButtons[len - 5];
-      const childDec = stepperButtons[len - 4];
-      const childInc = stepperButtons[len - 3];
-
-      for (let i = 0; i < 8; i++) adultDec.click();
-      await sleep(200);
-      for (let i = 1; i < adults; i++) adultInc.click();
-      await sleep(200);
-      for (let i = 0; i < 8; i++) childDec.click();
-      await sleep(200);
-      for (let i = 0; i < children; i++) childInc.click();
-      await sleep(600);
-
-      showToast(`Filled: ${adults} adults, ${children} children`);
-      return true;
+  // STEP 4: Reset to floor, then increment to target.
+  async function fillStepper(stepper, targetCount, minimum = 0) {
+    if (!stepper) return false;
+    for (let i = 0; i < 10; i++) {
+      stepper.decrease.click();
+      await sleep(50);
     }
-    showToast("Could not find guest fields");
-    return false;
+    await sleep(300);
+    const clicksNeeded = Math.max(0, targetCount - minimum);
+    for (let i = 0; i < clicksNeeded; i++) {
+      stepper.increase.click();
+      await sleep(100);
+    }
+    await sleep(300);
+    return true;
   }
 
-  if (adultStepper) {
-    for (let i = 0; i < 8; i++) adultStepper.decrease.click();
-    await sleep(300);
-    for (let i = 1; i < adults; i++) adultStepper.increase.click();
-    await sleep(300);
-  }
+  const adultFilled = await fillStepper(adultStepper, adults, 1);
+  const childFilled = await fillStepper(childStepper, children, 0);
 
-  if (childStepper) {
-    for (let i = 0; i < 8; i++) childStepper.decrease.click();
-    await sleep(300);
-    for (let i = 0; i < children; i++) childStepper.increase.click();
-    await sleep(800);
-  }
+  // STEP 5: Fill child age dropdowns (rendered after children added).
+  if (children > 0 && Array.isArray(childAges) && childAges.length > 0) {
+    await sleep(1000);
 
-  await sleep(500);
-  const allSelects = Array.from(document.querySelectorAll("select"));
-  allSelects.forEach((select, i) => {
-    if (childAges[i] !== undefined) {
-      select.value = String(childAges[i]);
+    const allSelects = Array.from(container.querySelectorAll("select"));
+    const ageSelects = allSelects.filter((s) => {
+      const label =
+        s.getAttribute("aria-label") ||
+        s.getAttribute("name") ||
+        s.id ||
+        s.closest("[class]")?.textContent ||
+        "";
+      return /age/i.test(label) || allSelects.length <= children;
+    });
+    console.log("[TripProfile] Age selects:", ageSelects.length);
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      "value"
+    ).set;
+
+    for (let i = 0; i < ageSelects.length; i++) {
+      if (childAges[i] === undefined) continue;
+      const select = ageSelects[i];
+      const age = String(childAges[i]);
+
+      select.value = age;
       select.dispatchEvent(new Event("change", { bubbles: true }));
+      await sleep(100);
+
+      if (select.value !== age && nativeSetter) {
+        nativeSetter.call(select, age);
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      await sleep(150);
+      console.log(
+        "[TripProfile] Age",
+        i,
+        "target:",
+        age,
+        "result:",
+        select.value
+      );
     }
-  });
-
-  showToast(
-    adultStepper
-      ? `Filled: ${adults} adults, ${children} children`
-      : "Could not find guest fields — try opening the picker first"
-  );
-
-  return !!(adultStepper || childStepper);
-}
-
-async function fillGoogleHotels(profile) {
-  const { adults, children } = profile.autoFillPayload;
-  const travelersBtn = document.querySelector('[data-label="Travelers"]');
-  if (!travelersBtn) return false;
-  travelersBtn.click();
-  await sleep(600);
-
-  const increaseButtons = document.querySelectorAll(
-    '[aria-label*="Increase"], button[data-label*="increase"]'
-  );
-  if (increaseButtons.length >= 2) {
-    for (let i = 0; i < 10; i++) increaseButtons[0].click();
-    for (let i = 0; i < adults; i++) increaseButtons[0].click();
-    await sleep(200);
-    for (let i = 0; i < children; i++) increaseButtons[1].click();
   }
 
-  return true;
+  // STEP 6: Close the picker.
+  await sleep(400);
+  const closeButton = Array.from(container.querySelectorAll("button")).find(
+    (b) => /^done$|^apply$|^search$|^close$/i.test(b.textContent.trim())
+  );
+  if (closeButton) {
+    closeButton.click();
+    console.log("[TripProfile] Closed picker");
+  }
+
+  const success = adultFilled || childFilled;
+  if (success) {
+    showToast(
+      `Filled: ${adults} adults, ${children} children` +
+        (Array.isArray(childAges) && childAges.length > 0
+          ? `, ages ${childAges.join(", ")}`
+          : "")
+    );
+  } else {
+    showToast("Could not auto-fill — use the profile card to fill manually");
+  }
+
+  return success;
 }
 
-const API_BASE = "https://travelcompaniontool.replit.app/api";
-
+// ─── Review badging (unchanged) ───────────────────────────────────────────
 function detectSource(hostname) {
   if (hostname.includes("google.com")) return "google";
-  /* `/reviews/score` only accepts "tripadvisor" | "google" — default to google for everything else */
+  // `/reviews/score` only accepts "tripadvisor" | "google" — default to google.
   return "google";
 }
 
@@ -332,7 +269,9 @@ async function scoreAndBadgeReviews(profile) {
   if (!reviewEls.length) return;
 
   const reviews = Array.from(reviewEls).map((el) => el.textContent.trim());
-  const propertyId = encodeURIComponent(window.location.pathname + window.location.search);
+  const propertyId = encodeURIComponent(
+    window.location.pathname + window.location.search
+  );
   const source = detectSource(window.location.hostname);
 
   let scored;
@@ -352,7 +291,6 @@ async function scoreAndBadgeReviews(profile) {
   reviewEls.forEach((el, i) => {
     const score = scored[i];
     if (!score) return;
-
     const topTags = (score.tags || []).slice(0, 2);
     const badge = document.createElement("span");
     badge.textContent = `★ ${score.luxuryValueScore}/10${topTags.length ? " · " + topTags.join(", ") : ""}`;
@@ -386,30 +324,7 @@ async function attemptAutoFill({ manual = false } = {}) {
     if (manual) showToast("No profile yet — open the extension and re-sync.");
     return false;
   }
-
-  const hostname = window.location.hostname;
-  const { adults, children } = profile.autoFillPayload;
-
-  let filled = false;
-  if (hostname.includes("expedia.com")) {
-    filled = await fillExpedia(profile);
-  } else if (hostname.includes("booking.com")) {
-    filled = await fillBooking(profile);
-  } else if (hostname.includes("google.com")) {
-    filled = await fillGoogleHotels(profile);
-  } else if (manual) {
-    showToast("Auto-fill not supported on this site.");
-    return false;
-  }
-
-  if (filled) {
-    showToast(
-      `TripProfile filled — ${adults} adult${adults !== 1 ? "s" : ""}, ${children} kid${children !== 1 ? "s" : ""}`
-    );
-  } else if (manual) {
-    showToast("Couldn't find the guest picker on this page.");
-  }
-  return filled;
+  return universalFill(profile);
 }
 
 async function run() {
