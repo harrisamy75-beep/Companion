@@ -98,23 +98,32 @@ async function universalFill(profile) {
     for (const el of candidates) {
       const text = el.innerText || "";
       const btns = el.querySelectorAll("button");
-      if (
-        /adults?/i.test(text) &&
-        /children|child/i.test(text) &&
-        btns.length >= 2 &&
-        el.offsetHeight > 0 &&
-        el.offsetWidth > 0
-      ) {
-        if (
-          !container ||
-          el.querySelectorAll("*").length <
-            container.querySelectorAll("*").length
-        ) {
+
+      if (!/adults?/i.test(text)) continue;
+      if (!/children|child/i.test(text)) continue;
+      if (el.offsetHeight === 0) continue;
+
+      console.log("[TripProfile] Candidate:", {
+        tag: el.tagName,
+        class: (el.className || "").toString().slice(0, 40),
+        buttons: btns.length,
+        height: el.offsetHeight,
+        text: text.slice(0, 60).replace(/\n/g, " "),
+      });
+
+      if (btns.length >= 2) {
+        if (!container || el.innerHTML.length < container.innerHTML.length) {
           container = el;
         }
       }
     }
-    if (container) break;
+    if (container) {
+      console.log("[TripProfile] Selected container:", {
+        class: (container.className || "").toString().slice(0, 40),
+        buttons: container.querySelectorAll("button").length,
+      });
+      break;
+    }
 
     // Halfway through, dump candidates so we can debug what's on the page.
     if (!container && attempt === 2) {
