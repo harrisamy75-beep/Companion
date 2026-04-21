@@ -81,12 +81,13 @@ async function universalFill(profile) {
     if (el) {
       el.click();
       console.log("[TripProfile] Opened with:", sel);
-      await sleep(800);
+      await sleep(1200); // Longer initial wait so the picker fully mounts.
       break;
     }
   }
 
   // STEP 2: Find the picker container — wait up to 3s for it to appear.
+  // Pick the SMALLEST element that contains both labels (most specific).
   let container = null;
   for (let attempt = 0; attempt < 6; attempt++) {
     const candidates = Array.from(
@@ -101,14 +102,41 @@ async function universalFill(profile) {
         /adults?/i.test(text) &&
         /children|child/i.test(text) &&
         btns.length >= 2 &&
-        btns.length <= 20 &&
-        el.offsetHeight > 0
+        el.offsetHeight > 0 &&
+        el.offsetWidth > 0
       ) {
-        container = el;
-        break;
+        if (
+          !container ||
+          el.querySelectorAll("*").length <
+            container.querySelectorAll("*").length
+        ) {
+          container = el;
+        }
       }
     }
     if (container) break;
+
+    // Halfway through, dump candidates so we can debug what's on the page.
+    if (!container && attempt === 2) {
+      const withAdults = Array.from(document.querySelectorAll("*"))
+        .filter(
+          (el) =>
+            el.children.length < 20 &&
+            /adults?/i.test(el.innerText || "") &&
+            el.offsetHeight > 0
+        )
+        .slice(0, 5);
+      console.log(
+        "[TripProfile] Elements with Adults text:",
+        withAdults.map((el) => ({
+          tag: el.tagName,
+          class: (el.className || "").toString().slice(0, 30),
+          buttons: el.querySelectorAll("button").length,
+          text: (el.innerText || "").slice(0, 50),
+        }))
+      );
+    }
+
     await sleep(500);
   }
 
