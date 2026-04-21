@@ -51,6 +51,61 @@ function sleep(ms) {
 
 const API_BASE = "https://travelcompaniontool.replit.app/api";
 
+async function findPickerContainer() {
+  for (let i = 0; i < 8; i++) {
+    await sleep(400);
+
+    // Try known picker containers first.
+    const known = [
+      document.querySelector(
+        '[data-stid="rooms-traveler-selector-menu-container"]'
+      ),
+      document.querySelector('[data-testid="occupancy-popup"]'),
+      document.querySelector('[class*="TravelerSelector"]'),
+      document.querySelector('[class*="traveler-selector"]'),
+      document.querySelector('[class*="GuestPicker"]'),
+      document.querySelector('[class*="guest-picker"]'),
+      document.querySelector('[class*="OccupancyForm"]'),
+      document.querySelector('[class*="occupancy-form"]'),
+    ].filter(Boolean);
+
+    if (known.length > 0) {
+      console.log(
+        "[TripProfile] Known container:",
+        known[0].getAttribute("data-stid") ||
+          (known[0].className || "").toString().slice(0, 40)
+      );
+      return known[0];
+    }
+
+    // Fallback: walk up from each button to find a container that
+    // mentions Adults + Children and has stepper-shaped buttons inside.
+    const allButtons = document.querySelectorAll("button");
+    for (const btn of allButtons) {
+      const parent = btn.closest("div, section, form");
+      if (!parent) continue;
+      const text = parent.textContent || "";
+      const parentBtns = parent.querySelectorAll("button");
+      if (
+        /adults?/i.test(text) &&
+        /children/i.test(text) &&
+        parentBtns.length >= 2 &&
+        parentBtns.length <= 20 &&
+        parent.offsetParent !== null
+      ) {
+        console.log(
+          "[TripProfile] Fallback container found:",
+          (parent.className || "").toString().slice(0, 40),
+          "buttons:",
+          parentBtns.length
+        );
+        return parent;
+      }
+    }
+  }
+  return null;
+}
+
 async function universalFill(profile) {
   const { adults, children, childAges } = profile.autoFillPayload;
 
@@ -76,78 +131,30 @@ async function universalFill(profile) {
     '[aria-label*="passenger" i]',
   ];
 
-  for (const sel of triggerPatterns) {
-    const el = document.querySelector(sel);
-    if (el) {
-      el.click();
-      console.log("[TripProfile] Opened with:", sel);
-      await sleep(1200); // Longer initial wait so the picker fully mounts.
-      break;
-    }
-  }
+  // Don't toggle a picker that's already open — we'd close it.
+  const alreadyOpen = document.querySelector(
+    '[data-stid="rooms-traveler-selector-menu-container"],' +
+      '[data-testid="occupancy-popup"],' +
+      '[class*="TravelerSelector"]'
+  );
 
-  // STEP 2: Find the picker container — wait up to 3s for it to appear.
-  // Pick the SMALLEST element that contains both labels (most specific).
-  let container = null;
-  for (let attempt = 0; attempt < 6; attempt++) {
-    const candidates = Array.from(
-      document.querySelectorAll(
-        'div, section, form, [role="dialog"], [role="group"]'
-      )
-    );
-    for (const el of candidates) {
-      const text = el.innerText || "";
-      const btns = el.querySelectorAll("button");
-
-      if (!/adults?/i.test(text)) continue;
-      if (!/children|child/i.test(text)) continue;
-      if (el.offsetHeight === 0) continue;
-
-      console.log("[TripProfile] Candidate:", {
-        tag: el.tagName,
-        class: (el.className || "").toString().slice(0, 40),
-        buttons: btns.length,
-        height: el.offsetHeight,
-        text: text.slice(0, 60).replace(/\n/g, " "),
-      });
-
-      if (btns.length >= 2) {
-        if (!container || el.innerHTML.length < container.innerHTML.length) {
-          container = el;
-        }
+  if (!alreadyOpen) {
+    for (const sel of triggerPatterns) {
+      const el = document.querySelector(sel);
+      if (el) {
+        el.click();
+        console.log("[TripProfile] Opened picker with:", sel);
+        await sleep(1200);
+        break;
       }
     }
-    if (container) {
-      console.log("[TripProfile] Selected container:", {
-        class: (container.className || "").toString().slice(0, 40),
-        buttons: container.querySelectorAll("button").length,
-      });
-      break;
-    }
-
-    // Halfway through, dump candidates so we can debug what's on the page.
-    if (!container && attempt === 2) {
-      const withAdults = Array.from(document.querySelectorAll("*"))
-        .filter(
-          (el) =>
-            el.children.length < 20 &&
-            /adults?/i.test(el.innerText || "") &&
-            el.offsetHeight > 0
-        )
-        .slice(0, 5);
-      console.log(
-        "[TripProfile] Elements with Adults text:",
-        withAdults.map((el) => ({
-          tag: el.tagName,
-          class: (el.className || "").toString().slice(0, 30),
-          buttons: el.querySelectorAll("button").length,
-          text: (el.innerText || "").slice(0, 50),
-        }))
-      );
-    }
-
-    await sleep(500);
+  } else {
+    console.log("[TripProfile] Picker already open");
   }
+
+  // STEP 2: Find the picker container — try known selectors first, then
+  // fall back to "any container near Adults+Children with steppers".
+  const container = await findPickerContainer();
 
   if (!container) {
     console.log("[TripProfile] No picker found");

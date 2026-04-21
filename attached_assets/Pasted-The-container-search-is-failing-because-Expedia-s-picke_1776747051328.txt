@@ -1,0 +1,77 @@
+The container search is failing because Expedia's picker 
+uses a shadowDOM or the elements have no innerText when 
+queried from the content script context.
+
+Replace the container search with a direct approach 
+using the known Expedia data-stid:
+
+async function findPickerContainer() {
+  // Wait for picker to be visible
+  for (let i = 0; i < 8; i++) {
+    await sleep(400);
+    
+    // Try known containers first
+    const known = [
+      document.querySelector('[data-stid="rooms-traveler-selector-menu-container"]'),
+      document.querySelector('[data-testid="occupancy-popup"]'),
+      document.querySelector('[class*="TravelerSelector"]'),
+      document.querySelector('[class*="traveler-selector"]'),
+      document.querySelector('[class*="GuestPicker"]'),
+      document.querySelector('[class*="guest-picker"]'),
+      document.querySelector('[class*="OccupancyForm"]'),
+      document.querySelector('[class*="occupancy-form"]'),
+    ].filter(Boolean);
+    
+    if (known.length > 0) {
+      console.log('[TripProfile] Known container:', 
+        known[0].getAttribute('data-stid') || 
+        known[0].className?.slice(0,40));
+      return known[0];
+    }
+    
+    // Fallback: find by button count near Adults text
+    const allButtons = document.querySelectorAll('button');
+    for (const btn of allButtons) {
+      const parent = btn.closest('div, section, form');
+      if (!parent) continue;
+      const text = parent.textContent || '';
+      const parentBtns = parent.querySelectorAll('button');
+      if (/adults?/i.test(text) && 
+          /children/i.test(text) && 
+          parentBtns.length >= 2 &&
+          parentBtns.length <= 20 &&
+          parent.offsetParent !== null) {
+        console.log('[TripProfile] Fallback container found');
+        return parent;
+      }
+    }
+  }
+  return null;
+}
+
+Also - the trigger click may be CLOSING an already-open 
+picker. Add a check:
+
+// Only click trigger if picker is NOT already open
+const alreadyOpen = document.querySelector(
+  '[data-stid="rooms-traveler-selector-menu-container"],' +
+  '[data-testid="occupancy-popup"],' +
+  '[class*="TravelerSelector"][style*="display: block"]'
+);
+
+if (!alreadyOpen) {
+  for (const sel of triggerPatterns) {
+    const el = document.querySelector(sel);
+    if (el) {
+      el.click();
+      console.log('[TripProfile] Opened picker with:', sel);
+      await sleep(1200);
+      break;
+    }
+  }
+} else {
+  console.log('[TripProfile] Picker already open');
+}
+
+Re-zip:
+cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip .
