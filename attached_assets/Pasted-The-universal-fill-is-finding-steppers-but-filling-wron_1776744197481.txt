@@ -1,0 +1,126 @@
+The universal fill is finding steppers but filling wrong fields.
+Log shows "Age selects: 0" and it's setting 2 rooms instead 
+of 2 children.
+
+The findStepperNearLabel function needs to be more precise.
+The issue is it's matching partial text — "Children" label 
+is being found but the wrong container is returned.
+
+Fix:
+
+1. Make the label matching more strict — only match if the 
+   text node is a DIRECT label for the stepper, not just 
+   anywhere in the container:
+
+function findStepperNearLabel(container, labelPattern) {
+  const walker = document.createTreeWalker(
+    container,
+    NodeFilter.SHOW_TEXT,
+    null
+  );
+  
+  let node;
+  while (node = walker.nextNode()) {
+    const text = node.textContent.trim();
+    if (!labelPattern.test(text)) continue;
+    
+    // Only match short text nodes that are clearly labels
+    if (text.length > 20) continue;
+    
+    console.log('[TripProfile] Found label:', text, 
+      'parent:', node.parentElement?.tagName,
+      'parentClass:', node.parentElement?.className?.slice(0,30));
+    
+    // Walk up max 4 levels to find stepper buttons
+    let el = node.parentElement;
+    for (let i = 0; i < 4; i++) {
+      if (!el || el === container) break;
+      const btns = Array.from(el.querySelectorAll('button'))
+        .filter(b => {
+          const txt = b.textContent.trim().toLowerCase();
+          // Must be stepper buttons not action buttons
+          return !['done', 'close', 'apply', 'search', 
+                   'cancel', 'ok', 'add another room',
+                   'add another', 'save', 'update'].includes(txt) &&
+                 txt.length < 20 &&
+                 // Must have +/- or increment/decrement signals
+                 (b.getAttribute('aria-label')?.match(/increase|decrease|add|remove|plus|minus/i) ||
+                  b.textContent.trim().match(/^[+\-−+]$/) ||
+                  b.className?.match(/increment|decrement|stepper|increase|decrease/i));
+        });
+      
+      if (btns.length >= 2) {
+        console.log('[TripProfile] Found stepper for', text, 
+          'buttons:', btns.map(b => b.getAttribute('aria-label') || b.textContent.trim()));
+        return {
+          decrease: btns[0],
+          increase: btns[btns.length - 1],
+          label: text
+        };
+      }
+      el = el.parentElement;
+    }
+  }
+  return null;
+}
+
+2. Add specific Expedia handling as a fast path:
+   Before the universal approach, try Expedia-specific:
+
+if (hostname.includes('expedia.com')) {
+  const expediaContainer = document.querySelector(
+    '[data-stid="rooms-traveler-selector-menu-container"]'
+  );
+  if (expediaContainer) {
+    console.log('[TripProfile] Using Expedia fast path');
+    const btns = Array.from(expediaContainer.querySelectorAll('button'))
+      .filter(b => {
+        const txt = b.textContent.trim();
+        return txt !== 'Done' && txt !== 'Add another room' && 
+               !txt.includes('room');
+      });
+    console.log('[TripProfile] Expedia filtered buttons:', 
+      btns.map(b => b.textContent.trim().slice(0,15)));
+    
+    // Should be: adultDec, adultInc, childDec, childInc
+    if (btns.length >= 4) {
+      for (let i = 0; i < 8; i++) btns[0].click();
+      await sleep(200);
+      for (let i = 1; i < adults; i++) btns[1].click();
+      await sleep(200);
+      for (let i = 0; i < 8; i++) btns[2].click();
+      await sleep(200);
+      for (let i = 0; i < children; i++) btns[3].click();
+      await sleep(1200);
+      
+      // Child ages
+      const ageSelects = Array.from(
+        expediaContainer.querySelectorAll('select')
+      );
+      console.log('[TripProfile] Expedia age selects:', ageSelects.length);
+      for (let i = 0; i < ageSelects.length; i++) {
+        if (childAges[i] !== undefined) {
+          const nativeSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLSelectElement.prototype, 'value'
+          ).set;
+          nativeSetter?.call(ageSelects[i], String(childAges[i]));
+          ageSelects[i].dispatchEvent(new Event('change', {bubbles: true}));
+          await sleep(200);
+        }
+      }
+      
+      const doneBtn = Array.from(expediaContainer.querySelectorAll('button'))
+        .find(b => b.textContent.trim() === 'Done');
+      if (doneBtn) { await sleep(300); doneBtn.click(); }
+      
+      showToast(`Filled: ${adults} adults, ${children} children`);
+      return true;
+    }
+  }
+}
+
+3. After the Expedia fast path, fall through to universal 
+   for all other sites.
+
+Re-zip:
+cd artifacts/browser-extension && zip -r /home/runner/workspace/TripProfile-latest.zip .

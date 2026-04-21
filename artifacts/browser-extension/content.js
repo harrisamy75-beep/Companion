@@ -54,6 +54,85 @@ const API_BASE = "https://travelcompaniontool.replit.app/api";
 
 async function universalFill(profile) {
   const { adults, children, childAges } = profile.autoFillPayload;
+  const hostname = window.location.hostname;
+
+  // ─── EXPEDIA FAST PATH ──────────────────────────────────────────────────
+  // The universal label-walker can mistake "Rooms" for a stepper on Expedia.
+  // We know Expedia's container and button order exactly, so use it directly.
+  if (hostname.includes("expedia.com")) {
+    // Open the picker first.
+    const trigger =
+      document.querySelector('[data-stid="open-room-picker"]') ||
+      document.querySelector('[data-stid="open-hotel-guest-picker"]');
+    if (trigger) {
+      trigger.click();
+      await sleep(800);
+    }
+
+    const expediaContainer = document.querySelector(
+      '[data-stid="rooms-traveler-selector-menu-container"]'
+    );
+    if (expediaContainer) {
+      console.log("[TripProfile] Using Expedia fast path");
+      const btns = Array.from(
+        expediaContainer.querySelectorAll("button")
+      ).filter((b) => {
+        const txt = b.textContent.trim();
+        return (
+          txt !== "Done" &&
+          txt !== "Add another room" &&
+          !txt.toLowerCase().includes("room")
+        );
+      });
+      console.log(
+        "[TripProfile] Expedia filtered buttons:",
+        btns.map((b) => b.textContent.trim().slice(0, 15))
+      );
+
+      // Should be: adultDec, adultInc, childDec, childInc
+      if (btns.length >= 4) {
+        for (let i = 0; i < 8; i++) btns[0].click();
+        await sleep(200);
+        for (let i = 1; i < adults; i++) btns[1].click();
+        await sleep(200);
+        for (let i = 0; i < 8; i++) btns[2].click();
+        await sleep(200);
+        for (let i = 0; i < children; i++) btns[3].click();
+        await sleep(1200);
+
+        // Child ages
+        const ageSelects = Array.from(
+          expediaContainer.querySelectorAll("select")
+        );
+        console.log("[TripProfile] Expedia age selects:", ageSelects.length);
+        const nativeSetter = Object.getOwnPropertyDescriptor(
+          window.HTMLSelectElement.prototype,
+          "value"
+        ).set;
+        for (let i = 0; i < ageSelects.length; i++) {
+          if (childAges[i] === undefined) continue;
+          nativeSetter?.call(ageSelects[i], String(childAges[i]));
+          ageSelects[i].dispatchEvent(
+            new Event("change", { bubbles: true })
+          );
+          await sleep(200);
+        }
+
+        const doneBtn = Array.from(
+          expediaContainer.querySelectorAll("button")
+        ).find((b) => b.textContent.trim() === "Done");
+        if (doneBtn) {
+          await sleep(300);
+          doneBtn.click();
+        }
+
+        showToast(`Filled: ${adults} adults, ${children} children`);
+        return true;
+      }
+    }
+    // If the fast path bailed (no container, wrong button count), fall
+    // through to the universal engine below.
+  }
 
   // STEP 1: Find and open the guest/traveler picker.
   const triggerSelectors = [
@@ -116,39 +195,75 @@ async function universalFill(profile) {
   );
 
   // STEP 3: Find stepper pairs by walking up from the label text.
+  // Strict matching — short label nodes only, and buttons must look like
+  // steppers (aria/text/class signals), not action buttons.
   function findStepperNearLabel(root, labelPattern) {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
     let node;
     while ((node = walker.nextNode())) {
-      if (labelPattern.test(node.textContent.trim())) {
-        let el = node.parentElement;
-        for (let i = 0; i < 6; i++) {
-          if (!el || el === root) break;
-          const btns = Array.from(el.querySelectorAll("button")).filter((b) => {
-            const txt = b.textContent.trim().toLowerCase();
-            return (
-              ![
-                "done",
-                "close",
-                "apply",
-                "search",
-                "cancel",
-                "ok",
-                "add another room",
-                "add another",
-                "save",
-              ].includes(txt) && txt.length < 20
-            );
-          });
-          if (btns.length >= 2) {
-            return {
-              decrease: btns[0],
-              increase: btns[btns.length - 1],
-              label: node.textContent.trim(),
-            };
+      const text = node.textContent.trim();
+      if (!labelPattern.test(text)) continue;
+      // Only match short text nodes that are clearly labels.
+      if (text.length > 20) continue;
+
+      console.log(
+        "[TripProfile] Found label:",
+        text,
+        "parent:",
+        node.parentElement?.tagName,
+        "parentClass:",
+        node.parentElement?.className?.slice(0, 30)
+      );
+
+      // Walk up max 4 levels to find stepper buttons.
+      let el = node.parentElement;
+      for (let i = 0; i < 4; i++) {
+        if (!el || el === root) break;
+        const btns = Array.from(el.querySelectorAll("button")).filter((b) => {
+          const txt = b.textContent.trim().toLowerCase();
+          if (
+            [
+              "done",
+              "close",
+              "apply",
+              "search",
+              "cancel",
+              "ok",
+              "add another room",
+              "add another",
+              "save",
+              "update",
+            ].includes(txt)
+          ) {
+            return false;
           }
-          el = el.parentElement;
+          if (txt.length >= 20) return false;
+          // Must have stepper signals on aria, text, or class.
+          const aria = b.getAttribute("aria-label") || "";
+          const cls = b.className || "";
+          return (
+            /increase|decrease|add|remove|plus|minus/i.test(aria) ||
+            /^[+\-−]$/.test(b.textContent.trim()) ||
+            /increment|decrement|stepper|increase|decrease/i.test(cls)
+          );
+        });
+
+        if (btns.length >= 2) {
+          console.log(
+            "[TripProfile] Found stepper for",
+            text,
+            "buttons:",
+            btns.map(
+              (b) => b.getAttribute("aria-label") || b.textContent.trim()
+            )
+          );
+          return {
+            decrease: btns[0],
+            increase: btns[btns.length - 1],
+            label: text,
+          };
         }
+        el = el.parentElement;
       }
     }
     return null;
