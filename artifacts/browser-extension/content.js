@@ -46,278 +46,120 @@ function sleep(ms) {
 }
 
 // ─── UNIVERSAL FILL ENGINE ─────────────────────────────────────────────────
-// Finds the pattern — "a container with Adults and Children labels and stepper
-// buttons" — rather than targeting specific sites. Works on Booking, Expedia,
-// Hotels.com, Marriott, Hyatt, and any travel site that follows the pattern.
+// Pattern-based: finds any container with Adults/Children labels and steppers.
+// No site-specific code. Works on any travel site that follows the pattern.
 
 const API_BASE = "https://travelcompaniontool.replit.app/api";
 
 async function universalFill(profile) {
   const { adults, children, childAges } = profile.autoFillPayload;
-  const hostname = window.location.hostname;
 
-  // ─── EXPEDIA FAST PATH ──────────────────────────────────────────────────
-  // The universal label-walker can mistake "Rooms" for a stepper on Expedia.
-  // We know Expedia's container and button order exactly, so use it directly.
-  if (hostname.includes("expedia.com")) {
-    // Open the picker first.
-    const trigger =
-      document.querySelector('[data-stid="open-room-picker"]') ||
-      document.querySelector('[data-stid="open-hotel-guest-picker"]');
-    if (trigger) {
-      trigger.click();
-      await sleep(800);
-    }
+  console.log("[TripProfile] Universal fill starting:", {
+    adults,
+    children,
+    childAges,
+  });
 
-    const expediaContainer = document.querySelector(
-      '[data-stid="rooms-traveler-selector-menu-container"]'
-    );
-    if (expediaContainer) {
-      // Wait for buttons to actually render inside the container.
-      let allBtns = [];
-      for (let attempt = 0; attempt < 5; attempt++) {
-        allBtns = Array.from(expediaContainer.querySelectorAll("button"));
-        if (allBtns.length >= 4) break;
-        await sleep(400);
-      }
-      console.log(
-        "[TripProfile] Using Expedia fast path. Total buttons:",
-        allBtns.length,
-        allBtns.map((b) => b.textContent.trim().slice(0, 15))
-      );
-
-      const btns = allBtns.filter((b) => {
-        const txt = b.textContent.trim().toLowerCase();
-        const aria = (b.getAttribute("aria-label") || "").toLowerCase();
-        // Exclude action buttons by text or aria, but keep stepper buttons
-        // even when their visible text mentions "room" (e.g. "+ Add room").
-        if (txt === "done" || aria === "done") return false;
-        if (txt.includes("add another") || aria.includes("add another"))
-          return false;
-        if (txt === "remove room" || aria === "remove room") return false;
-        return true;
-      });
-      console.log(
-        "[TripProfile] Expedia filtered buttons:",
-        btns.map((b) => b.textContent.trim().slice(0, 15) || b.getAttribute("aria-label"))
-      );
-
-      // Should be: adultDec, adultInc, childDec, childInc
-      if (btns.length >= 4) {
-        // Reset adults to floor (1), then climb to target.
-        for (let i = 0; i < 10; i++) {
-          btns[0].click();
-          await sleep(80);
-        }
-        await sleep(400);
-        for (let i = 1; i < adults; i++) {
-          btns[1].click();
-          await sleep(400);
-        }
-        await sleep(300);
-
-        // Reset children to 0, then add exactly `children` clicks.
-        for (let i = 0; i < 10; i++) {
-          btns[2].click();
-          await sleep(80);
-        }
-        await sleep(400);
-        for (let i = 0; i < children; i++) {
-          btns[3].click();
-          await sleep(400); // longer per-click so React commits each step
-        }
-        await sleep(1500); // wait for age dropdowns to render
-
-        // Aggressively retry finding age selects — Expedia mounts them late.
-        let ageSelects = [];
-        for (let attempt = 0; attempt < 5; attempt++) {
-          ageSelects = Array.from(document.querySelectorAll("select"));
-          console.log(
-            "[TripProfile] Age select attempt",
-            attempt,
-            ":",
-            ageSelects.length
-          );
-          if (ageSelects.length >= children) break;
-          await sleep(600);
-        }
-        console.log(
-          "[TripProfile] Final age selects:",
-          ageSelects.length,
-          ageSelects.map((s) => ({
-            id: s.id,
-            name: s.name,
-            aria: s.getAttribute("aria-label"),
-            options: s.options.length,
-          }))
-        );
-
-        const nativeSetter = Object.getOwnPropertyDescriptor(
-          window.HTMLSelectElement.prototype,
-          "value"
-        ).set;
-        for (let i = 0; i < ageSelects.length; i++) {
-          if (childAges[i] === undefined) continue;
-          const select = ageSelects[i];
-          const age = String(childAges[i]);
-          nativeSetter?.call(select, age);
-          select.dispatchEvent(new Event("change", { bubbles: true }));
-          await sleep(300);
-          console.log(
-            "[TripProfile] Age",
-            i,
-            "set to:",
-            age,
-            "actual:",
-            select.value
-          );
-        }
-
-        const doneBtn = Array.from(
-          expediaContainer.querySelectorAll("button")
-        ).find((b) => b.textContent.trim() === "Done");
-        if (doneBtn) {
-          await sleep(300);
-          doneBtn.click();
-        }
-
-        showToast(`Filled: ${adults} adults, ${children} children`);
-        return true;
-      }
-    }
-    // If the fast path bailed (no container, wrong button count), fall
-    // through to the universal engine below.
-  }
-
-  // STEP 1: Find and open the guest/traveler picker.
-  const triggerSelectors = [
-    '[data-stid="open-room-picker"]',
-    '[data-testid="occupancy-config"]',
-    '[data-testid="travelers-field"]',
-    'button[aria-label*="traveler" i]',
-    'button[aria-label*="guest" i]',
-    'button[aria-label*="passenger" i]',
-    'button[aria-label*="occupancy" i]',
-    '[class*="traveler-selector"]',
-    '[class*="guest-picker"]',
-    '[class*="occupancy"]',
-    '[class*="pax-selector"]',
+  // STEP 1: Try to open the picker.
+  const triggerPatterns = [
+    '[data-stid*="room-picker"]',
+    '[data-stid*="traveler"]',
+    '[data-stid*="guest"]',
+    '[data-testid*="occupancy"]',
+    '[data-testid*="traveler"]',
+    '[data-testid*="guest"]',
     '[id*="traveler"]',
     '[id*="guest"]',
+    '[id*="occupancy"]',
+    '[aria-label*="traveler" i]',
+    '[aria-label*="guest" i]',
+    '[aria-label*="passenger" i]',
   ];
 
-  for (const sel of triggerSelectors) {
+  for (const sel of triggerPatterns) {
     const el = document.querySelector(sel);
-    if (el && !el.getAttribute("aria-expanded")) {
+    if (el) {
       el.click();
+      console.log("[TripProfile] Opened with:", sel);
       await sleep(800);
-      console.log("[TripProfile] Opened picker with:", sel);
       break;
     }
   }
 
-  // STEP 2: Find the picker container (has both Adults and Children labels).
-  async function findPickerContainer() {
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const allEls = Array.from(
-        document.querySelectorAll(
-          'div, section, form, [role="dialog"], [role="listbox"]'
-        )
-      );
-      for (const el of allEls) {
-        const text = el.innerText || "";
-        const hasAdults = /adults?/i.test(text);
-        const hasChildren = /children|child/i.test(text);
-        const buttonCount = el.querySelectorAll("button").length;
-        if (hasAdults && hasChildren && buttonCount >= 2 && buttonCount < 30) {
-          return el;
-        }
+  // STEP 2: Find the picker container — wait up to 3s for it to appear.
+  let container = null;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const candidates = Array.from(
+      document.querySelectorAll(
+        'div, section, form, [role="dialog"], [role="group"]'
+      )
+    );
+    for (const el of candidates) {
+      const text = el.innerText || "";
+      const btns = el.querySelectorAll("button");
+      if (
+        /adults?/i.test(text) &&
+        /children|child/i.test(text) &&
+        btns.length >= 2 &&
+        btns.length <= 20 &&
+        el.offsetHeight > 0
+      ) {
+        container = el;
+        break;
       }
-      await sleep(500);
     }
-    return null;
+    if (container) break;
+    await sleep(500);
   }
 
-  const container = await findPickerContainer();
   if (!container) {
-    console.log("[TripProfile] No picker container found");
-    showToast("Open the guest picker first, then try again");
+    console.log("[TripProfile] No picker found");
+    showToast("Open the guest picker first, then click Fill This Page");
     return false;
   }
+
   console.log(
-    "[TripProfile] Found picker container:",
-    container.className?.slice(0, 50)
+    "[TripProfile] Container found:",
+    container.className?.slice(0, 40),
+    "buttons:",
+    container.querySelectorAll("button").length
   );
 
-  // STEP 3: Find stepper pairs by walking up from the label text.
-  // Strict matching — short label nodes only, and buttons must look like
-  // steppers (aria/text/class signals), not action buttons.
-  function findStepperNearLabel(root, labelPattern) {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  // STEP 3: Find the Adults and Children steppers.
+  function findStepperForLabel(labelRegex) {
+    const walker = document.createTreeWalker(
+      container,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
     let node;
     while ((node = walker.nextNode())) {
       const text = node.textContent.trim();
-      if (!labelPattern.test(text)) continue;
-      // Only match short text nodes that are clearly labels.
-      if (text.length > 20) continue;
+      if (!labelRegex.test(text) || text.length > 15) continue;
 
-      console.log(
-        "[TripProfile] Found label:",
-        text,
-        "parent:",
-        node.parentElement?.tagName,
-        "parentClass:",
-        node.parentElement?.className?.slice(0, 30)
-      );
-
-      // Walk up max 4 levels to find stepper buttons.
       let el = node.parentElement;
-      for (let i = 0; i < 4; i++) {
-        if (!el || el === root) break;
-        const btns = Array.from(el.querySelectorAll("button")).filter((b) => {
-          const txt = b.textContent.trim().toLowerCase();
-          if (
-            [
-              "done",
-              "close",
-              "apply",
-              "search",
-              "cancel",
-              "ok",
-              "add another room",
-              "add another",
-              "save",
-              "update",
-            ].includes(txt)
-          ) {
-            return false;
-          }
-          if (txt.length >= 20) return false;
-          if (txt === "remove room") return false;
-          // Must have stepper signals on aria, text, or class.
+      for (let depth = 0; depth < 6; depth++) {
+        if (!el || el === container) break;
+        const btns = Array.from(el.querySelectorAll("button"));
+        const stepperBtns = btns.filter((b) => {
+          const txt = b.textContent.trim();
           const aria = b.getAttribute("aria-label") || "";
-          const cls = typeof b.className === "string" ? b.className : "";
           return (
-            /increase|decrease|add|remove|plus|minus/i.test(aria) ||
-            /^[+\-−]$/.test(b.textContent.trim()) ||
-            /increment|decrement|stepper|increase|decrease|step-input/i.test(cls) ||
-            cls.includes("uitk-step")
+            txt.length <= 3 ||
+            aria.match(/increase|decrease|add|remove|plus|minus/i) ||
+            b.className?.match(/step|increment|decrement/i)
           );
         });
-
-        if (btns.length >= 2) {
+        if (stepperBtns.length >= 2) {
           console.log(
-            "[TripProfile] Found stepper for",
-            text,
-            "buttons:",
-            btns.map(
+            '[TripProfile] Stepper for "' + text + '":',
+            stepperBtns.map(
               (b) => b.getAttribute("aria-label") || b.textContent.trim()
             )
           );
           return {
-            decrease: btns[0],
-            increase: btns[btns.length - 1],
-            label: text,
+            dec: stepperBtns[0],
+            inc: stepperBtns[stepperBtns.length - 1],
           };
         }
         el = el.parentElement;
@@ -326,80 +168,65 @@ async function universalFill(profile) {
     return null;
   }
 
-  const adultStepper = findStepperNearLabel(container, /^adults?$/i);
-  const childStepper = findStepperNearLabel(container, /^children$|^child$/i);
+  const adultStepper = findStepperForLabel(/^adults?$/i);
+  const childStepper = findStepperForLabel(/^children$|^child$/i);
 
-  console.log("[TripProfile] Steppers found:", {
+  console.log("[TripProfile] Steppers:", {
     adults: !!adultStepper,
     children: !!childStepper,
-    adultLabel: adultStepper?.label,
-    childLabel: childStepper?.label,
   });
 
-  // STEP 4: Reset to floor, then increment to target.
-  async function fillStepper(stepper, targetCount, minimum = 0) {
-    if (!stepper) return false;
-    for (let i = 0; i < 10; i++) {
-      stepper.decrease.click();
-      await sleep(50);
-    }
-    await sleep(300);
-    const clicksNeeded = Math.max(0, targetCount - minimum);
-    for (let i = 0; i < clicksNeeded; i++) {
-      stepper.increase.click();
-      await sleep(100);
-    }
-    await sleep(300);
-    return true;
+  if (!adultStepper && !childStepper) {
+    showToast("Could not find guest fields — try opening the picker first");
+    return false;
   }
 
-  const adultFilled = await fillStepper(adultStepper, adults, 1);
-  const childFilled = await fillStepper(childStepper, children, 0);
+  // STEP 4: Fill the steppers.
+  async function setStepper(stepper, target, minimum = 0) {
+    if (!stepper) return;
+    for (let i = 0; i < 10; i++) {
+      stepper.dec.click();
+      await sleep(60);
+    }
+    await sleep(300);
+    const clicks = Math.max(0, target - minimum);
+    for (let i = 0; i < clicks; i++) {
+      stepper.inc.click();
+      await sleep(200);
+    }
+    await sleep(300);
+  }
 
-  // STEP 5: Fill child age dropdowns (rendered after children added).
-  // Search the WHOLE document (not just container) — some sites render the
-  // age dropdowns into a sibling portal. Wait longer for them to mount.
+  await setStepper(adultStepper, adults, 1);
+  await setStepper(childStepper, children, 0);
+
+  // STEP 5: Fill child ages — retry up to 5x.
   if (children > 0 && Array.isArray(childAges) && childAges.length > 0) {
-    await sleep(1500);
-
-    const allSelects = Array.from(document.querySelectorAll("select"));
-    const labelMatches = allSelects.filter((s) => {
-      const label = (
-        s.getAttribute("aria-label") ||
-        s.getAttribute("name") ||
-        s.id ||
-        ""
-      ).toLowerCase();
-      const surrounding =
-        s.closest("[class]")?.textContent?.toLowerCase() || "";
-      return (
-        label.includes("age") ||
-        (surrounding.includes("child") && surrounding.includes("age"))
+    let ageSelects = [];
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await sleep(800);
+      ageSelects = Array.from(document.querySelectorAll("select")).filter(
+        (s) => {
+          const ctx = (
+            (s.getAttribute("aria-label") || "") +
+            " " +
+            (s.getAttribute("name") || "") +
+            " " +
+            s.id +
+            " " +
+            (s.closest("div")?.innerText || "")
+          ).toLowerCase();
+          return ctx.includes("age") || s.options.length >= 10;
+        }
       );
-    });
-    console.log(
-      "[TripProfile] Age selects after wait:",
-      labelMatches.length,
-      labelMatches.map((s) => s.id || s.getAttribute("aria-label"))
-    );
-
-    // Expedia-specific: age selects often live in [class*="child-age"]
-    // wrappers or have id/name containing "age".
-    const expediaAgeSelects = Array.from(
-      document.querySelectorAll(
-        '[class*="child-age"] select,' +
-          '[data-stid*="age"] select,' +
-          'select[id*="age"],' +
-          'select[name*="age"]'
-      )
-    );
-    console.log(
-      "[TripProfile] Expedia specific age selects:",
-      expediaAgeSelects.length
-    );
-
-    const ageSelects =
-      labelMatches.length > 0 ? labelMatches : expediaAgeSelects;
+      console.log(
+        "[TripProfile] Age selects attempt",
+        attempt,
+        ":",
+        ageSelects.length
+      );
+      if (ageSelects.length >= children) break;
+    }
 
     const nativeSetter = Object.getOwnPropertyDescriptor(
       window.HTMLSelectElement.prototype,
@@ -410,20 +237,13 @@ async function universalFill(profile) {
       if (childAges[i] === undefined) continue;
       const select = ageSelects[i];
       const age = String(childAges[i]);
-
-      select.value = age;
+      nativeSetter?.call(select, age);
       select.dispatchEvent(new Event("change", { bubbles: true }));
-      await sleep(100);
-
-      if (select.value !== age && nativeSetter) {
-        nativeSetter.call(select, age);
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-      await sleep(150);
+      await sleep(200);
       console.log(
         "[TripProfile] Age",
         i,
-        "target:",
+        "→",
         age,
         "result:",
         select.value
@@ -433,28 +253,24 @@ async function universalFill(profile) {
 
   // STEP 6: Close the picker.
   await sleep(400);
-  const closeButton = Array.from(container.querySelectorAll("button")).find(
-    (b) => /^done$|^apply$|^search$|^close$/i.test(b.textContent.trim())
+  const closeBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    /^(done|apply|search|close)$/i.test(b.textContent.trim())
   );
-  if (closeButton) {
-    closeButton.click();
-    console.log("[TripProfile] Closed picker");
-  }
+  if (closeBtn) closeBtn.click();
 
-  const success = adultFilled || childFilled;
-  if (success) {
-    showToast(
-      `Filled: ${adults} adults, ${children} children` +
-        (Array.isArray(childAges) && childAges.length > 0
-          ? `, ages ${childAges.join(", ")}`
-          : "")
-    );
-  } else {
-    showToast("Could not auto-fill — use the profile card to fill manually");
-  }
-
-  return success;
+  showToast(
+    `Filled: ${adults} adults` +
+      (children > 0
+        ? `, ${children} children${
+            Array.isArray(childAges) && childAges.length > 0
+              ? ` (ages ${childAges.join(", ")})`
+              : ""
+          }`
+        : "")
+  );
+  return true;
 }
+
 
 // ─── Review badging (unchanged) ───────────────────────────────────────────
 function detectSource(hostname) {
