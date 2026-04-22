@@ -143,12 +143,32 @@ async function bookingFill(adults, children, childAges) {
     await sleep(500);
   }
   if (!panel) panel = await findPickerContainerGeneric();
-  if (!panel) { showToast("Open the guest picker first, then try again"); return false; }
+  if (!panel) { panel = document.body; console.log("[TripProfile] Booking panel: falling back to document.body"); }
+  else console.log("[TripProfile] Booking panel:", panel.className?.slice(0, 60));
 
-  console.log("[TripProfile] Booking panel:", panel.className?.slice(0, 60));
+  // Diagnostic: dump first 30 buttons in panel with their attrs so we can see what Booking uses
+  const probeBtns = Array.from(panel.querySelectorAll("button")).slice(0, 30);
+  console.log("[TripProfile] Booking button probe (panel, first 30):");
+  probeBtns.forEach((b, i) => {
+    console.log("  ", i, "aria=", b.getAttribute("aria-label"), "testid=", b.getAttribute("data-testid"), "txt=", b.textContent.trim().slice(0, 30));
+  });
 
-  const filledAdults = await bookingSetStepper(panel, /^adults?$/i, adults, 1);
-  const filledChildren = await bookingSetStepper(panel, /^children$/i, children, 0);
+  let filledAdults = await bookingSetStepper(panel, /adults?/i, adults, 1);
+  let filledChildren = await bookingSetStepper(panel, /children|child/i, children, 0);
+
+  // Fallback: if panel scan failed, try the whole document
+  if (!filledAdults && !filledChildren && panel !== document.body) {
+    console.log("[TripProfile] Booking panel scan failed, retrying on document.body");
+    const probeBtns2 = Array.from(document.querySelectorAll("button")).slice(0, 50);
+    console.log("[TripProfile] Booking button probe (document, first 50):");
+    probeBtns2.forEach((b, i) => {
+      const aria = b.getAttribute("aria-label");
+      const testid = b.getAttribute("data-testid");
+      if (aria || testid) console.log("  ", i, "aria=", aria, "testid=", testid, "txt=", b.textContent.trim().slice(0, 30));
+    });
+    filledAdults = await bookingSetStepper(document.body, /adults?/i, adults, 1);
+    filledChildren = await bookingSetStepper(document.body, /children|child/i, children, 0);
+  }
 
   if (children > 0 && childAges?.length > 0) {
     await sleep(1200);
