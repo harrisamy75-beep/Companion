@@ -241,7 +241,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         fillBtn.textContent = original;
         return;
       }
-      chrome.tabs.sendMessage(tab.id, { type: "MANUAL_FILL" }, () => {
+      chrome.tabs.sendMessage(tab.id, { type: "MANUAL_FILL" }, (response) => {
+        console.log("[TripProfile] sendMessage response:", response, "lastError:", chrome.runtime.lastError?.message);
         fillBtn.disabled = false;
         fillBtn.textContent = original;
         if (chrome.runtime.lastError) {
