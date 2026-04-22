@@ -129,8 +129,21 @@ async function bookingFill(adults, children, childAges) {
   ];
   for (const sel of triggerSelectors) {
     const el = document.querySelector(sel);
-    if (el) { el.click(); await sleep(900); console.log("[TripProfile] Booking opened picker:", sel); break; }
+    if (el) { el.click(); await sleep(1500); console.log("[TripProfile] Booking opened picker:", sel); break; }
   }
+
+  // Wait for stepper buttons to appear — Booking renders them async.
+  // Baseline is ~85 buttons on the homepage. Picker adds 6+ more.
+  const baselineCount = document.querySelectorAll("button").length;
+  console.log("[TripProfile] Booking baseline button count:", baselineCount);
+  let pickerRendered = false;
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const count = document.querySelectorAll("button").length;
+    console.log("[TripProfile] Booking button count attempt", attempt, ":", count);
+    if (count > baselineCount + 4) { pickerRendered = true; break; }
+    await sleep(300);
+  }
+  console.log("[TripProfile] Booking picker rendered:", pickerRendered);
 
   let panel = null;
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -143,32 +156,24 @@ async function bookingFill(adults, children, childAges) {
     await sleep(500);
   }
   if (!panel) panel = await findPickerContainerGeneric();
-  if (!panel) { panel = document.body; console.log("[TripProfile] Booking panel: falling back to document.body"); }
-  else console.log("[TripProfile] Booking panel:", panel.className?.slice(0, 60));
+  if (!panel) { showToast("Open the guest picker first, then try again"); return false; }
 
-  // Diagnostic: dump first 30 buttons in panel with their attrs so we can see what Booking uses
-  const probeBtns = Array.from(panel.querySelectorAll("button")).slice(0, 30);
-  console.log("[TripProfile] Booking button probe (panel, first 30):");
-  probeBtns.forEach((b, i) => {
-    console.log("  ", i, "aria=", b.getAttribute("aria-label"), "testid=", b.getAttribute("data-testid"), "txt=", b.textContent.trim().slice(0, 30));
-  });
+  console.log("[TripProfile] Booking panel:", panel.className?.slice(0, 60));
 
-  let filledAdults = await bookingSetStepper(panel, /adults?/i, adults, 1);
-  let filledChildren = await bookingSetStepper(panel, /children|child/i, children, 0);
+  // Dump all buttons in panel for diagnosis.
+  const panelBtns = Array.from(panel.querySelectorAll("button"));
+  console.log("[TripProfile] Booking panel buttons:", panelBtns.length,
+    panelBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim().slice(0, 10) }))
+  );
 
-  // Fallback: if panel scan failed, try the whole document
-  if (!filledAdults && !filledChildren && panel !== document.body) {
-    console.log("[TripProfile] Booking panel scan failed, retrying on document.body");
-    const probeBtns2 = Array.from(document.querySelectorAll("button")).slice(0, 50);
-    console.log("[TripProfile] Booking button probe (document, first 50):");
-    probeBtns2.forEach((b, i) => {
-      const aria = b.getAttribute("aria-label");
-      const testid = b.getAttribute("data-testid");
-      if (aria || testid) console.log("  ", i, "aria=", aria, "testid=", testid, "txt=", b.textContent.trim().slice(0, 30));
-    });
-    filledAdults = await bookingSetStepper(document.body, /adults?/i, adults, 1);
-    filledChildren = await bookingSetStepper(document.body, /children|child/i, children, 0);
-  }
+  // Also dump all buttons in full document.
+  const allBtns = Array.from(document.querySelectorAll("button"));
+  console.log("[TripProfile] Booking all buttons:", allBtns.length,
+    allBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim().slice(0, 10) }))
+  );
+
+  const filledAdults = await bookingSetStepper(panel, /^adults?$/i, adults, 1);
+  const filledChildren = await bookingSetStepper(panel, /^children$/i, children, 0);
 
   if (children > 0 && childAges?.length > 0) {
     await sleep(1200);

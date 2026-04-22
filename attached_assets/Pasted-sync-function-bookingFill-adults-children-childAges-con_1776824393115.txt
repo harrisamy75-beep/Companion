@@ -1,0 +1,97 @@
+sync function bookingFill(adults, children, childAges) {
+  console.log("[TripProfile] Booking.com path");
+
+  const triggerSelectors = [
+    '[data-testid="occupancy-config"]',
+    '[data-testid="searchbox-people-picker-trigger"]',
+    'button[aria-label*="occupancy" i]',
+    'button[aria-label*="guest" i]',
+    '[class*="occupancy"]',
+  ];
+  for (const sel of triggerSelectors) {
+    const el = document.querySelector(sel);
+    if (el) { el.click(); await sleep(1500); console.log("[TripProfile] Booking opened picker:", sel); break; }
+  }
+
+  // Wait for stepper buttons to appear — Booking renders them async.
+  // Baseline is ~85 buttons on the homepage. Picker adds 6+ more.
+  const baselineCount = document.querySelectorAll("button").length;
+  console.log("[TripProfile] Booking baseline button count:", baselineCount);
+  let pickerRendered = false;
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const count = document.querySelectorAll("button").length;
+    console.log("[TripProfile] Booking button count attempt", attempt, ":", count);
+    if (count > baselineCount + 4) { pickerRendered = true; break; }
+    await sleep(300);
+  }
+  console.log("[TripProfile] Booking picker rendered:", pickerRendered);
+
+  let panel = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    panel =
+      document.querySelector('[data-testid="occupancy-popup"]') ||
+      document.querySelector('[data-testid="searchbox-people-picker"]') ||
+      document.querySelector('[class*="occupancy-popup"]') ||
+      document.querySelector('[class*="OccupancyPopup"]');
+    if (panel) break;
+    await sleep(500);
+  }
+  if (!panel) panel = await findPickerContainerGeneric();
+  if (!panel) { showToast("Open the guest picker first, then try again"); return false; }
+
+  console.log("[TripProfile] Booking panel:", panel.className?.slice(0, 60));
+
+  // Dump all buttons in panel for diagnosis.
+  const panelBtns = Array.from(panel.querySelectorAll("button"));
+  console.log("[TripProfile] Booking panel buttons:", panelBtns.length,
+    panelBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim().slice(0, 10) }))
+  );
+
+  // Also dump all buttons in full document.
+  const allBtns = Array.from(document.querySelectorAll("button"));
+  console.log("[TripProfile] Booking all buttons:", allBtns.length,
+    allBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim().slice(0, 10) }))
+  );
+
+  const filledAdults = await bookingSetStepper(panel, /^adults?$/i, adults, 1);
+  const filledChildren = await bookingSetStepper(panel, /^children$/i, children, 0);
+
+  if (children > 0 && childAges?.length > 0) {
+    await sleep(1200);
+    let ageSelects = [];
+    for (let attempt = 0; attempt < 8; attempt++) {
+      ageSelects = Array.from(document.querySelectorAll(
+        '[data-testid*="age"] select,[data-testid*="child"] select,select[id*="age"],select[name*="age"],select[aria-label*="age" i],select[aria-label*="child" i]'
+      ));
+      if (ageSelects.length === 0) ageSelects = Array.from(panel.querySelectorAll("select"));
+      console.log("[TripProfile] Booking age selects attempt", attempt, ":", ageSelects.length);
+      if (ageSelects.length >= children) break;
+      await sleep(600);
+    }
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+    for (let i = 0; i < ageSelects.length; i++) {
+      if (childAges[i] === undefined) continue;
+      const select = ageSelects[i];
+      const age = String(childAges[i]);
+      nativeSetter?.call(select, age);
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      await sleep(300);
+      console.log("[TripProfile] Booking age", i, "set to:", age, "actual:", select.value);
+    }
+  }
+
+  await sleep(400);
+  const applyBtn =
+    panel.querySelector('[data-testid="searchbox-people-picker-confirm-button"]') ||
+    Array.from(panel.querySelectorAll("button")).find((b) => /^done$|^apply$|^search$|^ok$/i.test(b.textContent.trim()));
+  if (applyBtn) { applyBtn.click(); console.log("[TripProfile] Booking closed panel"); }
+
+  const success = filledAdults || filledChildren;
+  if (success) {
+    showToast(`Filled: ${adults} adults, ${children} children` + (childAges?.length > 0 ? `, ages ${childAges.join(", ")}` : ""));
+  } else {
+    showToast("Could not auto-fill — use the profile card to fill manually");
+  }
+  return success;
+}
