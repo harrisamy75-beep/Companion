@@ -242,19 +242,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       chrome.tabs.sendMessage(tab.id, { type: "MANUAL_FILL" }, (response) => {
-        console.log("[TripProfile] sendMessage response:", response, "lastError:", chrome.runtime.lastError?.message);
+        const lastErr = chrome.runtime.lastError?.message;
+        console.log("[TripProfile] sendMessage response:", response, "lastError:", lastErr);
         fillBtn.disabled = false;
         fillBtn.textContent = original;
-        if (chrome.runtime.lastError) {
-          flashStatus(
-            fillStatusEl,
-            "This page isn't supported. Open a travel site first.",
-            true,
-            4500
-          );
+        if (lastErr) {
+          flashStatus(fillStatusEl, "ERR: " + lastErr, true, 12000);
           return;
         }
-        flashStatus(fillStatusEl, "Done — check the page.", false, 3000);
+        const ok = response?.ok;
+        const errMsg = response?.error;
+        flashStatus(
+          fillStatusEl,
+          "RESP: ok=" + String(ok) + (errMsg ? " err=" + errMsg : ""),
+          !ok,
+          12000
+        );
       });
     });
   });
