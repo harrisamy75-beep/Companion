@@ -26,7 +26,14 @@ const API_BASE = "https://travelcompaniontool.replit.app/api";
 async function universalFill(profile) {
   const { adults, children, childAges } = profile.autoFillPayload;
   const hostname = window.location.hostname;
-  if (hostname.includes("booking.com")) return await bookingFill(adults, children, childAges);
+  if (hostname.includes("booking.com")) {
+    // Booking.com renders the occupancy picker in a way content scripts cannot reach.
+    // Show the floating reference panel so the user can fill manually.
+    console.log("[TripProfile] Booking.com — showing reference panel (auto-fill not supported)");
+    injectFloatingPanel(profile);
+    showToast("Booking.com auto-fill isn't supported — use the reference panel to fill manually");
+    return true;
+  }
   if (hostname.includes("expedia.com") || hostname.includes("hotels.com")) return await expediaFill(adults, children, childAges);
   return await universalFallbackFill(adults, children, childAges);
 }
@@ -116,139 +123,8 @@ async function expediaFill(adults, children, childAges) {
   return true;
 }
 
-// ─── BOOKING.COM ───────────────────────────────────────────────────────────
-async function bookingFill(adults, children, childAges) {
-  console.log("[TripProfile] Booking.com path");
-
-  // Booking.com blocks programmatic clicks on their occupancy picker.
-  // Strategy: wait for the user to open it, then fill it.
-  // We poll for stepper buttons to appear for up to 15 seconds.
-  showToast("Please click the guest picker on Booking.com, then we'll fill it...");
-
-  let decBtns = [];
-  for (let attempt = 0; attempt < 30; attempt++) {
-    const allBtns = Array.from(document.querySelectorAll("button"));
-    decBtns = allBtns.filter((b) => {
-      const aria = (b.getAttribute("aria-label") || "").toLowerCase();
-      const txt = b.textContent.trim();
-      const testid = (b.getAttribute("data-testid") || "").toLowerCase();
-      return (
-        /decrease|minus|subtract/i.test(aria) ||
-        /decrease|minus/.test(testid) ||
-        txt === "−" || txt === "-"
-      );
-    });
-    console.log("[TripProfile] Booking waiting for picker, dec buttons:", decBtns.length,
-      decBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim() }))
-    );
-    if (decBtns.length >= 2) break;
-    await sleep(500);
-  }
-
-  if (decBtns.length < 2) {
-    showToast("Could not find guest picker — please open it manually and try Fill again");
-    return false;
-  }
-
-  showToast("Found the picker! Filling now...");
-  console.log("[TripProfile] Booking dec buttons found:", decBtns.length,
-    decBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim() }))
-  );
-
-  // Find the panel — it's now open since buttons appeared.
-  const panel =
-    document.querySelector('[data-testid="occupancy-popup"]') ||
-    document.querySelector('[data-testid="searchbox-people-picker"]') ||
-    await findPickerContainerGeneric();
-
-  if (!panel) {
-    showToast("Could not find picker panel");
-    return false;
-  }
-
-  const filledAdults = await bookingSetStepper(panel, /^adults?$/i, adults, 1);
-  const filledChildren = await bookingSetStepper(panel, /^children$/i, children, 0);
-
-  if (children > 0 && childAges?.length > 0) {
-    await sleep(1200);
-    let ageSelects = [];
-    for (let attempt = 0; attempt < 8; attempt++) {
-      ageSelects = Array.from(document.querySelectorAll(
-        '[data-testid*="age"] select,[data-testid*="child"] select,select[id*="age"],select[name*="age"],select[aria-label*="age" i],select[aria-label*="child" i]'
-      ));
-      if (ageSelects.length === 0) ageSelects = Array.from(panel.querySelectorAll("select"));
-      console.log("[TripProfile] Booking age selects attempt", attempt, ":", ageSelects.length);
-      if (ageSelects.length >= children) break;
-      await sleep(600);
-    }
-
-    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
-    for (let i = 0; i < ageSelects.length; i++) {
-      if (childAges[i] === undefined) continue;
-      const select = ageSelects[i];
-      const age = String(childAges[i]);
-      nativeSetter?.call(select, age);
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-      await sleep(300);
-      console.log("[TripProfile] Booking age", i, "set to:", age, "actual:", select.value);
-    }
-  }
-
-  await sleep(400);
-  const applyBtn =
-    panel.querySelector('[data-testid="searchbox-people-picker-confirm-button"]') ||
-    Array.from(panel.querySelectorAll("button")).find((b) => /^done$|^apply$|^search$|^ok$/i.test(b.textContent.trim()));
-  if (applyBtn) { applyBtn.click(); console.log("[TripProfile] Booking closed panel"); }
-
-  const success = filledAdults || filledChildren;
-  if (success) {
-    showToast(`Filled: ${adults} adults, ${children} children` + (childAges?.length > 0 ? `, ages ${childAges.join(", ")}` : ""));
-  } else {
-    showToast("Could not auto-fill — use the profile card to fill manually");
-  }
-  return success;
-}
-
-async function bookingSetStepper(panel, labelPattern, target, minimum) {
-  const allBtns = Array.from(panel.querySelectorAll("button"));
-  const decBtns = allBtns.filter((b) => {
-    const aria = (b.getAttribute("aria-label") || "").toLowerCase();
-    const txt = b.textContent.trim();
-    const testid = (b.getAttribute("data-testid") || "").toLowerCase();
-    return /decrease|minus|subtract|remove/i.test(aria) || txt === "−" || txt === "-" || /decrease|minus/.test(testid);
-  });
-
-  console.log("[TripProfile] Booking dec buttons found:", decBtns.length, decBtns.map(b => b.getAttribute("aria-label") || b.textContent.trim()));
-
-  for (const dec of decBtns) {
-    let row = dec.parentElement;
-    for (let i = 0; i < 6; i++) {
-      if (!row || row === panel) break;
-      const rowText = row.innerText || row.textContent || "";
-      if (labelPattern.test(rowText) && rowText.length < 80) {
-        const rowBtns = Array.from(row.querySelectorAll("button"));
-        const inc = rowBtns.find((b) => {
-          const aria = (b.getAttribute("aria-label") || "").toLowerCase();
-          const txt = b.textContent.trim();
-          const testid = (b.getAttribute("data-testid") || "").toLowerCase();
-          return /increase|plus|add/i.test(aria) || txt === "+" || /increase|plus/.test(testid);
-        });
-        if (inc) {
-          console.log("[TripProfile] Booking stepper for", labelPattern, "dec:", dec.getAttribute("aria-label") || dec.textContent.trim(), "inc:", inc.getAttribute("aria-label") || inc.textContent.trim());
-          for (let j = 0; j < 12; j++) { dec.click(); await sleep(80); }
-          await sleep(350);
-          for (let j = 0; j < Math.max(0, target - minimum); j++) { inc.click(); await sleep(350); }
-          await sleep(300);
-          return true;
-        }
-      }
-      row = row.parentElement;
-    }
-  }
-
-  console.log("[TripProfile] Booking stepper not found for", labelPattern);
-  return false;
-}
+// Booking.com auto-fill removed — the router shows the floating reference panel
+// instead because the occupancy picker is unreachable from content scripts.
 
 // ─── UNIVERSAL FALLBACK ────────────────────────────────────────────────────
 async function universalFallbackFill(adults, children, childAges) {
