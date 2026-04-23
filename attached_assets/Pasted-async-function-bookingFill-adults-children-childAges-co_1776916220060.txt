@@ -1,0 +1,91 @@
+async function bookingFill(adults, children, childAges) {
+  console.log("[TripProfile] Booking.com path");
+
+  // Booking.com blocks programmatic clicks on their occupancy picker.
+  // Strategy: wait for the user to open it, then fill it.
+  // We poll for stepper buttons to appear for up to 15 seconds.
+  showToast("Please click the guest picker on Booking.com, then we'll fill it...");
+
+  let decBtns = [];
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const allBtns = Array.from(document.querySelectorAll("button"));
+    decBtns = allBtns.filter((b) => {
+      const aria = (b.getAttribute("aria-label") || "").toLowerCase();
+      const txt = b.textContent.trim();
+      const testid = (b.getAttribute("data-testid") || "").toLowerCase();
+      return (
+        /decrease|minus|subtract/i.test(aria) ||
+        /decrease|minus/.test(testid) ||
+        txt === "−" || txt === "-"
+      );
+    });
+    console.log("[TripProfile] Booking waiting for picker, dec buttons:", decBtns.length,
+      decBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim() }))
+    );
+    if (decBtns.length >= 2) break;
+    await sleep(500);
+  }
+
+  if (decBtns.length < 2) {
+    showToast("Could not find guest picker — please open it manually and try Fill again");
+    return false;
+  }
+
+  showToast("Found the picker! Filling now...");
+  console.log("[TripProfile] Booking dec buttons found:", decBtns.length,
+    decBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim() }))
+  );
+
+  // Find the panel — it's now open since buttons appeared.
+  const panel =
+    document.querySelector('[data-testid="occupancy-popup"]') ||
+    document.querySelector('[data-testid="searchbox-people-picker"]') ||
+    await findPickerContainerGeneric();
+
+  if (!panel) {
+    showToast("Could not find picker panel");
+    return false;
+  }
+
+  const filledAdults = await bookingSetStepper(panel, /^adults?$/i, adults, 1);
+  const filledChildren = await bookingSetStepper(panel, /^children$/i, children, 0);
+
+  if (children > 0 && childAges?.length > 0) {
+    await sleep(1200);
+    let ageSelects = [];
+    for (let attempt = 0; attempt < 8; attempt++) {
+      ageSelects = Array.from(document.querySelectorAll(
+        '[data-testid*="age"] select,[data-testid*="child"] select,select[id*="age"],select[name*="age"],select[aria-label*="age" i],select[aria-label*="child" i]'
+      ));
+      if (ageSelects.length === 0) ageSelects = Array.from(panel.querySelectorAll("select"));
+      console.log("[TripProfile] Booking age selects attempt", attempt, ":", ageSelects.length);
+      if (ageSelects.length >= children) break;
+      await sleep(600);
+    }
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+    for (let i = 0; i < ageSelects.length; i++) {
+      if (childAges[i] === undefined) continue;
+      const select = ageSelects[i];
+      const age = String(childAges[i]);
+      nativeSetter?.call(select, age);
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      await sleep(300);
+    }
+  }
+
+  await sleep(400);
+  const applyBtn =
+    panel.querySelector('[data-testid="searchbox-people-picker-confirm-button"]') ||
+    Array.from(panel.querySelectorAll("button")).find((b) => /^done$|^apply$|^search$|^ok$/i.test(b.textContent.trim()));
+  if (applyBtn) { applyBtn.click(); console.log("[TripProfile] Booking closed panel"); }
+
+  const success = filledAdults || filledChildren;
+  if (success) {
+    showToast(`Filled: ${adults} adults, ${children} children` + (childAges?.length > 0 ? `, ages ${childAges.join(", ")}` : ""));
+  } else {
+    showToast("Could not auto-fill — use the profile card to fill manually");
+  }
+  return success;
+}
+The key change: we no longer try to open the picker ourselves. Instead we show a toast saying "Please click the guest picker" and then wait up to 15 seconds for the stepper buttons to appear. Once the user clicks the picker open, we detect the buttons and fill immediately. This sidesteps Booking's anti-automation entirely.

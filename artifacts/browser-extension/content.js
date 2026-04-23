@@ -120,66 +120,51 @@ async function expediaFill(adults, children, childAges) {
 async function bookingFill(adults, children, childAges) {
   console.log("[TripProfile] Booking.com path");
 
-  const triggerSelectors = [
-    '[data-testid="occupancy-config"]',
-    '[data-testid="searchbox-people-picker-trigger"]',
-    'button[aria-label*="occupancy" i]',
-    'button[aria-label*="guest" i]',
-    '[class*="occupancy"]',
-  ];
-  for (const sel of triggerSelectors) {
-    const el = document.querySelector(sel);
-    if (el) {
-      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-      await sleep(50);
-      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
-      await sleep(50);
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-      await sleep(1500);
-      console.log("[TripProfile] Booking opened picker:", sel);
-      break;
-    }
-  }
+  // Booking.com blocks programmatic clicks on their occupancy picker.
+  // Strategy: wait for the user to open it, then fill it.
+  // We poll for stepper buttons to appear for up to 15 seconds.
+  showToast("Please click the guest picker on Booking.com, then we'll fill it...");
 
-  // Wait for stepper buttons to appear — Booking renders them async.
-  // Baseline is ~85 buttons on the homepage. Picker adds 6+ more.
-  const baselineCount = document.querySelectorAll("button").length;
-  console.log("[TripProfile] Booking baseline button count:", baselineCount);
-  let pickerRendered = false;
-  for (let attempt = 0; attempt < 16; attempt++) {
-    const count = document.querySelectorAll("button").length;
-    console.log("[TripProfile] Booking button count attempt", attempt, ":", count);
-    if (count > baselineCount + 4) { pickerRendered = true; break; }
-    await sleep(300);
-  }
-  console.log("[TripProfile] Booking picker rendered:", pickerRendered);
-
-  let panel = null;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    panel =
-      document.querySelector('[data-testid="occupancy-popup"]') ||
-      document.querySelector('[data-testid="searchbox-people-picker"]') ||
-      document.querySelector('[class*="occupancy-popup"]') ||
-      document.querySelector('[class*="OccupancyPopup"]');
-    if (panel) break;
+  let decBtns = [];
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const allBtns = Array.from(document.querySelectorAll("button"));
+    decBtns = allBtns.filter((b) => {
+      const aria = (b.getAttribute("aria-label") || "").toLowerCase();
+      const txt = b.textContent.trim();
+      const testid = (b.getAttribute("data-testid") || "").toLowerCase();
+      return (
+        /decrease|minus|subtract/i.test(aria) ||
+        /decrease|minus/.test(testid) ||
+        txt === "−" || txt === "-"
+      );
+    });
+    console.log("[TripProfile] Booking waiting for picker, dec buttons:", decBtns.length,
+      decBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim() }))
+    );
+    if (decBtns.length >= 2) break;
     await sleep(500);
   }
-  if (!panel) panel = await findPickerContainerGeneric();
-  if (!panel) { showToast("Open the guest picker first, then try again"); return false; }
 
-  console.log("[TripProfile] Booking panel:", panel.className?.slice(0, 60));
+  if (decBtns.length < 2) {
+    showToast("Could not find guest picker — please open it manually and try Fill again");
+    return false;
+  }
 
-  // Dump all buttons in panel for diagnosis.
-  const panelBtns = Array.from(panel.querySelectorAll("button"));
-  console.log("[TripProfile] Booking panel buttons:", panelBtns.length,
-    panelBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim().slice(0, 10) }))
+  showToast("Found the picker! Filling now...");
+  console.log("[TripProfile] Booking dec buttons found:", decBtns.length,
+    decBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim() }))
   );
 
-  // Also dump all buttons in full document.
-  const allBtns = Array.from(document.querySelectorAll("button"));
-  console.log("[TripProfile] Booking all buttons:", allBtns.length,
-    allBtns.map(b => ({ aria: b.getAttribute("aria-label"), testid: b.getAttribute("data-testid"), txt: b.textContent.trim().slice(0, 10) }))
-  );
+  // Find the panel — it's now open since buttons appeared.
+  const panel =
+    document.querySelector('[data-testid="occupancy-popup"]') ||
+    document.querySelector('[data-testid="searchbox-people-picker"]') ||
+    await findPickerContainerGeneric();
+
+  if (!panel) {
+    showToast("Could not find picker panel");
+    return false;
+  }
 
   const filledAdults = await bookingSetStepper(panel, /^adults?$/i, adults, 1);
   const filledChildren = await bookingSetStepper(panel, /^children$/i, children, 0);
