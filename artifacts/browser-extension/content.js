@@ -129,7 +129,16 @@ async function bookingFill(adults, children, childAges) {
   ];
   for (const sel of triggerSelectors) {
     const el = document.querySelector(sel);
-    if (el) { el.click(); await sleep(1500); console.log("[TripProfile] Booking opened picker:", sel); break; }
+    if (el) {
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      await sleep(50);
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+      await sleep(50);
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      await sleep(1500);
+      console.log("[TripProfile] Booking opened picker:", sel);
+      break;
+    }
   }
 
   // Wait for stepper buttons to appear — Booking renders them async.
