@@ -239,12 +239,12 @@ function LandingHero() {
           }}
         >
           {[
-            "Save your family's ages, preferences & loyalty\u00A0numbers.",
-            "Auto-fill every travel booking form in one click.",
-            "See only the reviews that match your travel style.",
-          ].map((line) => (
+            <>Save your family's ages, preferences<br />& loyalty numbers.</>,
+            <>Auto-fill every travel booking form in one click.</>,
+            <>See only the reviews that match your travel style.</>,
+          ].map((line, i) => (
             <p
-              key={line}
+              key={i}
               className="font-playfair"
               style={{
                 fontStyle: "italic",
@@ -254,7 +254,6 @@ function LandingHero() {
                 lineHeight: 1.2,
                 margin: 0,
                 padding: 0,
-                textWrap: "balance",
               }}
             >
               {line}
