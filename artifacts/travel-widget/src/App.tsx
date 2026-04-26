@@ -234,6 +234,8 @@ function LandingHero() {
             flexDirection: "column",
             gap: "18px",
             alignItems: "center",
+            maxWidth: "520px",
+            width: "100%",
           }}
         >
           {[
