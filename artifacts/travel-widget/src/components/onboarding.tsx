@@ -582,7 +582,7 @@ function ConsentStep({
           lineHeight: 1.6,
         }}
       >
-        A quick word about your data. Plain English, no fine print.
+        A quick word about your data.
       </p>
 
       <div
