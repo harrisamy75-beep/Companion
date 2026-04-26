@@ -1,0 +1,82 @@
+In universalFill, add a TripAdvisor route before the Expedia check:
+javascriptif (hostname.includes("tripadvisor.com")) return await tripAdvisorFill(adults, children, childAges);
+And add this new function:
+javascriptasync function tripAdvisorFill(adults, children, childAges) {
+  console.log("[TripProfile] TripAdvisor path");
+
+  // Open the guest picker if not already open.
+  const trigger = document.querySelector('button[aria-label*="number of rooms"]') ||
+    document.querySelector('button[aria-label*="number of guests"]');
+  if (trigger) {
+    trigger.click();
+    await sleep(800);
+    console.log("[TripProfile] TripAdvisor opened picker");
+  }
+
+  // Wait for stepper buttons to appear.
+  let adultDec, adultInc, childDec, childInc;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const btns = Array.from(document.querySelectorAll("button[aria-label]"));
+    adultDec = btns.find(b => b.getAttribute("aria-label") === "Set adult count to one less");
+    adultInc = btns.find(b => b.getAttribute("aria-label") === "Set adult count to one more");
+    childDec = btns.find(b => b.getAttribute("aria-label") === "Set child count to one less");
+    childInc = btns.find(b => b.getAttribute("aria-label") === "Set child count to one more");
+    if (adultDec && adultInc) break;
+    await sleep(400);
+    console.log("[TripProfile] TripAdvisor waiting for steppers, attempt:", attempt);
+  }
+
+  if (!adultDec || !adultInc) {
+    showToast("Could not find guest picker — try opening it first");
+    return false;
+  }
+
+  console.log("[TripProfile] TripAdvisor steppers found, filling...");
+
+  // Reset adults to 1, then increment to target.
+  for (let i = 0; i < 10; i++) { adultDec.click(); await sleep(80); }
+  await sleep(300);
+  for (let i = 1; i < adults; i++) { adultInc.click(); await sleep(200); }
+  await sleep(300);
+
+  // Reset children to 0, then increment to target.
+  if (childDec && childInc) {
+    for (let i = 0; i < 10; i++) { childDec.click(); await sleep(80); }
+    await sleep(300);
+    for (let i = 0; i < children; i++) { childInc.click(); await sleep(300); }
+    await sleep(500);
+  }
+
+  // Fill child age dropdowns if present.
+  if (children > 0 && childAges?.length > 0) {
+    await sleep(800);
+    let ageSelects = [];
+    for (let attempt = 0; attempt < 6; attempt++) {
+      ageSelects = Array.from(document.querySelectorAll(
+        'select[aria-label*="age" i], select[aria-label*="child" i], select[id*="age"], select[name*="age"]'
+      ));
+      console.log("[TripProfile] TripAdvisor age selects:", ageSelects.length);
+      if (ageSelects.length >= children) break;
+      await sleep(500);
+    }
+    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+    for (let i = 0; i < ageSelects.length; i++) {
+      if (childAges[i] === undefined) continue;
+      nativeSetter?.call(ageSelects[i], String(childAges[i]));
+      ageSelects[i].dispatchEvent(new Event("change", { bubbles: true }));
+      await sleep(200);
+    }
+  }
+
+  // Click Update/Done to close.
+  await sleep(300);
+  const updateBtn = Array.from(document.querySelectorAll("button")).find(b =>
+    /^update$|^done$|^apply$/i.test(b.textContent.trim())
+  );
+  if (updateBtn) { updateBtn.click(); console.log("[TripProfile] TripAdvisor clicked Update"); }
+
+  showToast(`Filled: ${adults} adults, ${children} children` +
+    (childAges?.length > 0 ? `, ages ${childAges.join(", ")}` : ""));
+  return true;
+}
+Also add tripadvisor.com/* to manifest.json host_permissions and matches if it's not already there. Test it and let me know what the console shows!

@@ -34,8 +34,122 @@ async function universalFill(profile) {
     showToast("Booking.com auto-fill isn't supported — use the reference panel to fill manually");
     return true;
   }
+  if (hostname.includes("tripadvisor.com")) return await tripAdvisorFill(adults, children, childAges);
   if (hostname.includes("expedia.com") || hostname.includes("hotels.com")) return await expediaFill(adults, children, childAges);
   return await universalFallbackFill(adults, children, childAges);
+}
+
+// ─── TRIPADVISOR ───────────────────────────────────────────────────────────
+async function tripAdvisorFill(adults, children, childAges) {
+  console.log("[TripProfile] TripAdvisor path");
+
+  const triggerSelectors = [
+    'button[aria-label*="number of rooms" i]',
+    'button[aria-label*="number of guests" i]',
+    'button[aria-label*="rooms" i][aria-label*="guests" i]',
+    'button[aria-label*="travelers" i]',
+  ];
+  for (const sel of triggerSelectors) {
+    const t = document.querySelector(sel);
+    if (t) {
+      t.click();
+      await sleep(800);
+      console.log("[TripProfile] TripAdvisor opened picker via:", sel);
+      break;
+    }
+  }
+
+  // Find scoped picker container (case-insensitive aria match)
+  const container = await findPickerContainerGeneric();
+
+  function findStepperBtns(scope) {
+    const btns = Array.from(scope.querySelectorAll("button[aria-label]"));
+    const match = (re) => btns.find((b) => re.test(b.getAttribute("aria-label") || ""));
+    return {
+      adultDec: match(/adult.*(less|decrease|decrement|minus|-)|decrease.*adult/i),
+      adultInc: match(/adult.*(more|increase|increment|plus|\+)|increase.*adult/i),
+      childDec: match(/child.*(less|decrease|decrement|minus|-)|decrease.*child/i),
+      childInc: match(/child.*(more|increase|increment|plus|\+)|increase.*child/i),
+    };
+  }
+
+  let steppers = { adultDec: null, adultInc: null, childDec: null, childInc: null };
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const scope = container || document;
+    steppers = findStepperBtns(scope);
+    if (steppers.adultDec && steppers.adultInc) break;
+    await sleep(400);
+    console.log("[TripProfile] TripAdvisor waiting for steppers, attempt:", attempt);
+  }
+
+  if (!steppers.adultDec || !steppers.adultInc) {
+    showToast("Open the guest picker first, then try again");
+    return false;
+  }
+
+  console.log("[TripProfile] TripAdvisor steppers found, filling...");
+
+  for (let i = 0; i < 10; i++) { steppers.adultDec.click(); await sleep(80); }
+  await sleep(300);
+  for (let i = 1; i < adults; i++) { steppers.adultInc.click(); await sleep(200); }
+  await sleep(300);
+
+  let childrenFilled = true;
+  if (children > 0) {
+    if (!steppers.childDec || !steppers.childInc) {
+      childrenFilled = false;
+      console.log("[TripProfile] TripAdvisor: child stepper pair missing");
+    } else {
+      for (let i = 0; i < 10; i++) { steppers.childDec.click(); await sleep(80); }
+      await sleep(300);
+      for (let i = 0; i < children; i++) { steppers.childInc.click(); await sleep(300); }
+      await sleep(500);
+    }
+  }
+
+  let agesFilled = true;
+  if (children > 0 && childrenFilled && Array.isArray(childAges) && childAges.length > 0) {
+    await sleep(800);
+    const ageScope = container || document;
+    let ageSelects = [];
+    for (let attempt = 0; attempt < 6; attempt++) {
+      ageSelects = Array.from(ageScope.querySelectorAll(
+        'select[aria-label*="age" i],select[aria-label*="child" i],select[id*="age"],select[name*="age"]'
+      ));
+      console.log("[TripProfile] TripAdvisor age selects:", ageSelects.length);
+      if (ageSelects.length >= children) break;
+      await sleep(500);
+    }
+    if (ageSelects.length < children) agesFilled = false;
+    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+    for (let i = 0; i < Math.min(ageSelects.length, childAges.length); i++) {
+      if (childAges[i] === undefined) continue;
+      nativeSetter?.call(ageSelects[i], String(childAges[i]));
+      ageSelects[i].dispatchEvent(new Event("change", { bubbles: true }));
+      await sleep(200);
+    }
+  }
+
+  const fullSuccess = childrenFilled && agesFilled;
+
+  if (fullSuccess) {
+    await sleep(300);
+    const closeScope = container || document;
+    const updateBtn = Array.from(closeScope.querySelectorAll("button")).find((b) =>
+      /^update$|^done$|^apply$/i.test(b.textContent.trim())
+    );
+    if (updateBtn) { updateBtn.click(); console.log("[TripProfile] TripAdvisor clicked Update"); }
+  } else {
+    console.log("[TripProfile] TripAdvisor: skipping Update click — incomplete fill");
+  }
+
+  if (fullSuccess) {
+    showToast(`Filled: ${adults} adults, ${children} children` +
+      (Array.isArray(childAges) && childAges.length > 0 ? `, ages ${childAges.join(", ")}` : ""));
+  } else {
+    showToast("Partially filled — finish in the picker manually");
+  }
+  return fullSuccess;
 }
 
 // ─── EXPEDIA + HOTELS.COM ──────────────────────────────────────────────────
