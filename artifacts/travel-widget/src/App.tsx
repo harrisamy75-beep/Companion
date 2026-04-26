@@ -211,7 +211,7 @@ function LandingHero() {
     >
       <div
         className="flex flex-col items-center text-center"
-        style={{ width: 520, maxWidth: "100%" }}
+        style={{ width: 600, maxWidth: "100%" }}
       >
         <h1
           className="font-playfair"
