@@ -43,20 +43,14 @@ async function universalFill(profile) {
 async function tripAdvisorFill(adults, children, childAges) {
   console.log("[TripProfile] TripAdvisor path");
 
-  const triggerSelectors = [
-    'button[aria-label*="number of rooms" i]',
-    'button[aria-label*="number of guests" i]',
-    'button[aria-label*="rooms" i][aria-label*="guests" i]',
-    'button[aria-label*="travelers" i]',
-  ];
-  for (const sel of triggerSelectors) {
-    const t = document.querySelector(sel);
-    if (t) {
-      t.click();
-      await sleep(800);
-      console.log("[TripProfile] TripAdvisor opened picker via:", sel);
-      break;
-    }
+  // Don't open the picker ourselves — it closes on focus loss when the
+  // popup opens. Require the user to open it first.
+  const alreadyOpen = !!document.querySelector(
+    'button[aria-label="Set adult count to one less"], button[aria-label*="adult" i][aria-label*="less" i]'
+  );
+  if (!alreadyOpen) {
+    showToast("Please open the guest picker first, then click Fill This Page");
+    return false;
   }
 
   // Find scoped picker container (case-insensitive aria match)
