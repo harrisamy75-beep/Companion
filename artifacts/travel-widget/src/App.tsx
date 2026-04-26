@@ -239,7 +239,7 @@ function LandingHero() {
           }}
         >
           {[
-            "Save your family's ages, preferences & loyalty numbers.",
+            "Save your family's ages, preferences & loyalty\u00A0numbers.",
             "Auto-fill every travel booking form in one click.",
             "See only the reviews that match your travel style.",
           ].map((line) => (
@@ -254,6 +254,7 @@ function LandingHero() {
                 lineHeight: 1.2,
                 margin: 0,
                 padding: 0,
+                textWrap: "balance",
               }}
             >
               {line}
