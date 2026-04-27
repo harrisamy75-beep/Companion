@@ -50,6 +50,7 @@ async function universalFill(profile) {
 // ─── TRIPADVISOR ───────────────────────────────────────────────────────────
 async function tripAdvisorFill(adults, children, childAges) {
   console.log("[TripProfile] TripAdvisor path");
+  showToast("Filling TripAdvisor — opening guest picker…");
 
   // Detect whether the picker is already open — broaden across aria phrasing
   // ("decrease/decrement/less/minus/remove/subtract"), generic +/- icon
@@ -141,8 +142,16 @@ async function tripAdvisorFill(adults, children, childAges) {
   }
 
   if (!steppers.adultDec || !steppers.adultInc) {
-    showToast("Open the guest picker first, then try again");
-    return false;
+    console.warn("[TripProfile] TripAdvisor: stepper buttons not found after retries — falling back to reference panel");
+    // No picker on this page (often true on hotel listing pages). Show the
+    // floating reference panel so the user always gets value from clicking Fill.
+    try {
+      const r = await chrome.storage.local.get(STORAGE_KEY);
+      const p = r[STORAGE_KEY];
+      if (p) injectFloatingPanel(p);
+    } catch (e) { console.warn("[TripProfile] panel fallback failed:", e); }
+    showToast("No guest picker on this page — use the reference panel to fill it manually.");
+    return { ok: true, mode: "manual", code: "TA_NO_STEPPERS_PANEL_SHOWN" };
   }
 
   console.log("[TripProfile] TripAdvisor steppers found, filling...");
@@ -405,7 +414,16 @@ async function attemptAutoFill({ manual = false } = {}) {
   console.log("[TripProfile] attemptAutoFill called, hostname:", window.location.hostname, "manual:", manual);
   const result = await chrome.storage.local.get(STORAGE_KEY);
   const profile = result[STORAGE_KEY];
-  if (!profile) { if (manual) showToast("No profile yet — open the extension and re-sync."); return false; }
+  if (!profile) {
+    if (manual) showToast("No profile yet — open the extension and re-sync.");
+    return { ok: false, mode: "noop", code: "NO_PROFILE" };
+  }
+  if (!profile.autoFillPayload) {
+    console.warn("[TripProfile] profile present but autoFillPayload missing", profile);
+    if (manual) showToast("Your profile is missing traveler counts — re-sync from the extension popup.");
+    return { ok: false, mode: "noop", code: "NO_AUTOFILL_PAYLOAD" };
+  }
+  console.log("[TripProfile] profile loaded, adults=", profile.autoFillPayload.adults, "children=", profile.autoFillPayload.children);
   return universalFill(profile);
 }
 
@@ -514,7 +532,27 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   console.log("[TripProfile] Message received:", msg && msg.type);
   try {
     if (msg?.type === "MANUAL_FILL") {
-      attemptAutoFill({ manual: true }).then((ok) => { try { sendResponse({ ok }); } catch (e) {} });
+      attemptAutoFill({ manual: true })
+        .then((result) => {
+          // Normalize: legacy boolean → object.
+          const payload =
+            result && typeof result === "object" && "ok" in result
+              ? result
+              : { ok: !!result, mode: result ? "autofill" : "noop" };
+          console.log("[TripProfile] MANUAL_FILL result:", payload);
+          try { sendResponse(payload); } catch (e) {}
+        })
+        .catch((err) => {
+          console.error("[TripProfile] MANUAL_FILL threw:", err);
+          try {
+            sendResponse({
+              ok: false,
+              mode: "noop",
+              code: "FILL_THREW",
+              error: (err && err.message) || String(err),
+            });
+          } catch (e) {}
+        });
       return true;
     }
     if (msg?.type === "SHOW_PANEL") {
@@ -524,5 +562,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       });
       return true;
     }
-  } catch (err) { try { sendResponse({ ok: false, error: String(err) }); } catch (e) {} }
+  } catch (err) {
+    console.error("[TripProfile] listener threw:", err);
+    try { sendResponse({ ok: false, mode: "noop", code: "LISTENER_THREW", error: String(err) }); } catch (e) {}
+  }
 });

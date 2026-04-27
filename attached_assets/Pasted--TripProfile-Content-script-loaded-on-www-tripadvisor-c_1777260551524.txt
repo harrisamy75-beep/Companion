@@ -1,0 +1,17 @@
+[TripProfile] Content script loaded on: www.tripadvisor.com
+client:85 [GSI_LOGGER]: Your client application uses one of the Google One Tap prompt UI status methods that may stop functioning when FedCM becomes mandatory. Refer to the migration guide to update your code accordingly and opt-in to FedCM to test your changes. Learn more: https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#display_moment and https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#skipped_moment
+_.G @ client:85Understand this warning
+www.tripadvisor.com/:1 FedCM was disabled either temporarily based on previous user action or permanently via site settings. Try manage third-party sign-in via the icon to the left of the URL bar or via site settings.Understand this error
+b2f8c708.html?gtmParams=&parentDomain=https%3A%2F%2Fwww.tripadvisor.com&gclid=undefined&gbraid=unde…:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.Understand this warning
+13406.js:24 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+z @ 13406.js:24Understand this warning
+pubads_impl.js:19 [GPT] Slot.getTargeting is deprecated, use Slot.getConfig('targeting') instead.
+https://goo.gle/gpt-message#201
+MY.log @ pubads_impl.js:19Understand this warning
+pubads_impl.js:19 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+vL @ pubads_impl.js:19Understand this warning
+8cre3h.gxuh19I.js:1 [GSI_LOGGER]: FedCM get() rejects with NetworkError: Error retrieving a token.
+console.error @ 8cre3h.gxuh19I.js:1Understand this error
+b2f8c708.html?gtmParams=&parentDomain=https%3A%2F%2Fwww.tripadvisor.com&gclid=undefined&gbraid=unde…:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.Understand this warning
+content.js:514 [TripProfile] Message received: MANUAL_FILL
+content.js:405 [TripProfile] attemptAutoFill called, hostname: www.tripadvisor.com manual: true
