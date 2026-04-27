@@ -239,7 +239,7 @@ function LandingHero() {
           }}
         >
           {[
-            <>Save your family's ages, preferences<br />& loyalty numbers.</>,
+            <>Save your family's ages and preferences.</>,
             <>Auto-fill every travel booking form in one click.</>,
             <>See only the reviews that match your travel style.</>,
           ].map((line, i) => (
