@@ -11,6 +11,7 @@ import placesRouter from "./places";
 import personalityRouter from "./personality";
 import quickMatchRouter from "./quick-match";
 import planRouter from "./plan";
+import planTripRouter from "./plan-trip";
 import accountRouter from "./account";
 import extensionRouter from "./extension";
 
@@ -28,6 +29,7 @@ router.use(placesRouter);
 router.use(personalityRouter);
 router.use(quickMatchRouter);
 router.use(planRouter);
+router.use(planTripRouter);
 router.use(accountRouter);
 router.use(extensionRouter);
 

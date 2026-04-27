@@ -27,6 +27,7 @@ import Home from "@/pages/home";
 import TravelersPage from "@/pages/travelers";
 import PreferencesPage from "@/pages/preferences";
 import StaysPage from "@/pages/stays";
+import PlanTripPage from "@/pages/plan-trip";
 import PricingPage from "@/pages/pricing";
 import SettingsPage from "@/pages/settings";
 import SettingsExtensionPage from "@/pages/settings-extension";
@@ -405,6 +406,7 @@ function AuthenticatedApp() {
         <Route path="/dashboard" component={Home} />
         <Route path="/travelers" component={TravelersPage} />
         <Route path="/stays" component={StaysPage} />
+        <Route path="/plan-trip" component={PlanTripPage} />
         <Route path="/preferences" component={PreferencesPage} />
         <Route path="/pricing" component={PricingPage} />
         <Route path="/settings" component={SettingsPage} />
