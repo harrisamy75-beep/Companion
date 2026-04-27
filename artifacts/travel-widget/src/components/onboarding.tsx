@@ -604,10 +604,10 @@ function ConsentStep({
           }}
         >
           {[
-            "Your travel party, preferences and favourite stays are stored in your account.",
-            "We use Anthropic's Claude AI to score reviews and write your travel personality.",
-            "We never sell your data and never use it to train AI models.",
-            "You can export everything or delete your account from Settings at any time.",
+            "Your party, preferences and stays are saved to your account.",
+            "Anthropic's Claude AI scores reviews and your travel style.",
+            "We never sell your data or use it to train AI models.",
+            "Export or delete your account anytime from Settings.",
           ].map((line) => (
             <li
               key={line}
