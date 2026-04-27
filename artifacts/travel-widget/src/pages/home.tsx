@@ -25,24 +25,16 @@ function getStyleLabel(id: string): string {
   return id;
 }
 
-function maskNumber(num: string | null): string | null {
-  if (!num) return null;
-  const clean = num.replace(/\s/g, "");
-  return clean.length <= 4 ? clean : "•••• " + clean.slice(-4);
-}
-
 function buildSubtitle(
   travelers: any[],
-  loyalty: any[],
   lovedProperties: any[],
   topStyleId: string | null
 ): string {
   const topStyle = topStyleId ? getStyleLabel(topStyleId) : null;
-  if (travelers.length > 0 && (loyalty.length > 0 || lovedProperties.length > 0)) {
+  if (travelers.length > 0 && lovedProperties.length > 0) {
     const parts: string[] = [];
     if (topStyle) parts.push(`${topStyle} traveler`);
-    if (loyalty.length > 0) parts.push(`${loyalty.length} loyalty ${loyalty.length === 1 ? "program" : "programs"}`);
-    if (lovedProperties.length > 0) parts.push(`${lovedProperties.length} loved ${lovedProperties.length === 1 ? "property" : "properties"}`);
+    parts.push(`${lovedProperties.length} loved ${lovedProperties.length === 1 ? "property" : "properties"}`);
     return parts.join(" · ") + ".";
   }
   if (travelers.length > 0) {
@@ -581,7 +573,6 @@ export default function Home() {
     "there";
   const allTravelers: any[] = summary?.travelers ?? [];
   const preferences: any = summary?.preferences ?? {};
-  const loyaltyPrograms: any[] = summary?.loyaltyPrograms ?? [];
   const favoriteProperties: any[] = summary?.favoriteProperties ?? [];
   const tripProfiles: any[] = summary?.tripProfiles ?? [];
   const personality: string | null = summary?.personality ?? null;
@@ -608,9 +599,7 @@ export default function Home() {
   const lovedProperties = favoriteProperties.filter((p) => p.tier === "loved");
   const topStyles = travelStyles.slice(0, 6);
   const topStyleId = travelStyles[0] ?? null;
-  const subtitle = buildSubtitle(allTravelers, loyaltyPrograms, lovedProperties, topStyleId);
-  const shownLoyalty = loyaltyPrograms.slice(0, 4);
-  const extraLoyalty = Math.max(0, loyaltyPrograms.length - 4);
+  const subtitle = buildSubtitle(allTravelers, lovedProperties, topStyleId);
 
   return (
     <Layout>
@@ -714,54 +703,13 @@ export default function Home() {
               </Link>
             </Card>
 
-            {/* Card B: Loyalty Programs */}
-            <Card>
-              <CardEyebrow>Loyalty</CardEyebrow>
-              {shownLoyalty.length > 0 ? (
-                <>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "16px" }}>
-                    {shownLoyalty.map((lp: any) => (
-                      <div key={lp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: "12px", borderBottom: "1px solid #F0EBE3" }}>
-                        <div>
-                          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "14px", color: "#1C1C1C" }}>
-                            {lp.programName || lp.brand}
-                          </span>
-                          {lp.tier && (
-                            <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "12px", color: "#B8963E", marginLeft: "8px" }}>
-                              {lp.tier}
-                            </span>
-                          )}
-                        </div>
-                        {lp.membershipNumber && (
-                          <span style={{ fontFamily: "'Courier New', monospace", fontSize: "12px", color: "#5C5248" }}>
-                            {maskNumber(lp.membershipNumber)}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {extraLoyalty > 0 && (
-                    <p style={{ fontFamily: "'Raleway', sans-serif", fontSize: "12px", color: "#5C5248", marginBottom: "12px" }}>+ {extraLoyalty} more</p>
-                  )}
-                  <Link href="/stays" className="link-wine" style={{ fontSize: "13px" }}>
-                    Manage programs →
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontStyle: "italic", fontSize: "14px", color: "#5C5248", marginBottom: "16px" }}>
-                    No programs saved yet.
-                  </p>
-                  <Link href="/stays" className="link-wine" style={{ fontSize: "13px" }}>
-                    Add loyalty programs →
-                  </Link>
-                </>
-              )}
-            </Card>
           </div>
 
           {/* RIGHT COLUMN */}
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+            {/* Card B: Review Intelligence — surfaced above the fold */}
+            <ReviewMatchCard />
 
             {/* Card C: Loved Properties */}
             <Card>
