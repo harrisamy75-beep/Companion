@@ -24,29 +24,6 @@ interface FavoriteProperty {
   createdAt: string;
 }
 
-interface LoyaltyProgram {
-  id: number;
-  userId: string;
-  programName: string;
-  brand: string;
-  membershipNumber: string | null;
-  tier: string | null;
-  notes: string | null;
-  createdAt: string;
-}
-
-interface SuggestedProgram {
-  brand: string;
-  program: string;
-  tiers?: string[];
-}
-
-interface SuggestedProgramGroup {
-  tier_type: string;
-  label: string;
-  programs: SuggestedProgram[];
-}
-
 interface PlaceResult {
   placeId: string;
   name: string;
@@ -112,47 +89,6 @@ function useProperties() {
     }, onSuccess: inv,
   });
   return { query, create, update, remove };
-}
-
-function useLoyalty() {
-  const qc = useQueryClient();
-  const KEY = ["loyalty"];
-  const query = useQuery<LoyaltyProgram[]>({
-    queryKey: KEY,
-    queryFn: async () => {
-      const r = await apiFetch("/api/loyalty");
-      if (!r.ok) throw new Error("Failed");
-      return r.json();
-    },
-  });
-  const suggestedQuery = useQuery<SuggestedProgramGroup[]>({
-    queryKey: ["loyalty-programs-suggested"],
-    queryFn: async () => {
-      const r = await apiFetch("/api/loyalty/programs");
-      if (!r.ok) throw new Error("Failed");
-      return r.json();
-    },
-  });
-  const inv = () => qc.invalidateQueries({ queryKey: KEY });
-  const create = useMutation({
-    mutationFn: async (d: Partial<LoyaltyProgram>) => {
-      const r = await apiFetch("/api/loyalty", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
-      if (!r.ok) throw new Error("Failed"); return r.json();
-    }, onSuccess: inv,
-  });
-  const update = useMutation({
-    mutationFn: async ({ id, ...d }: Partial<LoyaltyProgram> & { id: number }) => {
-      const r = await apiFetch(`/api/loyalty/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
-      if (!r.ok) throw new Error("Failed"); return r.json();
-    }, onSuccess: inv,
-  });
-  const remove = useMutation({
-    mutationFn: async (id: number) => {
-      const r = await apiFetch(`/api/loyalty/${id}`, { method: "DELETE" });
-      if (!r.ok) throw new Error("Failed");
-    }, onSuccess: inv,
-  });
-  return { query, suggestedQuery, create, update, remove };
 }
 
 /* ─── Inline text field ─── */
@@ -586,358 +522,34 @@ function PropertyForm({ initial, onSubmit, onCancel, loading }: {
   );
 }
 
-/* ─── Loyalty Program row ─── */
-function LoyaltyRow({ program, onEdit, onDelete }: {
-  program: LoyaltyProgram; onEdit: () => void; onDelete: () => void;
-}) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{ display: "flex", alignItems: "baseline", gap: "20px", padding: "14px 0", borderBottom: "1px solid #E5E0D8" }}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flexWrap: "wrap" }}>
-          <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "15px", color: "#1C1C1C" }}>{program.brand}</span>
-          <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: "13px", color: "#5C5248" }}>{program.programName}</span>
-          {program.tier && <span className="eyebrow">{program.tier}</span>}
-        </div>
-        {program.membershipNumber && (
-          <span style={{ fontFamily: "Menlo, monospace", fontSize: "12px", color: "#5C5248", display: "block", marginTop: "2px" }}>
-            {program.membershipNumber}
-          </span>
-        )}
-      </div>
-      {hovered && (
-        <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-          <button onClick={onEdit} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6B2737", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
-          <button onClick={onDelete} style={{ fontFamily: "'Raleway', sans-serif", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#5C5248", background: "none", border: "none", cursor: "pointer" }}>Remove</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Loyalty Form ─── */
-type LoyForm = { programName: string; brand: string; membershipNumber: string; tier: string; notes: string };
-const EMPTY_LOY: LoyForm = { programName: "", brand: "", membershipNumber: "", tier: "", notes: "" };
-
-function LoyaltyForm({ initial, onSubmit, onBulkAdd, onCancel, loading, suggested }: {
-  initial?: LoyForm; onSubmit: (f: LoyForm) => void; onBulkAdd?: (programs: SuggestedProgram[]) => Promise<void> | void; onCancel: () => void; loading: boolean; suggested: SuggestedProgramGroup[];
-}) {
-  const [form, setForm] = useState<LoyForm>(initial ?? EMPTY_LOY);
-  const [selectedBrands, setSelectedBrands] = useState<SuggestedProgram[]>([]);
-  const [bulkSaving, setBulkSaving] = useState(false);
-  // Re-sync local form when `initial` changes (e.g. user clicks "Add it →" on a smart suggestion
-  // while the form is already mounted, or switches between editing different programs).
-  useEffect(() => {
-    if (initial) setForm(initial);
-  }, [initial]);
-  const set = <K extends keyof LoyForm>(k: K, v: LoyForm[K]) => setForm(f => ({ ...f, [k]: v }));
-
-  const keyOf = (s: SuggestedProgram) => `${s.brand}|${s.program}`;
-  const isSelected = (s: SuggestedProgram) => selectedBrands.some(x => keyOf(x) === keyOf(s));
-  const toggleBrand = (s: SuggestedProgram) => {
-    setSelectedBrands(prev =>
-      prev.some(x => keyOf(x) === keyOf(s))
-        ? prev.filter(x => keyOf(x) !== keyOf(s))
-        : [...prev, s]
-    );
-  };
-
-  const handleBulkAdd = async () => {
-    if (!onBulkAdd || selectedBrands.length === 0) return;
-    setBulkSaving(true);
-    try {
-      await onBulkAdd(selectedBrands);
-      setSelectedBrands([]);
-    } finally {
-      setBulkSaving(false);
-    }
-  };
-
-  const inBulkMode = !initial && selectedBrands.length > 0;
-
-  // Look up the currently-selected program's tier list (from the grouped data)
-  const selectedTiers: string[] | undefined = (() => {
-    for (const g of suggested) {
-      const match = g.programs.find(p => p.brand === form.brand && p.program === form.programName);
-      if (match) return match.tiers;
-    }
-    return undefined;
-  })();
-
-  return (
-    <form onSubmit={e => { e.preventDefault(); onSubmit(form); }} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      {!initial && suggested.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {suggested.map(group => (
-            <div key={group.tier_type}>
-              <p className="eyebrow" style={{ marginBottom: "8px" }}>{group.label}</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                {group.programs.map(s => {
-                  const selected = isSelected(s);
-                  return (
-                    <button
-                      key={s.brand + s.program}
-                      type="button"
-                      onClick={() => toggleBrand(s)}
-                      aria-pressed={selected}
-                      style={{
-                        fontFamily: "'Raleway', sans-serif",
-                        fontWeight: 400,
-                        fontSize: "13px",
-                        color: selected ? "#fff" : "#5C5248",
-                        background: selected ? "#6B2737" : "transparent",
-                        border: `1px solid ${selected ? "#6B2737" : "#E5E0D8"}`,
-                        borderRadius: "2px",
-                        padding: "6px 14px",
-                        cursor: "pointer",
-                        transition: "all 150ms ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected(s)) (e.currentTarget as HTMLButtonElement).style.background = "#F5F0E6";
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected(s)) (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                      }}
-                    >
-                      {s.brand}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {!inBulkMode && (
-      <>
-      <Field label="Brand">
-        <input className="input-underline" required value={form.brand} onChange={e => set("brand", e.target.value)} placeholder="Hyatt" />
-      </Field>
-      <Field label="Program name">
-        <input className="input-underline" required value={form.programName} onChange={e => set("programName", e.target.value)} placeholder="World of Hyatt" />
-      </Field>
-      <Field label="Membership number">
-        <input className="input-underline" value={form.membershipNumber} onChange={e => set("membershipNumber", e.target.value)} placeholder="123456789" />
-      </Field>
-      <Field label="Status tier">
-        {selectedTiers && selectedTiers.length > 0 ? (
-          <select
-            className="input-underline"
-            value={form.tier}
-            onChange={e => set("tier", e.target.value)}
-            style={{ background: "transparent", appearance: "none", cursor: "pointer" }}
-          >
-            <option value="">— Select tier —</option>
-            {selectedTiers.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        ) : (
-          <input className="input-underline" value={form.tier} onChange={e => set("tier", e.target.value)} placeholder="Globalist" />
-        )}
-      </Field>
-
-      <div style={{ display: "flex", gap: "12px" }}>
-        <button type="button" onClick={onCancel} style={{ flex: 1, height: "44px", background: "transparent", border: "1px solid #E5E0D8", cursor: "pointer", fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#5C5248" }}>
-          Cancel
-        </button>
-        <button type="submit" disabled={loading} className="btn-wine" style={{ flex: 1, height: "44px" }}>
-          {loading ? "Saving…" : "Save"}
-        </button>
-      </div>
-      </>
-      )}
-
-      {inBulkMode && (
-        <div
-          style={{
-            position: "sticky",
-            bottom: 0,
-            background: "white",
-            borderTop: "1px solid #E5E0D8",
-            padding: "16px 24px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "16px",
-            marginTop: "8px",
-            marginLeft: "-20px",
-            marginRight: "-20px",
-            marginBottom: "-20px",
-            zIndex: 5,
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p
-              style={{
-                fontFamily: "'Raleway', sans-serif",
-                fontWeight: 300,
-                fontStyle: "italic",
-                fontSize: "13px",
-                color: "#5C5248",
-                marginBottom: "2px",
-              }}
-            >
-              {selectedBrands.length} program{selectedBrands.length === 1 ? "" : "s"} selected
-            </p>
-            <p
-              style={{
-                fontFamily: "'Raleway', sans-serif",
-                fontWeight: 300,
-                fontStyle: "italic",
-                fontSize: "12px",
-                color: "#94A39B",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-              title={selectedBrands.map(s => s.brand).join(", ")}
-            >
-              {selectedBrands.map(s => s.brand).join(", ")}
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={() => setSelectedBrands([])}
-              style={{
-                background: "transparent",
-                border: "1px solid #E5E0D8",
-                padding: "10px 16px",
-                cursor: "pointer",
-                fontFamily: "'Raleway', sans-serif",
-                fontWeight: 500,
-                fontSize: "11px",
-                letterSpacing: "0.14em",
-                textTransform: "uppercase",
-                color: "#5C5248",
-              }}
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              onClick={handleBulkAdd}
-              disabled={bulkSaving}
-              className="btn-wine"
-              style={{
-                padding: "10px 20px",
-                fontFamily: "'Raleway', sans-serif",
-                fontWeight: 600,
-                fontSize: "11px",
-                letterSpacing: "0.14em",
-                textTransform: "uppercase",
-              }}
-            >
-              {bulkSaving ? "Adding…" : `Add Selected`}
-            </button>
-          </div>
-        </div>
-      )}
-    </form>
-  );
-}
 
 /* ─── Page ─── */
 const TIER_FILTERS = ["all", "loved", "liked", "avoid"];
 
-type ProgramMatch = SuggestedProgram & { tier_type: string; tier_type_label: string };
-
-function findProgramByBrand(brand: string, groups: SuggestedProgramGroup[]): ProgramMatch | null {
-  if (!brand) return null;
-  const b = brand.trim().toLowerCase();
-  for (const g of groups) {
-    for (const p of g.programs) {
-      const lb = p.brand.toLowerCase();
-      // Match if equal, or property brand contains the loyalty brand (e.g. "Park Hyatt" → "Hyatt"),
-      // or vice versa for shorter property brands.
-      if (b === lb || b.includes(lb) || lb.includes(b)) {
-        return { ...p, tier_type: g.tier_type, tier_type_label: g.label };
-      }
-    }
-  }
-  return null;
-}
-
-function getTierTypeForBrand(brand: string, groups: SuggestedProgramGroup[]): { tier_type: string; label: string } {
-  const m = findProgramByBrand(brand, groups);
-  return m ? { tier_type: m.tier_type, label: m.tier_type_label } : { tier_type: "other", label: "Other" };
-}
-
 export default function StaysPage() {
   const { toast } = useToast();
   const { query: propQ, create: createProp, update: updateProp, remove: removeProp } = useProperties();
-  const { query: loyQ, suggestedQuery, create: createLoy, update: updateLoy, remove: removeLoy } = useLoyalty();
 
   const [tierFilter, setTierFilter] = useState("all");
   const [showPropForm, setShowPropForm] = useState(false);
   const [editingProp, setEditingProp] = useState<FavoriteProperty | null>(null);
-  const [showLoyForm, setShowLoyForm] = useState(false);
-  const [editingLoy, setEditingLoy] = useState<LoyaltyProgram | null>(null);
-  const [pendingSuggestion, setPendingSuggestion] = useState<{ propertyBrand: string; match: ProgramMatch } | null>(null);
-  const [prefilledLoy, setPrefilledLoy] = useState<LoyForm | null>(null);
 
   const allProperties = propQ.data ?? [];
   const filteredProperties = tierFilter === "all" ? allProperties : allProperties.filter(p => p.tier === tierFilter);
-  const loyaltyPrograms = loyQ.data ?? [];
-  const suggested = suggestedQuery.data ?? [];
-
-  // Group user's saved loyalty programs by tier_type, preserving suggested-group order.
-  const groupedLoyalty: { tier_type: string; label: string; programs: LoyaltyProgram[] }[] = (() => {
-    const map = new Map<string, { label: string; programs: LoyaltyProgram[] }>();
-    for (const p of loyaltyPrograms) {
-      const { tier_type, label } = getTierTypeForBrand(p.brand, suggested);
-      if (!map.has(tier_type)) map.set(tier_type, { label, programs: [] });
-      map.get(tier_type)!.programs.push(p);
-    }
-    const order = suggested.map(g => g.tier_type).concat("other");
-    return order
-      .filter(tt => map.has(tt))
-      .map(tt => ({ tier_type: tt, label: map.get(tt)!.label, programs: map.get(tt)!.programs }));
-  })();
 
   /* Handlers — Properties */
   const handleSaveProp = (f: PropForm) => {
-    const checkSuggestion = () => {
-      if (!f.brand) return;
-      const match = findProgramByBrand(f.brand, suggested);
-      if (!match) return;
-      // Skip if user already has any loyalty for this brand.
-      const already = loyaltyPrograms.some(lp => {
-        const lb = lp.brand.toLowerCase();
-        const mb = match.brand.toLowerCase();
-        return lb === mb || lb.includes(mb) || mb.includes(lb);
-      });
-      if (!already) setPendingSuggestion({ propertyBrand: f.brand, match });
-    };
-
     if (editingProp) {
       updateProp.mutate({ id: editingProp.id, ...f, tags: f.tags }, {
-        onSuccess: () => { setEditingProp(null); toast({ title: "Property updated" }); checkSuggestion(); },
+        onSuccess: () => { setEditingProp(null); toast({ title: "Property updated" }); },
         onError: () => toast({ title: "Failed", variant: "destructive" }),
       });
     } else {
       createProp.mutate({ ...f, tags: f.tags }, {
-        onSuccess: () => { setShowPropForm(false); toast({ title: "Property added" }); checkSuggestion(); },
+        onSuccess: () => { setShowPropForm(false); toast({ title: "Property added" }); },
         onError: () => toast({ title: "Failed", variant: "destructive" }),
       });
     }
-  };
-
-  const acceptSuggestion = () => {
-    if (!pendingSuggestion) return;
-    const m = pendingSuggestion.match;
-    setPrefilledLoy({ brand: m.brand, programName: m.program, membershipNumber: "", tier: "", notes: "" });
-    setShowLoyForm(true);
-    setEditingLoy(null);
-    setPendingSuggestion(null);
-    // Smooth scroll to loyalty section
-    setTimeout(() => {
-      document.getElementById("loyalty-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
   };
 
   const handleDeleteProp = (id: number) => {
@@ -946,21 +558,6 @@ export default function StaysPage() {
       onSuccess: () => toast({ title: "Removed" }),
       onError: () => toast({ title: "Failed", variant: "destructive" }),
     });
-  };
-
-  /* Handlers — Loyalty */
-  const handleSaveLoy = (f: LoyForm) => {
-    if (editingLoy) {
-      updateLoy.mutate({ id: editingLoy.id, ...f }, {
-        onSuccess: () => { setEditingLoy(null); toast({ title: "Program updated" }); },
-        onError: () => toast({ title: "Failed", variant: "destructive" }),
-      });
-    } else {
-      createLoy.mutate(f, {
-        onSuccess: () => { setShowLoyForm(false); toast({ title: "Program added" }); },
-        onError: () => toast({ title: "Failed", variant: "destructive" }),
-      });
-    }
   };
 
   return (
@@ -973,7 +570,7 @@ export default function StaysPage() {
             Stays
           </h1>
           <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#5C5248", marginTop: "6px" }}>
-            Favourite properties and loyalty programs, in one place.
+            Your favourite properties, in one place.
           </p>
           <span className="section-rule" style={{ marginTop: "24px", display: "block" }} />
         </div>
@@ -1037,130 +634,6 @@ export default function StaysPage() {
           ) : (
             <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#5C5248", paddingTop: "16px" }}>
               {tierFilter === "all" ? "No properties saved yet." : `No ${tierFilter} properties.`}
-            </p>
-          )}
-        </section>
-
-        {/* Smart suggestion banner — appears after a property save matches an unowned loyalty program */}
-        {pendingSuggestion && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "16px",
-              padding: "12px 16px",
-              borderLeft: "2px solid #6B2737",
-              background: "rgba(107, 39, 55, 0.05)",
-              marginTop: "-32px",
-            }}
-          >
-            <p
-              className="font-playfair"
-              style={{ fontStyle: "italic", fontSize: "14px", color: "#1C1C1C", margin: 0, flex: 1 }}
-            >
-              You saved a {pendingSuggestion.propertyBrand} property — add{" "}
-              <span style={{ fontWeight: 600 }}>{pendingSuggestion.match.program}</span>{" "}
-              to your loyalty programs?
-            </p>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
-              <button
-                onClick={acceptSuggestion}
-                style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "13px", color: "#6B2737", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-              >
-                Add it →
-              </button>
-              <button
-                onClick={() => setPendingSuggestion(null)}
-                aria-label="Dismiss suggestion"
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248", padding: 0, display: "flex" }}
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        <span className="section-rule" />
-
-        {/* ── Section B: Loyalty Programs ── */}
-        <section id="loyalty-section">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "24px" }}>
-            <h2 className="font-playfair" style={{ fontWeight: 400, fontSize: "28px", color: "#1C1C1C" }}>
-              Loyalty Programs
-            </h2>
-            {!showLoyForm && !editingLoy && (
-              <button onClick={() => { setPrefilledLoy(null); setShowLoyForm(true); }}
-                style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 500, fontSize: "13px", color: "#6B2737", background: "none", border: "none", cursor: "pointer" }}>
-                + Add program
-              </button>
-            )}
-          </div>
-
-          {/* Add / Edit form */}
-          {(showLoyForm || editingLoy) && (
-            <div style={{ borderLeft: "3px solid #6B2737", paddingLeft: "20px", marginBottom: "32px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                <h3 className="font-playfair" style={{ fontWeight: 400, fontSize: "20px", color: "#1C1C1C" }}>
-                  {editingLoy ? "Edit program" : "Add program"}
-                </h3>
-                <button onClick={() => { setShowLoyForm(false); setEditingLoy(null); setPrefilledLoy(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5248" }}><X size={16} /></button>
-              </div>
-              <LoyaltyForm
-                initial={
-                  editingLoy
-                    ? { programName: editingLoy.programName, brand: editingLoy.brand, membershipNumber: editingLoy.membershipNumber ?? "", tier: editingLoy.tier ?? "", notes: editingLoy.notes ?? "" }
-                    : prefilledLoy ?? undefined
-                }
-                onSubmit={(f) => { handleSaveLoy(f); setPrefilledLoy(null); }}
-                onBulkAdd={async (programs) => {
-                  try {
-                    await Promise.all(
-                      programs.map((p) =>
-                        createLoy.mutateAsync({
-                          brand: p.brand,
-                          programName: p.program,
-                          membershipNumber: "",
-                          tier: "",
-                          notes: "",
-                        })
-                      )
-                    );
-                    toast({ title: `Added ${programs.length} program${programs.length === 1 ? "" : "s"}` });
-                    setShowLoyForm(false);
-                    setPrefilledLoy(null);
-                  } catch {
-                    toast({ title: "Some programs failed to add", variant: "destructive" });
-                  }
-                }}
-                onCancel={() => { setShowLoyForm(false); setEditingLoy(null); setPrefilledLoy(null); }}
-                loading={createLoy.isPending || updateLoy.isPending}
-                suggested={suggested}
-              />
-            </div>
-          )}
-
-          {loyQ.isLoading ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {[1, 2, 3].map(i => <Skeleton key={i} style={{ height: "50px", borderRadius: "2px" }} />)}
-            </div>
-          ) : groupedLoyalty.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
-              {groupedLoyalty.map(group => (
-                <div key={group.tier_type}>
-                  <p className="eyebrow" style={{ marginBottom: "8px" }}>{group.label}</p>
-                  {group.programs.map(p => (
-                    <LoyaltyRow key={p.id} program={p}
-                      onEdit={() => { setShowLoyForm(false); setPrefilledLoy(null); setEditingLoy(p); }}
-                      onDelete={() => { if (!confirm("Remove this program?")) return; removeLoy.mutate(p.id, { onSuccess: () => toast({ title: "Removed" }), onError: () => toast({ title: "Failed", variant: "destructive" }) }); }}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="font-playfair" style={{ fontStyle: "italic", fontSize: "17px", color: "#5C5248" }}>
-              No programs added yet.
             </p>
           )}
         </section>
