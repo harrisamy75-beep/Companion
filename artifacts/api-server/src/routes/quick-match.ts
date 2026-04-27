@@ -220,8 +220,19 @@ router.post("/reviews/quick-match", async (req, res): Promise<void> => {
     "foodie":           { "score": number 1-10, "reason": string (max 8 words) },
     "eco":              { "score": number 1-10, "reason": string (max 8 words) },
     "adventurous_menu": { "score": number 1-10, "reason": string (max 8 words) }
-  }
+  },
+  "alternatives": [
+    { "name": string (real, currently-operating hotel name), "area": string (city/neighbourhood), "why": string (max 18 words on why it fits this traveller better) }
+  ]
 }
+
+ALTERNATIVES — when to populate:
+- If the queried property scores BELOW 75 for this traveller, suggest 2–3 real, currently-operating alternatives in the SAME city or destination region that would score noticeably higher for them.
+- If it scores 75+, return an EMPTY array [] — no need to redirect them.
+- Alternatives must be REAL properties you are confident exist (no invented names). Prefer well-known names you can stand behind.
+- Each alternative must clearly address the gap that held the original property back (e.g. if luxury_value was low, suggest a higher-class property; if foodie was low, suggest one with a real culinary reputation).
+- Do NOT suggest the same property the user just searched for. Do NOT suggest properties from the user's "AVOIDED" list.
+- Match or exceed the loved-property benchmark in style and class.
 
 CRITICAL — when REAL Google review data is provided, ground EVERY judgement in that data. Do NOT default to your training-set impression of the brand. Read the review snippets carefully — recurring complaints (timeshare pressure, cleanliness, bait-and-switch, dated rooms, food quality, service) directly cap luxury_value and overall score.
 
@@ -415,6 +426,33 @@ Location calibration:
       return words.length <= n ? s : words.slice(0, n).join(" ").replace(/[,;:.\-–—]+$/, "");
     };
 
+    // Parse alternatives — only surface them when the queried property
+    // didn't score well, so we don't second-guess a clear winner.
+    const looksLikeUrlOrSearch = (s: string): boolean =>
+      /^https?:\/\//i.test(s) || /^www\./i.test(s) || /\.(com|net|org|co|io|travel|hotel)\b/i.test(s);
+    const queryNorm = normalize(displayName);
+    const rawAlts = Array.isArray(parsed.alternatives) ? parsed.alternatives : [];
+    const alternatives = (finalScore < 75 ? rawAlts : [])
+      .map((a: { name?: string; area?: string; why?: string }) => ({
+        name: typeof a?.name === "string" ? a.name.trim() : "",
+        area: typeof a?.area === "string" ? a.area.trim() : "",
+        why: typeof a?.why === "string" ? trimToWords(a.why.trim(), 18) : "",
+      }))
+      .filter((a: { name: string }) => {
+        if (!a.name) return false;
+        if (looksLikeUrlOrSearch(a.name)) return false;
+        const n = normalize(a.name);
+        // Reject anything that looks like the queried property (substring
+        // overlap, not just strict equality — handles "Rosewood Miramar Beach"
+        // vs "Rosewood Miramar").
+        if (n === queryNorm) return false;
+        if (queryNorm.length >= 5 && (n.includes(queryNorm) || queryNorm.includes(n))) return false;
+        // Reject anything that resembles a previously avoided property.
+        if (isLovedPropertyMatch(a.name, avoidedFavorites)) return false;
+        return true;
+      })
+      .slice(0, 3);
+
     res.json({
       score: finalScore,
       displayName,
@@ -442,6 +480,7 @@ Location calibration:
       previouslyAvoided,
       styleMismatch,
       styleMismatchReason,
+      alternatives,
       dataSource: place ? "google_reviews" : "ai_only",
     });
   } catch (err) {

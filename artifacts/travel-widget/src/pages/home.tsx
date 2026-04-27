@@ -213,8 +213,10 @@ type QuickMatchResult = {
   googleReviewCount?: number | null;
   googleAddress?: string | null;
   avoidWarning?: string | null;
+  previouslyAvoided?: boolean;
   styleMismatch?: boolean;
   styleMismatchReason?: string | null;
+  alternatives?: Array<{ name: string; area?: string; why?: string }>;
   dataSource?: "google_reviews" | "ai_only";
 };
 
@@ -273,8 +275,7 @@ function ReviewMatchCard() {
     );
   };
 
-  const handleMatch = async () => {
-    const q = query.trim();
+  const runMatch = async (q: string, star: number | null, guestScoreStr: string) => {
     if (!q) return;
     if (looksLikeSearchPage(q)) {
       setInputError(
@@ -287,13 +288,13 @@ function ReviewMatchCard() {
     setLoading(true);
     setResult(null);
     try {
-      const guestScoreNum = parseFloat(guestScoreInput);
+      const guestScoreNum = parseFloat(guestScoreStr);
       const payload: Record<string, unknown> = { query: q };
-      if (hotelStar) payload.hotelStarRating = hotelStar;
+      if (star) payload.hotelStarRating = star;
       if (Number.isFinite(guestScoreNum) && guestScoreNum >= 1 && guestScoreNum <= 10) {
         payload.guestScore = guestScoreNum;
       }
-      setSubmittedStar(hotelStar);
+      setSubmittedStar(star);
       const res = await apiFetch("/api/reviews/quick-match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -305,6 +306,24 @@ function ReviewMatchCard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMatch = () => runMatch(query.trim(), hotelStar, guestScoreInput);
+
+  const handleAlternativeClick = (name: string) => {
+    setQuery(name);
+    setHotelStar(null);
+    setGuestScoreInput("");
+    void runMatch(name, null, "");
+  };
+
+  const handleReset = () => {
+    setQuery("");
+    setHotelStar(null);
+    setGuestScoreInput("");
+    setSubmittedStar(null);
+    setResult(null);
+    setInputError(null);
   };
 
   return (
@@ -554,6 +573,92 @@ function ReviewMatchCard() {
               </div>
             </div>
           )}
+
+          {/* Alternative recommendations — only present when this property
+              didn't score well. Click to re-run the match against the alt. */}
+          {(result.alternatives ?? []).length > 0 && (
+            <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+              <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 600, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#B8963E", marginBottom: "4px" }}>
+                Better fits in this area
+              </p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "12.5px", color: "rgba(255,255,255,0.5)", marginBottom: "14px", lineHeight: 1.5 }}>
+                Tap any to score it against your style.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {(result.alternatives ?? []).map((alt, i) => (
+                  <button
+                    key={`${alt.name}-${i}`}
+                    type="button"
+                    onClick={() => handleAlternativeClick(alt.name)}
+                    style={{
+                      textAlign: "left",
+                      background: "rgba(184,150,62,0.06)",
+                      border: "1px solid rgba(184,150,62,0.25)",
+                      padding: "12px 14px",
+                      cursor: "pointer",
+                      transition: "background 0.15s, border-color 0.15s",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(184,150,62,0.12)";
+                      e.currentTarget.style.borderColor = "rgba(184,150,62,0.5)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "rgba(184,150,62,0.06)";
+                      e.currentTarget.style.borderColor = "rgba(184,150,62,0.25)";
+                    }}
+                  >
+                    <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 500, fontSize: "14px", color: "white", lineHeight: 1.3 }}>
+                      {alt.name}
+                      {alt.area && (
+                        <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontStyle: "italic", fontSize: "11.5px", color: "rgba(255,255,255,0.5)", marginLeft: "8px" }}>
+                          {alt.area}
+                        </span>
+                      )}
+                    </span>
+                    {alt.why && (
+                      <span style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 300, fontSize: "12px", color: "rgba(255,255,255,0.7)", lineHeight: 1.45 }}>
+                        {alt.why}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Check another hotel — reset CTA */}
+          <div style={{ marginTop: "26px", paddingTop: "18px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "center" }}>
+            <button
+              type="button"
+              onClick={handleReset}
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.25)",
+                color: "white",
+                fontFamily: "'Raleway', sans-serif",
+                fontWeight: 600,
+                fontSize: "10px",
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                padding: "10px 20px",
+                cursor: "pointer",
+                transition: "background 0.15s, border-color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(184,150,62,0.12)";
+                e.currentTarget.style.borderColor = "#B8963E";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)";
+              }}
+            >
+              Check another hotel
+            </button>
+          </div>
         </div>
       )}
 
