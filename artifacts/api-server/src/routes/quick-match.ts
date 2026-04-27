@@ -100,8 +100,13 @@ function isLovedPropertyMatch(query: string, favorites: FavoriteLike[]): boolean
 // ---------------------------------------------------------------------------
 // Match tier — copy that sits above the big score number on the dashboard.
 // ---------------------------------------------------------------------------
-function tierFromScore(score: number, avoid: boolean): { tier: "avoid" | "strong" | "good" | "weak"; label: string } {
+function tierFromScore(
+  score: number,
+  avoid: boolean,
+  styleMismatch: boolean
+): { tier: "avoid" | "mismatch" | "strong" | "good" | "weak"; label: string } {
   if (avoid) return { tier: "avoid", label: "Avoid — guests warn against this" };
+  if (styleMismatch) return { tier: "mismatch", label: "Popular, but wrong for your style" };
   if (score >= 95) return { tier: "strong", label: "Exceptional match" };
   if (score >= 85) return { tier: "strong", label: "Strong match" };
   if (score >= 70) return { tier: "good", label: "Good match with some gaps" };
@@ -349,7 +354,22 @@ Location calibration:
       finalScore = Math.min(finalScore, 20);
     }
 
-    const tier = tierFromScore(finalScore, !!avoid);
+    // STYLE MISMATCH: the property is well-rated by the public (Google ≥ 4.0
+    // with ≥100 reviews) but scores poorly for THIS traveller's style. This
+    // is the "popular all-inclusive vs. luxury-leaning guest" case.
+    const styleMismatch =
+      !avoid &&
+      finalScore < 45 &&
+      !!place &&
+      place.rating !== null &&
+      place.rating >= 4.0 &&
+      (place.userRatingsTotal ?? 0) >= 100;
+
+    const styleMismatchReason = styleMismatch
+      ? `Loved by the general public (${place!.rating!.toFixed(1)}/5 across ${place!.userRatingsTotal!.toLocaleString()} reviews) but the vibe doesn't fit your travel style.`
+      : null;
+
+    const tier = tierFromScore(finalScore, !!avoid, styleMismatch);
 
     // Cap explanation copy to ~45 words / 2 sentences as a server-side
     // safety net even if Claude over-writes.
@@ -386,6 +406,8 @@ Location calibration:
       googleReviewCount: place?.userRatingsTotal ?? null,
       googleAddress: place?.formattedAddress ?? null,
       avoidWarning: avoid,
+      styleMismatch,
+      styleMismatchReason,
       dataSource: place ? "google_reviews" : "ai_only",
     });
   } catch (err) {

@@ -196,7 +196,7 @@ type QuickMatchResult = {
   score: number;
   displayName?: string;
   lovedPropertyMatch?: boolean;
-  matchTier?: "avoid" | "strong" | "good" | "weak";
+  matchTier?: "avoid" | "mismatch" | "strong" | "good" | "weak";
   matchTierLabel?: string;
   tags: string[];
   headline: string;
@@ -214,6 +214,8 @@ type QuickMatchResult = {
   googleReviewCount?: number | null;
   googleAddress?: string | null;
   avoidWarning?: string | null;
+  styleMismatch?: boolean;
+  styleMismatchReason?: string | null;
   dataSource?: "google_reviews" | "ai_only";
 };
 
@@ -417,7 +419,7 @@ function ReviewMatchCard() {
             </p>
           )}
 
-          {/* AVOID warning — prominent red banner */}
+          {/* AVOID warning — prominent red banner (data quality concern) */}
           {result.avoidWarning && (
             <div style={{ background: "#3A0F12", border: "1px solid #E04B4B", padding: "14px 16px", marginBottom: "16px", marginTop: "4px" }}>
               <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#E04B4B", marginBottom: "6px" }}>
@@ -425,6 +427,18 @@ function ReviewMatchCard() {
               </p>
               <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "14px", color: "rgba(255,255,255,0.9)", lineHeight: 1.45 }}>
                 {result.avoidWarning}
+              </p>
+            </div>
+          )}
+
+          {/* STYLE MISMATCH — amber banner (popular but wrong fit for you) */}
+          {result.styleMismatch && !result.avoidWarning && (
+            <div style={{ background: "#2E2418", border: "1px solid #D9A24A", padding: "14px 16px", marginBottom: "16px", marginTop: "4px" }}>
+              <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#D9A24A", marginBottom: "6px" }}>
+                ✦ Style mismatch
+              </p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "14px", color: "rgba(255,255,255,0.9)", lineHeight: 1.45 }}>
+                {result.styleMismatchReason}
               </p>
             </div>
           )}
