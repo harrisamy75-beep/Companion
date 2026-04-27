@@ -93,8 +93,8 @@ export default function TermsPage() {
         <section style={sectionStyle}>
           <h2 style={headingStyle}>Your data is yours</h2>
           <p style={paragraphStyle}>
-            You own everything you put into Companion — your travel party, preferences,
-            favourite stays, loyalty numbers. You can export it or delete it any time
+            You own everything you put into Companion — your travel party, preferences
+            and favourite stays. You can export it or delete it any time
             from Settings.
           </p>
         </section>

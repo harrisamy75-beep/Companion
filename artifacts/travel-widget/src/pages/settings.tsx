@@ -184,8 +184,8 @@ function DeleteAccountModal({
             marginBottom: 20,
           }}
         >
-          This permanently deletes your profile, travel party, favourite stays,
-          loyalty programs and all preferences. This cannot be undone.
+          This permanently deletes your profile, travel party, favourite stays
+          and all preferences. This cannot be undone.
         </p>
         <p
           style={{
@@ -400,7 +400,7 @@ export default function SettingsPage() {
           <div style={sectionHeading}>Privacy &amp; data</div>
           <Row
             label="Export my data"
-            help="Download all your travelers, preferences, stays and loyalty info as JSON."
+            help="Download all your travelers, preferences and stays as JSON."
             right={
               <button
                 type="button"

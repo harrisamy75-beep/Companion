@@ -6,7 +6,6 @@ const ROW_DEFS: { key: keyof PlanDef["limits"]; label: string }[] = [
   { key: "travelers", label: "Travelers" },
   { key: "tripProfiles", label: "Trip profiles" },
   { key: "favoriteProperties", label: "Saved properties" },
-  { key: "loyaltyPrograms", label: "Loyalty programs" },
 ];
 
 export default function PricingPage() {
@@ -71,7 +70,6 @@ export default function PricingPage() {
                 {[
                   "Unlimited travelers & trip profiles",
                   "Unlimited favourite properties",
-                  "Unlimited loyalty programs",
                   "AI-powered review matching",
                   "Travel personality profile",
                   "Auto-fill browser extension",

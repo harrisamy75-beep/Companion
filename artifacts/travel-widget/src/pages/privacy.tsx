@@ -110,7 +110,6 @@ export default function PrivacyPage() {
           <Bullet>Travel party details you enter (names, ages, relationships).</Bullet>
           <Bullet>Travel preferences and style selections.</Bullet>
           <Bullet>Favourite properties and hotel brands.</Bullet>
-          <Bullet>Loyalty program names and membership numbers (optional).</Bullet>
           <Bullet>Usage data — which features you use, when.</Bullet>
         </Section>
 
@@ -147,7 +146,6 @@ export default function PrivacyPage() {
         <Section title="Data storage & security">
           <Bullet>Data stored in PostgreSQL database hosted by Replit / Neon.</Bullet>
           <Bullet>Authentication managed by Clerk.</Bullet>
-          <Bullet>Loyalty numbers are stored but never shared with third parties.</Bullet>
           <Bullet>We do not sell your data. Ever.</Bullet>
         </Section>
 
