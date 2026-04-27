@@ -183,7 +183,17 @@ router.post("/reviews/quick-match", async (req, res): Promise<void> => {
   // Prefer Google's resolved name once we have a real place, otherwise fall
   // back to the URL-cleaned name from the user input.
   const displayName = place?.name ?? extractDisplayName(query);
-  const lovedPropertyMatch = isLovedPropertyMatch(query, favorites);
+
+  // Split favourites by tier so we can use them as positive vs. negative
+  // benchmarks. "loved" + "liked" → things the traveller wants more of;
+  // "avoid" → things they explicitly want LESS of.
+  const lovedFavorites = favorites.filter((f) => f.tier === "loved" || f.tier === "liked");
+  const avoidedFavorites = favorites.filter((f) => f.tier === "avoid");
+
+  const lovedPropertyMatch = isLovedPropertyMatch(query, lovedFavorites);
+  // If the user already marked this property "avoid", treat it as a hard
+  // signal — Claude doesn't need to score it, the user has already spoken.
+  const previouslyAvoided = isLovedPropertyMatch(query, avoidedFavorites);
 
   const client = buildClient();
   if (!client) {
@@ -276,20 +286,30 @@ Location calibration:
               if (parsedGuestScore !== null) lines.push(`Guest review score: ${parsedGuestScore.toFixed(1)}/10`);
             }
 
-            const lovedBench = favorites
-              .filter((f) => f.tier === "loved" && (f.starRating || f.pricePerNight))
+            const formatFav = (f: typeof favorites[number]) => {
+              const bits: string[] = [];
+              if (f.starRating) bits.push(`${f.starRating} star${f.starRating === 1 ? "" : "s"}`);
+              if (f.pricePerNight) bits.push(`~$${f.pricePerNight}/night`);
+              const noteSummary = (f.notes ?? "").trim().slice(0, 120);
+              const noteSuffix = noteSummary ? ` — note: "${noteSummary}"` : "";
+              return `- ${f.propertyName}${f.location ? ` (${f.location})` : ""}${bits.length ? ` — ${bits.join(", ")}` : ""}${noteSuffix}`;
+            };
+
+            const lovedBench = lovedFavorites
+              .filter((f) => f.starRating || f.pricePerNight || (f.notes ?? "").trim())
               .slice(0, 6)
-              .map((f) => {
-                const bits: string[] = [];
-                if (f.starRating) bits.push(`${f.starRating} star${f.starRating === 1 ? "" : "s"}`);
-                if (f.pricePerNight) bits.push(`~$${f.pricePerNight}/night`);
-                return `- ${f.propertyName}${f.location ? ` (${f.location})` : ""}${bits.length ? ` — ${bits.join(", ")}` : ""}`;
-              });
+              .map(formatFav);
             if (lovedBench.length > 0) {
               lines.push("");
-              lines.push("This user's loved properties (use as a benchmark for what they consider a strong match):");
+              lines.push("Properties this traveller has LOVED (positive benchmark — score relative to these):");
               lines.push(...lovedBench);
-              lines.push("Score the new property relative to this benchmark.");
+            }
+
+            const avoidBench = avoidedFavorites.slice(0, 6).map(formatFav);
+            if (avoidBench.length > 0) {
+              lines.push("");
+              lines.push("Properties this traveller has explicitly AVOIDED (negative benchmark — anything similar in vibe, brand, or location should score LOW and you should mention the resemblance in score_explanation):");
+              lines.push(...avoidBench);
             }
 
             return lines.join("\n");
@@ -348,17 +368,30 @@ Location calibration:
     const baseScore = Math.min(100, Math.max(0, Math.round(Number(parsed.score) || 72)));
     let finalScore = lovedPropertyMatch ? Math.min(100, baseScore + 15) : baseScore;
 
+    // PREVIOUSLY-AVOIDED override: the user has already told us they avoid
+    // this property. Trust them — pin the score down hard.
+    if (previouslyAvoided) {
+      finalScore = Math.min(finalScore, 10);
+    }
+
     // AVOID safety net: cap the score hard so the UI cannot show a "good
     // match" for a property the data clearly says to avoid.
     if (avoid) {
       finalScore = Math.min(finalScore, 20);
     }
 
+    // Synthesize a friendly avoid warning when the user previously avoided
+    // this property — even if Google data is fine, the user's own signal wins.
+    const effectiveAvoidWarning = previouslyAvoided
+      ? "You previously marked this property as Avoid. We're respecting that."
+      : avoid;
+
     // STYLE MISMATCH: the property is well-rated by the public (Google ≥ 4.0
     // with ≥100 reviews) but scores poorly for THIS traveller's style. This
     // is the "popular all-inclusive vs. luxury-leaning guest" case.
+    // (Suppressed when previously-avoided so we don't double up the banners.)
     const styleMismatch =
-      !avoid &&
+      !effectiveAvoidWarning &&
       finalScore < 45 &&
       !!place &&
       place.rating !== null &&
@@ -369,7 +402,7 @@ Location calibration:
       ? `Loved by the general public (${place!.rating!.toFixed(1)}/5 across ${place!.userRatingsTotal!.toLocaleString()} reviews) but the vibe doesn't fit your travel style.`
       : null;
 
-    const tier = tierFromScore(finalScore, !!avoid, styleMismatch);
+    const tier = tierFromScore(finalScore, !!effectiveAvoidWarning, styleMismatch);
 
     // Cap explanation copy to ~45 words / 2 sentences as a server-side
     // safety net even if Claude over-writes.
@@ -405,7 +438,8 @@ Location calibration:
       googleRating: place?.rating ?? null,
       googleReviewCount: place?.userRatingsTotal ?? null,
       googleAddress: place?.formattedAddress ?? null,
-      avoidWarning: avoid,
+      avoidWarning: effectiveAvoidWarning,
+      previouslyAvoided,
       styleMismatch,
       styleMismatchReason,
       dataSource: place ? "google_reviews" : "ai_only",

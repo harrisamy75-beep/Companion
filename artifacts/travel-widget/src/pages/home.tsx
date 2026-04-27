@@ -7,7 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Heart } from "lucide-react";
 import { TRAVEL_STYLE_GROUPS } from "@/lib/travel-styles";
-import ReviewSorter from "@/components/review-sorter";
 
 /* ─── Helpers ─── */
 function getGreeting(): string {
@@ -841,9 +840,6 @@ export default function Home() {
           childAges={childAges}
           partyDescription={`${userName} Family — ${adultTravelers.length} adult${adultTravelers.length === 1 ? "" : "s"}${childTravelers.length > 0 ? `, ${childTravelers.length} kid${childTravelers.length === 1 ? "" : "s"}` : ""}`}
         />
-
-        {/* ── Section 3.75: Review Sorter ── */}
-        <ReviewSorter userTags={travelStyles} />
 
         {/* ── Section 4: Quick actions ── */}
         <div style={{ display: "flex", alignItems: "center", gap: "0", paddingTop: "8px", borderTop: "1px solid #E5E0D8" }}>
