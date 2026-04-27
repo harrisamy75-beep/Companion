@@ -23,6 +23,14 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 const API_BASE = "https://travelcompaniontool.replit.app/api";
 
 // ─── ROUTER ────────────────────────────────────────────────────────────────
+// All site-specific fillers return { ok: boolean, mode: "autofill"|"manual"|"noop", code?: string }.
+// `autofill` = the form was actually filled. `manual` = a reference panel was shown but the user
+// still has to type. `noop` = nothing happened (unsupported page, missing trigger).
+function asResult(value, fallbackMode) {
+  if (value && typeof value === "object" && "ok" in value) return value;
+  return { ok: !!value, mode: fallbackMode || "autofill" };
+}
+
 async function universalFill(profile) {
   const { adults, children, childAges } = profile.autoFillPayload;
   const hostname = window.location.hostname;
@@ -32,25 +40,81 @@ async function universalFill(profile) {
     console.log("[TripProfile] Booking.com — showing reference panel (auto-fill not supported)");
     injectFloatingPanel(profile);
     showToast("Booking.com auto-fill isn't supported — use the reference panel to fill manually");
-    return true;
+    return { ok: true, mode: "manual", code: "BOOKING_REFERENCE_PANEL" };
   }
-  if (hostname.includes("tripadvisor.com")) return await tripAdvisorFill(adults, children, childAges);
-  if (hostname.includes("expedia.com") || hostname.includes("hotels.com")) return await expediaFill(adults, children, childAges);
-  return await universalFallbackFill(adults, children, childAges);
+  if (hostname.includes("tripadvisor.com")) return asResult(await tripAdvisorFill(adults, children, childAges));
+  if (hostname.includes("expedia.com") || hostname.includes("hotels.com")) return asResult(await expediaFill(adults, children, childAges));
+  return asResult(await universalFallbackFill(adults, children, childAges));
 }
 
 // ─── TRIPADVISOR ───────────────────────────────────────────────────────────
 async function tripAdvisorFill(adults, children, childAges) {
   console.log("[TripProfile] TripAdvisor path");
 
-  // Don't open the picker ourselves — it closes on focus loss when the
-  // popup opens. Require the user to open it first.
-  const alreadyOpen = !!document.querySelector(
-    'button[aria-label="Set adult count to one less"], button[aria-label*="adult" i][aria-label*="less" i]'
-  );
-  if (!alreadyOpen) {
-    showToast("Please open the guest picker first, then click Fill This Page");
+  // Detect whether the picker is already open — broaden across aria phrasing
+  // ("decrease/decrement/less/minus/remove/subtract"), generic +/- icon
+  // buttons next to an adults label, or a visible dialog/listbox.
+  const isPickerOpen = () => {
+    if (
+      document.querySelector(
+        'button[aria-label*="adult" i][aria-label*="less" i], ' +
+        'button[aria-label*="adult" i][aria-label*="decrease" i], ' +
+        'button[aria-label*="adult" i][aria-label*="decrement" i], ' +
+        'button[aria-label*="adult" i][aria-label*="minus" i], ' +
+        'button[aria-label*="adult" i][aria-label*="remove" i], ' +
+        'button[aria-label*="adult" i][aria-label*="subtract" i], ' +
+        'button[aria-label*="decrease" i][aria-label*="adult" i], ' +
+        'button[aria-label*="remove" i][aria-label*="adult" i]'
+      )
+    ) return true;
+    // Fallback: open dialog with the word "adults" in it.
+    const dialog = document.querySelector('[role="dialog"], [role="listbox"]');
+    if (dialog && /adult/i.test(dialog.textContent || "")) return true;
     return false;
+  };
+
+  // If the picker isn't open yet, find a narrow, safe trigger and open it.
+  // We deliberately avoid catch-all selectors like aria-label*="travel",
+  // which match unrelated nav controls and cause unintended navigation.
+  if (!isPickerOpen()) {
+    const triggerSelectors = [
+      'button[data-test-target*="ROOMS" i]',
+      'button[data-test-target*="GUESTS" i]',
+      'button[data-test-target*="OCCUPANCY" i]',
+      'button[data-automation*="rooms" i]',
+      'button[data-automation*="guests" i]',
+      'button[data-automation*="occupancy" i]',
+      'button[aria-label*="rooms" i]',
+      'button[aria-label*="guest" i]',
+      'button[aria-label*="occupancy" i]',
+    ];
+    for (const sel of triggerSelectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        console.log("[TripProfile] TripAdvisor opening picker via selector:", sel);
+        el.click();
+        await sleep(700);
+        if (isPickerOpen()) break;
+      }
+    }
+    // Fallback: any button whose visible text reads like a guests/rooms
+    // summary (e.g. "1 Room, 2 Adults", "2 Guests"). Skip nav-like buttons.
+    if (!isPickerOpen()) {
+      const candidate = Array.from(document.querySelectorAll("button")).find((b) => {
+        const txt = (b.textContent || "").trim();
+        if (!txt || txt.length > 40) return false;
+        // Must mention rooms/guests/adults with a number.
+        if (!/\b\d+\s*(rooms?|guests?|adults?)\b/i.test(txt)) return false;
+        // Skip obvious nav/footer.
+        if (b.closest("nav, footer, header[role='banner']")) return false;
+        return true;
+      });
+      if (candidate) {
+        console.log("[TripProfile] TripAdvisor opening picker via text-match:", candidate.textContent.trim().slice(0, 30));
+        candidate.click();
+        await sleep(800);
+      }
+    }
   }
 
   // Find scoped picker container (case-insensitive aria match)
@@ -360,10 +424,9 @@ function buildPanelLines(profile) {
   const af = profile.autoFillPayload || {};
   const adults = af.adults ?? 0; const children = af.children ?? 0;
   const childAges = Array.isArray(af.childAges) ? af.childAges : [];
-  const loyalty = Array.isArray(profile.loyaltyPrograms) ? profile.loyaltyPrograms : [];
   const partyLine = `${adults} adult${adults !== 1 ? "s" : ""}` + (children > 0 ? ` · ${children} child${children !== 1 ? "ren" : ""}` : "");
   const ageLine = childAges.length > 0 ? `Ages: ${childAges.join(", ")}` : null;
-  return { partyLine, ageLine, loyalty };
+  return { partyLine, ageLine };
 }
 
 function injectFloatingPanel(profile) {
@@ -400,21 +463,6 @@ function injectFloatingPanel(profile) {
     ageEl.textContent = data.ageLine;
     Object.assign(ageEl.style, { fontSize:"12.5px",color:"#5C5248",marginBottom:"10px" });
     body.appendChild(ageEl);
-  }
-
-  if (data.loyalty.length > 0) {
-    const loyaltyTitle = document.createElement("div");
-    loyaltyTitle.textContent = "Loyalty";
-    Object.assign(loyaltyTitle.style, { fontSize:"9.5px",fontWeight:"600",letterSpacing:"0.16em",textTransform:"uppercase",color:"#A07840",marginTop:"6px",marginBottom:"5px",paddingTop:"8px",borderTop:"1px solid #E5E0D8" });
-    body.appendChild(loyaltyTitle);
-    data.loyalty.slice(0, 6).forEach((p) => {
-      const row = document.createElement("div");
-      Object.assign(row.style, { display:"flex",justifyContent:"space-between",gap:"8px",fontSize:"12px",color:"#1C1C1C",padding:"3px 0" });
-      const lbl = document.createElement("span"); lbl.textContent = p.programName || p.brand || "Program"; lbl.style.fontWeight = "500";
-      const num = document.createElement("span"); num.textContent = p.membershipNumber || "—";
-      Object.assign(num.style, { fontFamily:"ui-monospace,'SF Mono',Menlo,monospace",fontSize:"11px",color:"#5C5248",userSelect:"all" });
-      row.appendChild(lbl); row.appendChild(num); body.appendChild(row);
-    });
   }
 
   const footer = document.createElement("div");

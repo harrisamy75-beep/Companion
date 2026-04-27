@@ -128,6 +128,12 @@
         <div class="sub" id="children-detail"></div>
       </div>
 
+      <!-- Primary action: auto-fill guest picker (above the fold) -->
+      <div class="actions">
+        <button id="fill-page" class="gold">Fill this page</button>
+        <div id="fill-status"></div>
+      </div>
+
       <div class="section">
         <div class="label">Travel style</div>
         <div class="tags" id="style-tags">
@@ -135,21 +141,10 @@
         </div>
       </div>
 
-      <div class="section">
-        <div class="label">Loyalty</div>
-        <div class="sub" id="loyalty-preview">—</div>
-      </div>
-
-      <!-- Primary action: clipboard copy -->
-      <div class="actions">
-        <button id="copy-payload" class="gold">Copy for booking</button>
-        <div id="copy-status"></div>
-      </div>
-
-      <!-- Auto-fill the open guest picker -->
+      <!-- Secondary action: clipboard copy -->
       <div class="actions" style="padding-top: 0;">
-        <button id="fill-page" class="primary">Fill this page</button>
-        <div id="fill-status"></div>
+        <button id="copy-payload" class="primary">Copy for booking</button>
+        <div id="copy-status"></div>
       </div>
 
       <!-- Floating reference card on page -->

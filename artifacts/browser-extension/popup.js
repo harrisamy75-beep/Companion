@@ -9,7 +9,7 @@ function formatSyncTime(isoString) {
 
 function buildClipboardPayload(profile) {
   if (!profile) return "";
-  const { autoFillPayload, loyaltyPrograms } = profile;
+  const { autoFillPayload } = profile;
   const adults = autoFillPayload?.adults ?? 0;
   const children = autoFillPayload?.children ?? 0;
   const childAges = Array.isArray(autoFillPayload?.childAges) ? autoFillPayload.childAges : [];
@@ -21,16 +21,6 @@ function buildClipboardPayload(profile) {
     lines.push(`Child ages: ${childAges.join(", ")}`);
   }
 
-  if (Array.isArray(loyaltyPrograms) && loyaltyPrograms.length > 0) {
-    const loyaltyStr = loyaltyPrograms
-      .map((p) => {
-        const num = p.membershipNumber ? ` ${p.membershipNumber}` : " [number]";
-        return `${p.programName}${num}`;
-      })
-      .join(", ");
-    lines.push(`Loyalty: ${loyaltyStr}`);
-  }
-
   return lines.join("\n");
 }
 
@@ -38,12 +28,11 @@ function renderProfile(profile) {
   if (!profile) {
     document.getElementById("traveler-count").textContent = "No profile yet";
     document.getElementById("children-detail").textContent = "";
-    document.getElementById("loyalty-preview").textContent = "—";
     document.getElementById("sync-time").textContent = "Connect, then tap Re-sync";
     return;
   }
 
-  const { family, preferences, loyaltyPrograms, _syncedAt } = profile;
+  const { family, preferences, _syncedAt } = profile;
 
   document.getElementById("traveler-count").textContent =
     `${family.travelerCount} traveler${family.travelerCount !== 1 ? "s" : ""}`;
@@ -74,15 +63,6 @@ function renderProfile(profile) {
       more.textContent = `+${tags.length - 3} more`;
       tagsEl.appendChild(more);
     }
-  }
-
-  const loyaltyEl = document.getElementById("loyalty-preview");
-  if (Array.isArray(loyaltyPrograms) && loyaltyPrograms.length > 0) {
-    const top = loyaltyPrograms.slice(0, 3).map((p) => p.programName).join(", ");
-    const more = loyaltyPrograms.length > 3 ? ` +${loyaltyPrograms.length - 3} more` : "";
-    loyaltyEl.textContent = top + more;
-  } else {
-    loyaltyEl.textContent = "No loyalty programs added";
   }
 
   document.getElementById("sync-time").textContent = formatSyncTime(_syncedAt);
@@ -247,17 +227,35 @@ document.addEventListener("DOMContentLoaded", async () => {
         fillBtn.disabled = false;
         fillBtn.textContent = original;
         if (lastErr) {
-          flashStatus(fillStatusEl, "ERR: " + lastErr, true, 12000);
+          flashStatus(
+            fillStatusEl,
+            "This page isn't supported. Try Booking, Expedia, Hotels.com or TripAdvisor. [CS_NOT_INJECTED]",
+            true,
+            6000
+          );
           return;
         }
         const ok = response?.ok;
-        const errMsg = response?.error;
-        flashStatus(
-          fillStatusEl,
-          "RESP: ok=" + String(ok) + (errMsg ? " err=" + errMsg : ""),
-          !ok,
-          12000
-        );
+        const mode = response?.mode;
+        const code = response?.code ? ` [${response.code}]` : "";
+        if (ok && mode === "autofill") {
+          flashStatus(fillStatusEl, "Filled — review and confirm in the picker.", false, 4000);
+          setTimeout(() => window.close(), 600);
+        } else if (ok && mode === "manual") {
+          flashStatus(
+            fillStatusEl,
+            "Reference panel shown on the page — fill the form using those values." + code,
+            false,
+            6000
+          );
+        } else {
+          flashStatus(
+            fillStatusEl,
+            "Couldn't fill automatically — finish in the picker manually." + code,
+            true,
+            6000
+          );
+        }
       });
     });
   });
