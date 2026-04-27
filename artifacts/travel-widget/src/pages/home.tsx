@@ -196,7 +196,7 @@ type QuickMatchResult = {
   score: number;
   displayName?: string;
   lovedPropertyMatch?: boolean;
-  matchTier?: "strong" | "good" | "weak";
+  matchTier?: "avoid" | "strong" | "good" | "weak";
   matchTierLabel?: string;
   tags: string[];
   headline: string;
@@ -210,6 +210,11 @@ type QuickMatchResult = {
   whatWorked?: string[];
   whatHeldItBack?: string[];
   userTags?: string[];
+  googleRating?: number | null;
+  googleReviewCount?: number | null;
+  googleAddress?: string | null;
+  avoidWarning?: string | null;
+  dataSource?: "google_reviews" | "ai_only";
 };
 
 const CATEGORY_LABELS: { key: keyof NonNullable<QuickMatchResult["scoreBreakdown"]>; label: string }[] = [
@@ -247,6 +252,7 @@ const TIER_COLORS: Record<string, string> = {
   "Good match with some gaps": "rgba(255,255,255,0.55)",
   "Partial match": "#D9A24A",
   "Poor match for your style": "#A8324A",
+  "Avoid — guests warn against this": "#E04B4B",
 };
 
 function ReviewMatchCard() {
@@ -394,9 +400,33 @@ function ReviewMatchCard() {
         <div>
           {/* Cleaned display name (e.g. URL → "Villa Agrippina Gran Melia") */}
           {result.displayName && (
-            <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 400, fontSize: "16px", color: "rgba(255,255,255,0.85)", textAlign: "center", marginBottom: "10px", lineHeight: 1.4 }}>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontWeight: 400, fontSize: "16px", color: "rgba(255,255,255,0.85)", textAlign: "center", marginBottom: "6px", lineHeight: 1.4 }}>
               {result.displayName}
             </p>
+          )}
+
+          {/* Real Google rating (when we resolved a real place) */}
+          {typeof result.googleRating === "number" && (
+            <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "12px", color: "rgba(255,255,255,0.55)", textAlign: "center", marginBottom: "10px", letterSpacing: "0.04em" }}>
+              <span style={{ color: "#B8963E", marginRight: "4px" }}>★</span>
+              <span style={{ color: "white", fontWeight: 500 }}>{result.googleRating.toFixed(1)}</span>
+              <span style={{ color: "rgba(255,255,255,0.4)" }}> / 5 on Google</span>
+              {result.googleReviewCount && (
+                <span style={{ color: "rgba(255,255,255,0.4)" }}> · {result.googleReviewCount.toLocaleString()} reviews</span>
+              )}
+            </p>
+          )}
+
+          {/* AVOID warning — prominent red banner */}
+          {result.avoidWarning && (
+            <div style={{ background: "#3A0F12", border: "1px solid #E04B4B", padding: "14px 16px", marginBottom: "16px", marginTop: "4px" }}>
+              <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: "11px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#E04B4B", marginBottom: "6px" }}>
+                ⚠ Avoid
+              </p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: "italic", fontSize: "14px", color: "rgba(255,255,255,0.9)", lineHeight: 1.45 }}>
+                {result.avoidWarning}
+              </p>
+            </div>
           )}
 
           {/* Loved-property indicator */}
@@ -425,7 +455,7 @@ function ReviewMatchCard() {
 
           {/* Score */}
           <div style={{ textAlign: "center", marginBottom: "8px" }}>
-            <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "72px", color: "white", lineHeight: 1 }}>
+            <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "72px", color: result.avoidWarning ? "#E04B4B" : "white", lineHeight: 1 }}>
               {result.score}
             </span>
             <p style={{ fontFamily: "'Raleway', sans-serif", fontWeight: 400, fontSize: "12px", color: "rgba(255,255,255,0.5)", marginTop: "6px", letterSpacing: "0.04em" }}>

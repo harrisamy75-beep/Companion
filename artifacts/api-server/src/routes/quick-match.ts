@@ -2,6 +2,7 @@ import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import { eq } from "drizzle-orm";
 import { db, preferencesTable, favoritePropertiesTable } from "@workspace/db";
+import { lookupPlace, type PlaceLookup } from "../lib/places-lookup.js";
 
 const router = Router();
 
@@ -99,12 +100,31 @@ function isLovedPropertyMatch(query: string, favorites: FavoriteLike[]): boolean
 // ---------------------------------------------------------------------------
 // Match tier — copy that sits above the big score number on the dashboard.
 // ---------------------------------------------------------------------------
-function tierFromScore(score: number): { tier: "strong" | "good" | "weak"; label: string } {
+function tierFromScore(score: number, avoid: boolean): { tier: "avoid" | "strong" | "good" | "weak"; label: string } {
+  if (avoid) return { tier: "avoid", label: "Avoid — guests warn against this" };
   if (score >= 95) return { tier: "strong", label: "Exceptional match" };
   if (score >= 85) return { tier: "strong", label: "Strong match" };
   if (score >= 70) return { tier: "good", label: "Good match with some gaps" };
   if (score >= 50) return { tier: "good", label: "Partial match" };
   return { tier: "weak", label: "Poor match for your style" };
+}
+
+// ---------------------------------------------------------------------------
+// AVOID warning rule — a property is flagged AVOID when guests have spoken
+// loudly and unfavourably. We need a reasonable sample (≥30 reviews) so we
+// don't penalise small boutiques unfairly.
+// ---------------------------------------------------------------------------
+function avoidReason(place: PlaceLookup | null): string | null {
+  if (!place || place.rating === null) return null;
+  const reviews = place.userRatingsTotal ?? 0;
+  if (reviews < 30) return null;
+  if (place.rating < 3.5) {
+    return `Google rating ${place.rating.toFixed(1)}/5 across ${reviews.toLocaleString()} reviews — well below acceptable.`;
+  }
+  if (place.rating < 3.8 && reviews >= 200) {
+    return `Google rating ${place.rating.toFixed(1)}/5 across ${reviews.toLocaleString()} reviews — too many guests are unhappy.`;
+  }
+  return null;
 }
 
 router.post("/reviews/quick-match", async (req, res): Promise<void> => {
@@ -129,10 +149,11 @@ router.post("/reviews/quick-match", async (req, res): Promise<void> => {
     return;
   }
 
-  // Fetch preferences and favourites in parallel.
-  const [prefRows, favorites] = await Promise.all([
+  // Fetch preferences, favourites, and live Google data in parallel.
+  const [prefRows, favorites, place] = await Promise.all([
     db.select().from(preferencesTable).where(eq(preferencesTable.userId, userId)).limit(1),
     db.select().from(favoritePropertiesTable).where(eq(favoritePropertiesTable.userId, userId)),
+    lookupPlace(query),
   ]);
 
   // Merge both style columns (legacy text[] + new jsonb), dedup, drop empties.
@@ -154,7 +175,9 @@ router.post("/reviews/quick-match", async (req, res): Promise<void> => {
       : "no travel style preferences set";
 
   const personality: string | null = (req as any).session?.personality ?? null;
-  const displayName = extractDisplayName(query);
+  // Prefer Google's resolved name once we have a real place, otherwise fall
+  // back to the URL-cleaned name from the user input.
+  const displayName = place?.name ?? extractDisplayName(query);
   const lovedPropertyMatch = isLovedPropertyMatch(query, favorites);
 
   const client = buildClient();
@@ -163,11 +186,15 @@ router.post("/reviews/quick-match", async (req, res): Promise<void> => {
     return;
   }
 
+  // If Google says rating < 3.5 with a meaningful sample, treat as AVOID
+  // regardless of what Claude returns. This is the "Grand Sirenes" safety net.
+  const avoid = avoidReason(place);
+
   try {
     const message = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 500,
-      system: `You are a luxury travel concierge. Given a hotel or destination and a traveler's preferences, return ONLY valid JSON with no other text:
+      max_tokens: 600,
+      system: `You are a luxury travel concierge. Given a hotel or destination, REAL guest review data (when available), and a traveler's preferences, return ONLY valid JSON with no other text:
 {
   "score": number (0-100 match),
   "tags": string[] (2-3 short descriptive words),
@@ -180,23 +207,25 @@ router.post("/reviews/quick-match", async (req, res): Promise<void> => {
     "adventurous_menu": { "score": number 1-10, "reason": string (max 8 words) }
   }
 }
-Score 80+ only for strong matches. Be honest — a poor match should score 30-50. Weight your reasoning toward the traveller's PRIMARY styles (listed first), not every tag equally.
 
-Score luxury_value_score and overall match strictly using this hotel-class ladder:
+CRITICAL — when REAL Google review data is provided, ground EVERY judgement in that data. Do NOT default to your training-set impression of the brand. Read the review snippets carefully — recurring complaints (timeshare pressure, cleanliness, bait-and-switch, dated rooms, food quality, service) directly cap luxury_value and overall score.
+
+Google rating → score floor:
+- ≥ 4.7 with ≥500 reviews: world-class. luxury_value 9-10. Overall 85+.
+- 4.4–4.6: strong. luxury_value 7-9. Overall 70-90 depending on style fit.
+- 4.0–4.3: solid mid-tier. luxury_value 5-7. Overall 55-75.
+- 3.7–3.9: mediocre. luxury_value 3-5. Overall 35-55. Mention specific complaints.
+- 3.5–3.6: weak. luxury_value 2-4. Overall 25-40. Mention specific complaints.
+- < 3.5 with ≥30 reviews: AVOID territory. luxury_value 1-2. Overall 5-25. Quote the worst recurring theme in score_explanation.
+
+Hotel-class ladder (use ONLY when no Google data is provided):
 - 5-star luxury brand (Aman, Rosewood, Four Seasons, Ritz-Carlton, St. Regis, Park Hyatt, Bvlgari, Mandarin Oriental, Belmond, Cheval Blanc, Capella): luxury_value 9-10. Overall 80+ for luxury-leaning travelers.
 - 5-star upscale (Waldorf Astoria, Conrad, JW Marriott, Grand Hyatt, W Hotels, Andaz, EDITION, 1 Hotels, Soho House, NoMad, Faena, The Standard, Ace, Design Hotels collection): luxury_value 7-8. Overall 65-85 for luxury-leaning travelers.
 - 4-star full service (Marriott, Hilton, Hyatt Regency, Westin, Sheraton, Renaissance, Le Méridien, Kimpton): luxury_value 5-6. Overall 50-65.
 - 3-star select service (Courtyard, Hampton Inn, Hyatt Place, Aloft, Hilton Garden Inn, Fairfield Inn, Residence Inn, Holiday Inn Resort): luxury_value 3-4. Overall 40-55.
-- 2-star / budget chains (Holiday Inn, Holiday Inn Express, Comfort Inn, Comfort Suites, Motel 6, Days Inn, Super 8, Howard Johnson, Rodeway Inn, Econo Lodge, Travelodge, Best Western non-Premier, Quality Inn, La Quinta, Red Roof, Knights Inn, America's Best Value, Microtel, Sleep Inn): luxury_value 1-2. Overall 25-45 for luxury-leaning travelers, regardless of price.
-- Boutique independent: judge on signals (design language, service, materials, food program, location).
-- Hollywood / Las Vegas Strip / Times Square budget hotels in noisy tourist zones score lower for travelers seeking refined, quiet, or design-led stays — call out the location-vs-style mismatch in score_explanation.
-- Do not inflate scores out of politeness. A clear mismatch is a clear mismatch.
+- 2-star / budget chains: luxury_value 1-2. Overall 25-45.
 
-Review-score calibration when an average guest score is provided:
-- 9.0–10.0: boost luxury_value by +1 and overall by +3
-- 8.0–8.9: neutral
-- 7.0–7.9: reduce luxury_value by -1 and overall by -3
-- below 7.0: reduce luxury_value by -2 and overall by -6
+Score 80+ ONLY for strong matches with strong supporting data. Be honest — a poor match should score 30-50, an actively bad property should score below 30. Do not inflate.
 
 Location calibration:
 - Hollywood Blvd corridor, airport, highway, strip-mall locations: -2 luxury_value, -5 overall
@@ -211,10 +240,35 @@ Location calibration:
               `Traveler's style: ${styleDesc}`,
             ];
             if (personality) lines.push(`Personality: ${personality}`);
-            if (parsedStar !== null) lines.push(`Hotel star rating: ${parsedStar} stars`);
-            if (parsedGuestScore !== null) lines.push(`Guest review score: ${parsedGuestScore.toFixed(1)}/10`);
-            if (parsedStar !== null || parsedGuestScore !== null) {
-              lines.push("Use the star rating and guest score to calibrate your luxury_value_score and overall match.");
+
+            // Prefer authoritative Google data over user-entered values.
+            if (place) {
+              lines.push("");
+              lines.push("REAL Google review data for this property:");
+              if (place.formattedAddress) lines.push(`- Address: ${place.formattedAddress}`);
+              if (place.rating !== null) {
+                lines.push(`- Google rating: ${place.rating.toFixed(1)}/5${place.userRatingsTotal ? ` (${place.userRatingsTotal.toLocaleString()} reviews)` : ""}`);
+              }
+              if (place.priceLevel !== null) {
+                lines.push(`- Google price level: ${"$".repeat(Math.max(1, place.priceLevel))} (0-4 scale, ${place.priceLevel}/4)`);
+              }
+              if (place.editorialSummary) {
+                lines.push(`- Editorial summary: ${place.editorialSummary}`);
+              }
+              if (place.reviews.length > 0) {
+                lines.push("");
+                lines.push("Recent guest review snippets (most recent first):");
+                place.reviews.forEach((rv, i) => {
+                  const stars = rv.rating ? `${rv.rating}/5` : "?/5";
+                  const when = rv.relativeTime ? ` (${rv.relativeTime})` : "";
+                  lines.push(`${i + 1}. [${stars}${when}] "${rv.text}"`);
+                });
+              }
+              lines.push("");
+              lines.push("Ground your scoring in this real data. Quote specific themes from the reviews in your explanation.");
+            } else {
+              if (parsedStar !== null) lines.push(`Hotel star rating: ${parsedStar} stars`);
+              if (parsedGuestScore !== null) lines.push(`Guest review score: ${parsedGuestScore.toFixed(1)}/10`);
             }
 
             const lovedBench = favorites
@@ -287,8 +341,15 @@ Location calibration:
     // Apply the +15 loved-property bonus AFTER Claude scores so it's
     // additive recognition, not a thumb on the model's scale.
     const baseScore = Math.min(100, Math.max(0, Math.round(Number(parsed.score) || 72)));
-    const finalScore = lovedPropertyMatch ? Math.min(100, baseScore + 15) : baseScore;
-    const tier = tierFromScore(finalScore);
+    let finalScore = lovedPropertyMatch ? Math.min(100, baseScore + 15) : baseScore;
+
+    // AVOID safety net: cap the score hard so the UI cannot show a "good
+    // match" for a property the data clearly says to avoid.
+    if (avoid) {
+      finalScore = Math.min(finalScore, 20);
+    }
+
+    const tier = tierFromScore(finalScore, !!avoid);
 
     // Cap explanation copy to ~45 words / 2 sentences as a server-side
     // safety net even if Claude over-writes.
@@ -320,6 +381,12 @@ Location calibration:
       whatWorked: whatWorked.slice(0, 3),
       whatHeldItBack: whatHeldItBack.slice(0, 3),
       userTags: travelStyles,
+      // New: real Google data for the UI to display + AVOID warning
+      googleRating: place?.rating ?? null,
+      googleReviewCount: place?.userRatingsTotal ?? null,
+      googleAddress: place?.formattedAddress ?? null,
+      avoidWarning: avoid,
+      dataSource: place ? "google_reviews" : "ai_only",
     });
   } catch (err) {
     console.error("Quick match failed:", err);
