@@ -127,8 +127,8 @@ async function tripAdvisorFill(adults, children, childAges) {
     return {
       adultDec: match(/adult.*(less|decrease|decrement|minus|-)|decrease.*adult/i),
       adultInc: match(/adult.*(more|increase|increment|plus|\+)|increase.*adult/i),
-      childDec: match(/child.*(less|decrease|decrement|minus|-)|decrease.*child/i),
-      childInc: match(/child.*(more|increase|increment|plus|\+)|increase.*child/i),
+      childDec: match(/child.*less|less.*child/i),
+      childInc: match(/child.*more|more.*child/i),
     };
   }
 
@@ -162,9 +162,11 @@ async function tripAdvisorFill(adults, children, childAges) {
   await sleep(300);
 
   let childrenFilled = true;
+  let childStepperMissing = false;
   if (children > 0) {
     if (!steppers.childDec || !steppers.childInc) {
       childrenFilled = false;
+      childStepperMissing = true;
       console.log("[TripProfile] TripAdvisor: child stepper pair missing");
     } else {
       for (let i = 0; i < 10; i++) { steppers.childDec.click(); await sleep(80); }
@@ -199,20 +201,19 @@ async function tripAdvisorFill(adults, children, childAges) {
 
   const fullSuccess = childrenFilled && agesFilled;
 
-  if (fullSuccess) {
-    await sleep(300);
-    const closeScope = container || document;
-    const updateBtn = Array.from(closeScope.querySelectorAll("button")).find((b) =>
-      /^update$|^done$|^apply$/i.test(b.textContent.trim())
-    );
-    if (updateBtn) { updateBtn.click(); console.log("[TripProfile] TripAdvisor clicked Update"); }
-  } else {
-    console.log("[TripProfile] TripAdvisor: skipping Update click — incomplete fill");
-  }
+  // Always click Update if adults were filled — saves at least the adult count.
+  await sleep(300);
+  const closeScope = container || document;
+  const updateBtn = Array.from(closeScope.querySelectorAll("button")).find((b) =>
+    /^update$|^done$|^apply$/i.test(b.textContent.trim())
+  );
+  if (updateBtn) { updateBtn.click(); console.log("[TripProfile] TripAdvisor clicked Update"); }
 
   if (fullSuccess) {
     showToast(`Filled: ${adults} adults, ${children} children` +
       (Array.isArray(childAges) && childAges.length > 0 ? `, ages ${childAges.join(", ")}` : ""));
+  } else if (childStepperMissing) {
+    showToast("Adults filled — child stepper not found, please set manually.");
   } else {
     showToast("Partially filled — finish in the picker manually");
   }
