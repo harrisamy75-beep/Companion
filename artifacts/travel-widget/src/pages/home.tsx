@@ -252,8 +252,10 @@ function BreakdownBar({ label, score, weight }: { label: string; score: number; 
 const TIER_COLORS: Record<string, string> = {
   "Exceptional match": "#B8963E",
   "Strong match": "#7CB67C",
+  "Good match": "#7CB67C",
   "Good match with some gaps": "rgba(255,255,255,0.55)",
   "Partial match": "#D9A24A",
+  "Poor match": "#A8324A",
   "Poor match for your style": "#A8324A",
   "Avoid — guests warn against this": "#E04B4B",
 };

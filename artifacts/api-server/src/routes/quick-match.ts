@@ -99,6 +99,7 @@ function isLovedPropertyMatch(query: string, favorites: FavoriteLike[]): boolean
 
 // ---------------------------------------------------------------------------
 // Match tier — copy that sits above the big score number on the dashboard.
+// Thresholds: <65 Poor · 65-74 Partial · 75-84 Good · 85+ Strong.
 // ---------------------------------------------------------------------------
 function tierFromScore(
   score: number,
@@ -109,9 +110,53 @@ function tierFromScore(
   if (styleMismatch) return { tier: "mismatch", label: "Popular, but wrong for your style" };
   if (score >= 95) return { tier: "strong", label: "Exceptional match" };
   if (score >= 85) return { tier: "strong", label: "Strong match" };
-  if (score >= 70) return { tier: "good", label: "Good match with some gaps" };
-  if (score >= 50) return { tier: "good", label: "Partial match" };
-  return { tier: "weak", label: "Poor match for your style" };
+  if (score >= 75) return { tier: "good", label: "Good match" };
+  if (score >= 65) return { tier: "good", label: "Partial match" };
+  return { tier: "weak", label: "Poor match" };
+}
+
+// ---------------------------------------------------------------------------
+// Luxury-leaning style detector. The slug list mirrors travel-styles.ts —
+// anything containing "luxury" plus the explicit luxury-tier categories
+// (Design Hotels, Private Villa, Members Club, etc).
+// ---------------------------------------------------------------------------
+const LUXURY_STYLE_SLUGS = new Set<string>([
+  "ultra-luxury",
+  "boutique-luxury",
+  "luxury-family",
+  "luxury-wellness",
+  "luxury-adventure",
+  "luxury-chill",
+  "design-hotels",
+  "private-villa",
+  "castle-estate",
+  "treehouse-overwater",
+  "safari-expedition",
+  "superyacht-charter",
+  "private-aviation",
+  "members-club",
+  "first-class",
+  "michelin-star-dining",
+  "chefs-table-omakase",
+  "fine-dining",
+  "luxury-cruise",
+  "expedition-cruise",
+  "honeymoon",
+  "anniversary-travel",
+  "orient-express-style",
+  "butler-service",
+  "private-plunge-pool",
+  "adults-only-pool",
+  "adult-only-resort",
+]);
+
+function hasLuxuryStyle(styles: string[]): boolean {
+  return styles.some((s) => {
+    const norm = String(s).toLowerCase().trim();
+    if (!norm) return false;
+    if (norm.includes("luxury")) return true;
+    return LUXURY_STYLE_SLUGS.has(norm);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +223,8 @@ router.post("/reviews/quick-match", async (req, res): Promise<void> => {
         ? topStyles.join(", ")
         : `PRIMARY: ${topStyles.join(", ")}; ALSO: ${remainingStyles.slice(0, 5).join(", ")}`
       : "no travel style preferences set";
+
+  const luxuryLeaning = hasLuxuryStyle(travelStyles);
 
   const personality: string | null = (req as any).session?.personality ?? null;
   // Prefer Google's resolved name once we have a real place, otherwise fall
@@ -253,6 +300,14 @@ Hotel-class ladder (use ONLY when no Google data is provided):
 
 Score 80+ ONLY for strong matches with strong supporting data. Be honest — a poor match should score 30-50, an actively bad property should score below 30. Do not inflate.
 
+STAR RATING vs TRAVELLER STYLE — CRITICAL:
+When the traveller has provided a hotel star rating, treat it as a strong, near-authoritative signal of the property's class. Match it against the traveller's style:
+- If the traveller's style is luxury-leaning (e.g. Boutique Luxury, Ultra Luxury, Luxury Family, Luxury Wellness, Luxury Adventure, Luxury Chill, Design Hotels, Private Villa, Honeymoon, Members Club, First Class, Fine Dining, Michelin Star Dining) AND the hotel is 3 stars or below, this is a MAJOR style mismatch. The overall score MUST NOT exceed 60, regardless of how good the reviews are. Reflect the mismatch explicitly in score_explanation (e.g. "A well-run 3-star, but a clear step down from the boutique-luxury properties you favour.").
+- If the traveller's style is luxury-leaning AND the hotel is 4 stars, allow up to 75 — solid but not the luxury class they expect.
+- If the traveller's style is luxury-leaning AND the hotel is 5 stars, no star-based ceiling — judge purely on review quality and brand fit.
+- If the traveller's style is value-oriented (Value Hunter, Budget Family, Hostel & Backpacker) AND the hotel is 5-star ultra-luxury, treat that as a price/style mismatch and explain it (don't crash the score, but cap around 70 unless reviews specifically rave about value-for-money).
+- For mid-leaning travellers with no strong luxury or value signal, star rating is one factor among many — no hard cap.
+
 Location calibration:
 - Hollywood Blvd corridor, airport, highway, strip-mall locations: -2 luxury_value, -5 overall
 - Premium locations (Beverly Hills, Malibu, Palm Beach, Aspen, Hamptons, Mayfair, St-Germain): +1 luxury_value, +3 overall
@@ -292,9 +347,26 @@ Location calibration:
               }
               lines.push("");
               lines.push("Ground your scoring in this real data. Quote specific themes from the reviews in your explanation.");
-            } else {
-              if (parsedStar !== null) lines.push(`Hotel star rating: ${parsedStar} stars`);
-              if (parsedGuestScore !== null) lines.push(`Guest review score: ${parsedGuestScore.toFixed(1)}/10`);
+            }
+
+            // User-entered star + guest score are ALWAYS surfaced — they are
+            // an explicit signal from the traveller and must factor into the
+            // STAR RATING vs TRAVELLER STYLE rule.
+            if (parsedStar !== null) {
+              lines.push("");
+              lines.push(`Traveller-provided hotel star rating: ${parsedStar} star${parsedStar === 1 ? "" : "s"}`);
+              if (luxuryLeaning && parsedStar <= 3) {
+                lines.push(
+                  `STYLE/CLASS MISMATCH: this traveller's saved styles are luxury-leaning, but the hotel is only ${parsedStar} star${parsedStar === 1 ? "" : "s"}. Per the STAR RATING vs TRAVELLER STYLE rule, the overall score MUST NOT exceed 60. State the mismatch plainly in score_explanation.`
+                );
+              } else if (luxuryLeaning && parsedStar === 4) {
+                lines.push(
+                  `Note: traveller's styles are luxury-leaning and this is a 4-star — solid but a half-step below their usual class. Per the rule, cap overall at 75.`
+                );
+              }
+            }
+            if (parsedGuestScore !== null) {
+              lines.push(`Traveller-provided guest score: ${parsedGuestScore.toFixed(1)}/10`);
             }
 
             const formatFav = (f: typeof favorites[number]) => {
@@ -378,6 +450,14 @@ Location calibration:
     // additive recognition, not a thumb on the model's scale.
     const baseScore = Math.min(100, Math.max(0, Math.round(Number(parsed.score) || 72)));
     let finalScore = lovedPropertyMatch ? Math.min(100, baseScore + 15) : baseScore;
+
+    // STAR / STYLE MISMATCH HARD CAP — luxury-leaning traveller + 3-or-less
+    // star hotel cannot exceed 60, no matter how strong the reviews are.
+    // 4-star + luxury-leaning is capped at 75 (still allows "Good match").
+    if (parsedStar !== null && luxuryLeaning) {
+      if (parsedStar <= 3) finalScore = Math.min(finalScore, 60);
+      else if (parsedStar === 4) finalScore = Math.min(finalScore, 75);
+    }
 
     // PREVIOUSLY-AVOIDED override: the user has already told us they avoid
     // this property. Trust them — pin the score down hard.
