@@ -30,3 +30,9 @@ id = "Gfk6HMyyKvN9PNTNW31lV"
 uri = "file://Companion Tool.zip"
 type = "unspecified"
 title = "Companion Tool — v3 with TripAdvisor fallback"
+
+[[outputs]]
+id = "iRVvpd_QK4HAx4WU0NdHa"
+uri = "file://exports/travel-companion-extension.zip"
+type = "unspecified"
+title = "Travel Companion Extension (latest)"
