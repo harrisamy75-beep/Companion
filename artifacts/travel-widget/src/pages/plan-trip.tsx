@@ -166,6 +166,25 @@ function HotelCard({ hotel }: { hotel: RecommendedHotel }) {
             Estimated nightly rate: <strong style={{ fontWeight: 700 }}>{hotel.nightlyRate}</strong>
           </p>
         )}
+        <a
+          href={`https://www.google.com/travel/hotels?q=${encodeURIComponent(`${hotel.name} ${hotel.location}`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-block",
+            fontFamily: "'Raleway', sans-serif",
+            fontWeight: 600,
+            fontSize: "12px",
+            color: "#6B2737",
+            marginTop: "10px",
+            letterSpacing: "0.06em",
+            textDecoration: "none",
+            borderBottom: "1px solid rgba(107, 39, 55, 0.4)",
+            paddingBottom: "1px",
+          }}
+        >
+          Search hotels →
+        </a>
       </div>
     </div>
   );
