@@ -123,12 +123,32 @@ async function tripAdvisorFill(adults, children, childAges) {
 
   function findStepperBtns(scope) {
     const btns = Array.from(scope.querySelectorAll("button[aria-label]"));
-    const match = (re) => btns.find((b) => re.test(b.getAttribute("aria-label") || ""));
+    const aria = (b) => b.getAttribute("aria-label") || "";
     return {
-      adultDec: match(/adult.*(less|decrease|decrement|minus|-)|decrease.*adult/i),
-      adultInc: match(/adult.*(more|increase|increment|plus|\+)|increase.*adult/i),
-      childDec: match(/child.*less|less.*child/i),
-      childInc: match(/child.*more|more.*child/i),
+      adultDec: btns.find((b) => {
+        const a = aria(b);
+        return /adult.*less|less.*adult/i.test(a) ||
+               /adult.*(decrease|decrement|minus|remove|-)/i.test(a) ||
+               /decrease.*adult|minus.*adult|remove.*adult/i.test(a);
+      }),
+      adultInc: btns.find((b) => {
+        const a = aria(b);
+        return /adult.*more|more.*adult/i.test(a) ||
+               /adult.*(increase|increment|plus|add|\+)/i.test(a) ||
+               /increase.*adult|plus.*adult|add.*adult/i.test(a);
+      }),
+      childDec: btns.find((b) => {
+        const a = aria(b);
+        return /child.*less|less.*child/i.test(a) ||
+               /child.*(decrease|decrement|minus|remove)/i.test(a) ||
+               /decrease.*child|minus.*child|remove.*child/i.test(a);
+      }),
+      childInc: btns.find((b) => {
+        const a = aria(b);
+        return /child.*more|more.*child/i.test(a) ||
+               /child.*(increase|increment|plus|add)/i.test(a) ||
+               /increase.*child|plus.*child|add.*child/i.test(a);
+      }),
     };
   }
 
