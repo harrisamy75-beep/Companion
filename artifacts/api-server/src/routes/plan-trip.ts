@@ -86,13 +86,24 @@ router.post("/plan-trip", async (req, res): Promise<void> => {
     return Number.isFinite(n) && n > 0 ? n : null;
   })();
 
-  // Pull all profile context in parallel.
+  // Pull all profile context in parallel. Each query is isolated so a missing
+  // table or transient error degrades gracefully rather than failing the whole
+  // request.
+  const safe = async <T>(p: Promise<T>, fallback: T): Promise<T> => {
+    try {
+      return await p;
+    } catch (err) {
+      console.warn("[plan-trip] profile query failed, using fallback:", err instanceof Error ? err.message : err);
+      return fallback;
+    }
+  };
+
   const [prefRows, travelers, kids, favorites, loyalty] = await Promise.all([
-    db.select().from(preferencesTable).where(eq(preferencesTable.userId, userId)).limit(1),
-    db.select().from(travelersTable).where(eq(travelersTable.userId, userId)),
-    db.select().from(childrenTable).where(eq(childrenTable.userId, userId)),
-    db.select().from(favoritePropertiesTable).where(eq(favoritePropertiesTable.userId, userId)),
-    db.select().from(loyaltyProgramsTable).where(eq(loyaltyProgramsTable.userId, userId)),
+    safe(db.select().from(preferencesTable).where(eq(preferencesTable.userId, userId)).limit(1), [] as any[]),
+    safe(db.select().from(travelersTable).where(eq(travelersTable.userId, userId)), [] as any[]),
+    safe(db.select().from(childrenTable).where(eq(childrenTable.userId, userId)), [] as any[]),
+    safe(db.select().from(favoritePropertiesTable).where(eq(favoritePropertiesTable.userId, userId)), [] as any[]),
+    safe(db.select().from(loyaltyProgramsTable).where(eq(loyaltyProgramsTable.userId, userId)), [] as any[]),
   ]);
 
   const prefs = prefRows[0] ?? null;
