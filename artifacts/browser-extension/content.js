@@ -184,10 +184,47 @@ async function tripAdvisorFill(adults, children, childAges) {
   let childrenFilled = true;
   let childStepperMissing = false;
   if (children > 0) {
+    // Child stepper may mount only after adults are filled / picker fully expanded.
+    // Re-query the whole document with a tighter, TripAdvisor-specific match.
+    if (!steppers.childDec || !steppers.childInc) {
+      await sleep(500);
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const freshBtns = Array.from(document.querySelectorAll("button[aria-label]"));
+        steppers.childDec = freshBtns.find((b) =>
+          /Set child count to one less/i.test(b.getAttribute("aria-label") || "")
+        );
+        steppers.childInc = freshBtns.find((b) =>
+          /Set child count to one more/i.test(b.getAttribute("aria-label") || "")
+        );
+        if (steppers.childDec && steppers.childInc) break;
+        await sleep(400);
+        console.log(
+          "[TripProfile] TripAdvisor child stepper retry",
+          attempt,
+          "dec:",
+          !!steppers.childDec,
+          "inc:",
+          !!steppers.childInc
+        );
+      }
+      // Fall back to the broader synonym matcher if the specific labels still miss.
+      if (!steppers.childDec || !steppers.childInc) {
+        const fallback = findStepperBtns(document);
+        steppers.childDec = steppers.childDec || fallback.childDec;
+        steppers.childInc = steppers.childInc || fallback.childInc;
+      }
+    }
+
     if (!steppers.childDec || !steppers.childInc) {
       childrenFilled = false;
       childStepperMissing = true;
-      console.log("[TripProfile] TripAdvisor: child stepper pair missing");
+      const allLabels = Array.from(document.querySelectorAll("button[aria-label]"))
+        .map((b) => b.getAttribute("aria-label"))
+        .filter(Boolean);
+      console.log(
+        "[TripProfile] TripAdvisor: child stepper pair missing — all button aria-labels in DOM:",
+        allLabels
+      );
     } else {
       for (let i = 0; i < 10; i++) { steppers.childDec.click(); await sleep(80); }
       await sleep(300);
