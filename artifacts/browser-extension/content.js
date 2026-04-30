@@ -375,11 +375,44 @@ async function universalFallbackFill(adults, children, childAges) {
   ];
   for (const sel of triggerSelectors) {
     const el = document.querySelector(sel);
-    if (el && !el.getAttribute("aria-expanded")) { el.click(); await sleep(800); console.log("[TripProfile] Opened picker with:", sel); break; }
+    if (el && el.getAttribute("aria-expanded") !== "true") {
+      el.click();
+      await sleep(800);
+      console.log("[TripProfile] Opened picker with:", sel);
+      break;
+    }
   }
 
   const container = await findPickerContainerGeneric();
   if (!container) { showToast("Open the guest picker first, then try again"); return false; }
+
+  function normalizeText(value) {
+    return (value || "").replace(/\s+/g, " ").trim().toLowerCase();
+  }
+
+  function controlText(el) {
+    const labelledBy = el.getAttribute("aria-labelledby");
+    const labelledText = labelledBy
+      ? labelledBy
+          .split(/\s+/)
+          .map((id) => document.getElementById(id)?.innerText || "")
+          .join(" ")
+      : "";
+    const explicitLabel = el.id
+      ? Array.from(document.querySelectorAll(`label[for="${CSS.escape(el.id)}"]`))
+          .map((label) => label.innerText || "")
+          .join(" ")
+      : "";
+    const nearby = el.closest("label,[role='group'],[class*='row'],[class*='field'],[class*='guest'],[class*='traveler']")?.innerText || "";
+    return normalizeText([
+      el.getAttribute("aria-label"),
+      el.getAttribute("name"),
+      el.id,
+      labelledText,
+      explicitLabel,
+      nearby,
+    ].filter(Boolean).join(" "));
+  }
 
   function findStepperNearLabel(root, labelPattern) {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
@@ -405,6 +438,23 @@ async function universalFallbackFill(adults, children, childAges) {
     return null;
   }
 
+  function setNativeValue(input, value) {
+    const setter = Object.getOwnPropertyDescriptor(input.constructor.prototype, "value")?.set;
+    if (setter) setter.call(input, String(value));
+    else input.value = String(value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  async function fillNumberInput(labelPattern, value) {
+    const inputs = Array.from(container.querySelectorAll('input[type="number"],input[inputmode="numeric"],input[aria-label],input[name],input[id]'));
+    const input = inputs.find((el) => labelPattern.test(controlText(el)));
+    if (!input) return false;
+    setNativeValue(input, value);
+    await sleep(150);
+    return true;
+  }
+
   const adultStepper = findStepperNearLabel(container, /^adults?$/i);
   const childStepper = findStepperNearLabel(container, /^children$|^child$/i);
 
@@ -417,14 +467,14 @@ async function universalFallbackFill(adults, children, childAges) {
     return true;
   }
 
-  const adultFilled = await fillStepper(adultStepper, adults, 1);
-  const childFilled = await fillStepper(childStepper, children, 0);
+  const adultFilled = await fillStepper(adultStepper, adults, 1) || await fillNumberInput(/\badults?\b/, adults);
+  const childFilled = await fillStepper(childStepper, children, 0) || await fillNumberInput(/\bchildren\b|\bchild\b|\bkids?\b/, children);
 
   if (children > 0 && Array.isArray(childAges) && childAges.length > 0) {
     await sleep(1500);
     const allSelects = Array.from(document.querySelectorAll("select"));
     let ageSelects = allSelects.filter((s) => {
-      const label = (s.getAttribute("aria-label") || s.getAttribute("name") || s.id || "").toLowerCase();
+      const label = controlText(s);
       const surrounding = s.closest("[class]")?.textContent?.toLowerCase() || "";
       return label.includes("age") || (surrounding.includes("child") && surrounding.includes("age"));
     });
@@ -432,11 +482,15 @@ async function universalFallbackFill(adults, children, childAges) {
       ageSelects = Array.from(document.querySelectorAll('[class*="child-age"] select,[data-stid*="age"] select,select[id*="age"],select[name*="age"]'));
     }
     const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
-    for (let i = 0; i < ageSelects.length; i++) {
+    for (let i = 0; i < Math.min(ageSelects.length, childAges.length); i++) {
       if (childAges[i] === undefined) continue;
       const select = ageSelects[i]; const age = String(childAges[i]);
-      select.value = age; select.dispatchEvent(new Event("change", { bubbles: true })); await sleep(100);
-      if (select.value !== age && nativeSetter) { nativeSetter.call(select, age); select.dispatchEvent(new Event("change", { bubbles: true })); }
+      const matchingOption = Array.from(select.options || []).find((option) =>
+        option.value === age || normalizeText(option.textContent).startsWith(age)
+      );
+      const value = matchingOption?.value ?? age;
+      select.value = value; select.dispatchEvent(new Event("change", { bubbles: true })); await sleep(100);
+      if (select.value !== value && nativeSetter) { nativeSetter.call(select, value); select.dispatchEvent(new Event("change", { bubbles: true })); }
       await sleep(150);
     }
   }
@@ -456,12 +510,22 @@ async function universalFallbackFill(adults, children, childAges) {
 async function findPickerContainerGeneric() {
   for (let attempt = 0; attempt < 4; attempt++) {
     const allEls = Array.from(document.querySelectorAll('div,section,form,[role="dialog"],[role="listbox"]'));
+    const candidates = [];
     for (const el of allEls) {
       const text = el.innerText || "";
       if (/adults?/i.test(text) && /children|child/i.test(text)) {
         const bc = el.querySelectorAll("button").length;
-        if (bc >= 2 && bc < 30) return el;
+        const ic = el.querySelectorAll("input,select").length;
+        if ((bc >= 2 || ic >= 2) && bc < 30) candidates.push(el);
       }
+    }
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => {
+        const ar = a.getBoundingClientRect();
+        const br = b.getBoundingClientRect();
+        return ar.width * ar.height - br.width * br.height;
+      });
+      return candidates[0];
     }
     await sleep(500);
   }
