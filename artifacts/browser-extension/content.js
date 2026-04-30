@@ -467,8 +467,8 @@ async function universalFallbackFill(adults, children, childAges) {
     return true;
   }
 
-  const adultFilled = await fillStepper(adultStepper, adults, 1) || await fillNumberInput(/\badults?\b/, adults);
-  const childFilled = await fillStepper(childStepper, children, 0) || await fillNumberInput(/\bchildren\b|\bchild\b|\bkids?\b/, children);
+  const adultFilled = await fillNumberInput(/\badults?\b/, adults) || await fillStepper(adultStepper, adults, 1);
+  const childFilled = await fillNumberInput(/\bchildren\b|\bchild\b|\bkids?\b/, children) || await fillStepper(childStepper, children, 0);
 
   if (children > 0 && Array.isArray(childAges) && childAges.length > 0) {
     await sleep(1500);

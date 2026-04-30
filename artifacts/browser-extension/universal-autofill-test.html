@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Companion Universal Autofill Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 32px;
+        color: #1c1c1c;
+      }
+      button,
+      select,
+      input {
+        font: inherit;
+      }
+      .picker-trigger,
+      .done {
+        padding: 10px 14px;
+        border: 1px solid #bbb;
+        background: white;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .guest-picker {
+        display: none;
+        margin-top: 16px;
+        padding: 18px;
+        border: 1px solid #ddd;
+        max-width: 420px;
+      }
+      .guest-picker.open {
+        display: block;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto auto auto;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      .step {
+        width: 32px;
+        height: 32px;
+      }
+      .ages {
+        margin: 14px 0;
+        display: grid;
+        gap: 10px;
+      }
+      .result {
+        margin-top: 20px;
+        padding: 12px;
+        background: #f6f6f6;
+        border: 1px solid #ddd;
+        white-space: pre-line;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Companion Universal Autofill Test</h1>
+    <p>This page simulates a generic hotel guest picker.</p>
+
+    <button class="picker-trigger" aria-label="Guests" aria-expanded="false">Guests</button>
+
+    <section class="guest-picker" role="dialog" aria-label="Guest picker">
+      <div class="row">
+        <span>Adults</span>
+        <button class="step" aria-label="Decrease adults">-</button>
+        <input id="adults-count" aria-label="Adults" type="number" value="1" />
+        <button class="step" aria-label="Increase adults">+</button>
+      </div>
+      <div class="row">
+        <span>Children</span>
+        <button class="step" aria-label="Decrease children">-</button>
+        <input id="children-count" aria-label="Children" type="number" value="0" />
+        <button class="step" aria-label="Increase children">+</button>
+      </div>
+      <div class="ages">
+        <label>
+          Child 1 age
+          <select aria-label="Child 1 age">
+            <option value="">Select</option>
+            <option value="3">3 years old</option>
+            <option value="7">7 years old</option>
+            <option value="12">12 years old</option>
+          </select>
+        </label>
+        <label>
+          Child 2 age
+          <select aria-label="Child 2 age">
+            <option value="">Select</option>
+            <option value="3">3 years old</option>
+            <option value="7">7 years old</option>
+            <option value="12">12 years old</option>
+          </select>
+        </label>
+      </div>
+      <button class="done">Done</button>
+    </section>
+
+    <div id="result" class="result">Waiting for test...</div>
+
+    <script>
+      const trigger = document.querySelector(".picker-trigger");
+      const picker = document.querySelector(".guest-picker");
+      trigger.addEventListener("click", () => {
+        trigger.setAttribute("aria-expanded", "true");
+        picker.classList.add("open");
+      });
+
+      for (const button of document.querySelectorAll(".step")) {
+        button.addEventListener("click", () => {
+          const input = button.parentElement.querySelector("input");
+          const current = Number(input.value || "0");
+          const delta = button.textContent.trim() === "+" ? 1 : -1;
+          input.value = String(Math.max(0, current + delta));
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      }
+
+      window.chrome = {
+        storage: {
+          local: {
+            async get() {
+              return {
+                tripprofile: {
+                  autoFillPayload: {
+                    adults: 2,
+                    children: 2,
+                    childAges: [3, 7],
+                  },
+                },
+              };
+            },
+          },
+        },
+        runtime: {
+          onMessage: {
+            addListener() {},
+          },
+        },
+      };
+    </script>
+    <script src="./content.js"></script>
+    <script>
+      window.addEventListener("load", async () => {
+        const result = await attemptAutoFill({ manual: true });
+        const adults = document.querySelector("#adults-count").value;
+        const children = document.querySelector("#children-count").value;
+        const ages = Array.from(document.querySelectorAll("select")).map((select) => select.value);
+        const passed = adults === "2" && children === "2" && ages[0] === "3" && ages[1] === "7";
+        document.querySelector("#result").textContent =
+          `Result: ${passed ? "PASS" : "FAIL"}\n` +
+          `Adults: ${adults}\n` +
+          `Children: ${children}\n` +
+          `Ages: ${ages.join(", ")}\n` +
+          `Fill response: ${JSON.stringify(result)}`;
+      });
+    </script>
+  </body>
+</html>
