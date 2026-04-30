@@ -11,6 +11,7 @@ export * from "./authUser";
 export * from "./authUserEnvelope";
 export * from "./autoFillPayload";
 export * from "./beginBrowserLoginParams";
+export * from "./child";
 export * from "./createTravelerBody";
 export * from "./createTravelerBodyTravelerType";
 export * from "./errorEnvelope";

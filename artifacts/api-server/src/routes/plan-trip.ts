@@ -246,8 +246,7 @@ Order the array by match_score descending. Be honest — if no hotel in the dest
     });
 
     const text = message.content
-      .filter((c): c is { type: "text"; text: string } => c.type === "text")
-      .map((c) => c.text)
+      .map((c) => (c.type === "text" ? c.text : ""))
       .join("\n")
       .trim();
 

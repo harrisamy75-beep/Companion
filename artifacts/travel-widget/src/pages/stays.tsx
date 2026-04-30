@@ -389,6 +389,14 @@ type PropForm = {
 
 const EMPTY_PROP: PropForm = { propertyName: "", brand: "", location: "", category: "hotel", tier: "liked", tags: [], notes: "", visitedAt: "", placeId: "", starRating: null, pricePerNight: "" };
 
+function normalizePropForm(f: PropForm): Partial<FavoriteProperty> {
+  const price = f.pricePerNight.trim();
+  return {
+    ...f,
+    pricePerNight: price ? Number(price) : null,
+  };
+}
+
 function PropertyForm({ initial, onSubmit, onCancel, loading }: {
   initial?: PropForm; onSubmit: (f: PropForm) => void; onCancel: () => void; loading: boolean;
 }) {
@@ -539,13 +547,14 @@ export default function StaysPage() {
 
   /* Handlers — Properties */
   const handleSaveProp = (f: PropForm) => {
+    const payload = normalizePropForm(f);
     if (editingProp) {
-      updateProp.mutate({ id: editingProp.id, ...f, tags: f.tags }, {
+      updateProp.mutate({ id: editingProp.id, ...payload }, {
         onSuccess: () => { setEditingProp(null); toast({ title: "Property updated" }); },
         onError: () => toast({ title: "Failed", variant: "destructive" }),
       });
     } else {
-      createProp.mutate({ ...f, tags: f.tags }, {
+      createProp.mutate(payload, {
         onSuccess: () => { setShowPropForm(false); toast({ title: "Property added" }); },
         onError: () => toast({ title: "Failed", variant: "destructive" }),
       });

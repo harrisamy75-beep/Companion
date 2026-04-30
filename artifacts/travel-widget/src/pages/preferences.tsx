@@ -10,7 +10,7 @@ import { useForm, Controller } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import * as z from "zod";
+import * as z from "zod/v4";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TRAVEL_STYLE_GROUPS } from "@/lib/travel-styles";
 
@@ -221,7 +221,7 @@ export default function PreferencesPage() {
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema as any),
     defaultValues: {
       seatPreference: "", mealPreference: "", frequentFlyerNumbers: "",
       passportNotes: "", accessibilityNeeds: "", hotelPreferences: "",

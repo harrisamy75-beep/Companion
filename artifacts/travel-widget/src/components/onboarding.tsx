@@ -33,6 +33,7 @@ const TIER_META = {
   liked: { label: "Liked", icon: <Star size={12} />, color: "#B8963E" },
   avoid: { label: "Avoid", icon: <Minus size={12} />, color: "#5C5248" },
 };
+type FavoriteTier = keyof typeof TIER_META;
 
 /* ─── eyebrow label helper ─── */
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -329,7 +330,13 @@ function Step3({ properties, setProperties }: {
   properties: PropertyEntry[];
   setProperties: React.Dispatch<React.SetStateAction<PropertyEntry[]>>;
 }) {
-  const EMPTY = { propertyName: "", brand: "", location: "", tier: "liked" as const, placeId: "" };
+  const EMPTY: { propertyName: string; brand: string; location: string; tier: FavoriteTier; placeId: string } = {
+    propertyName: "",
+    brand: "",
+    location: "",
+    tier: "liked",
+    placeId: "",
+  };
   const [form, setForm] = useState({ ...EMPTY });
   const [showForm, setShowForm] = useState(true);
 

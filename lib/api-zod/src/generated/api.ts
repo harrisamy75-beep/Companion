@@ -185,7 +185,23 @@ export const UpsertPreferencesResponse = zod.object({
  * @summary Get full travel summary including ages at today
  */
 export const GetTravelSummaryResponse = zod.object({
-  children: zod.array(zod.unknown()),
+  children: zod.array(
+    zod.object({
+      id: zod.number(),
+      userId: zod.string().nullish(),
+      name: zod.string(),
+      birthDate: zod.coerce.date().nullish(),
+      travelerType: zod.enum(["adult", "child"]),
+      relationship: zod.string().nullish(),
+      foodPreferences: zod.array(zod.string()),
+      activityPreferences: zod.array(zod.string()),
+      accessibilityNeeds: zod.string().nullish(),
+      notes: zod.string().nullish(),
+      ageYears: zod.number().nullish(),
+      ageMonths: zod.number().nullish(),
+      ageDisplay: zod.string().nullish(),
+    }),
+  ),
   preferences: zod
     .object({
       id: zod.number(),

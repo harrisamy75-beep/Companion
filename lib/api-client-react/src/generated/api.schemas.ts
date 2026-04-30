@@ -33,6 +33,8 @@ export interface Traveler {
   ageDisplay?: string | null;
 }
 
+export type Child = Traveler;
+
 export type CreateTravelerBodyTravelerType =
   (typeof CreateTravelerBodyTravelerType)[keyof typeof CreateTravelerBodyTravelerType];
 

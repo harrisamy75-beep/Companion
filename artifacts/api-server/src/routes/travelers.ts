@@ -9,6 +9,18 @@ import { checkLimit, limitExceededResponse } from "../lib/plan-limits";
 
 const router: IRouter = Router();
 
+function toDateString(value: Date | string | null | undefined): string | null | undefined {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return value;
+}
+
+function normalizeTravelerBody(data: typeof CreateTravelerBody._type) {
+  return {
+    ...data,
+    birthDate: toDateString(data.birthDate),
+  };
+}
+
 export function computeAge(birthDate: string): {
   ageYears: number;
   ageMonths: number;
@@ -88,7 +100,7 @@ router.post("/travelers", async (req, res): Promise<void> => {
   }
   const [row] = await db
     .insert(travelersTable)
-    .values({ ...parsed.data, userId })
+    .values({ ...normalizeTravelerBody(parsed.data), userId })
     .returning();
   res.status(201).json(formatTraveler(row));
 });
@@ -108,7 +120,7 @@ router.put("/travelers/:id", async (req, res): Promise<void> => {
   }
   const [row] = await db
     .update(travelersTable)
-    .set({ ...parsed.data, updatedAt: new Date() })
+    .set({ ...normalizeTravelerBody(parsed.data), updatedAt: new Date() })
     .where(
       and(
         eq(travelersTable.id, params.data.id),

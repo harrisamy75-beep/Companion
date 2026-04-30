@@ -402,6 +402,10 @@ components:
         - foodPreferences
         - activityPreferences
 
+    Child:
+      allOf:
+        - $ref: "#/components/schemas/Traveler"
+
     CreateTravelerBody:
       type: object
       properties:

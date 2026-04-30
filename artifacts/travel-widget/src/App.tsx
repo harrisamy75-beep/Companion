@@ -439,8 +439,8 @@ function ClerkQueryClientCacheInvalidator() {
   const prevUserIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
-    const unsubscribe = addListener(({ user }: { user: { id: string } | null | undefined }) => {
-      const id = user?.id ?? null;
+    const unsubscribe = addListener((resources) => {
+      const id = resources.user?.id ?? null;
       if (
         prevUserIdRef.current !== undefined &&
         prevUserIdRef.current !== id

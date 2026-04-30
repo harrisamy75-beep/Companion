@@ -93,6 +93,10 @@ router.get("/extension/sync", async (req, res): Promise<void> => {
   }
 
   const userId = pref.userId;
+  if (!userId) {
+    res.status(404).json({ error: "No user is associated with this extension key" });
+    return;
+  }
 
   const [travelersRows, loyaltyRows, propertyRows] = await Promise.all([
     db
