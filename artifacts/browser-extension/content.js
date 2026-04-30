@@ -411,9 +411,11 @@ async function expediaFill(adults, children, childAges) {
 async function universalFallbackFill(adults, children, childAges, profile) {
   const triggerSelectors = [
     '[data-stid="open-room-picker"]','[data-testid="occupancy-config"]','[data-testid="travelers-field"]',
+    '[data-testid*="passenger" i]','[data-testid*="traveler" i]','[data-testid*="guest" i]',
     'button[aria-label*="traveler" i]','button[aria-label*="guest" i]','button[aria-label*="passenger" i]',
+    'button[aria-label*="rooms" i]','button[aria-label*="party" i]',
     'button[aria-label*="occupancy" i]','[class*="traveler-selector"]','[class*="guest-picker"]',
-    '[class*="occupancy"]','[class*="pax-selector"]','[id*="traveler"]','[id*="guest"]',
+    '[class*="occupancy"]','[class*="pax-selector"]','[class*="passenger"]','[id*="traveler"]','[id*="guest"]','[id*="passenger"]',
   ];
   for (const sel of triggerSelectors) {
     const el = document.querySelector(sel);
@@ -465,7 +467,7 @@ async function universalFallbackFill(adults, children, childAges, profile) {
     let node;
     while ((node = walker.nextNode())) {
       const text = node.textContent.trim();
-      if (!labelPattern.test(text) || text.length > 20) continue;
+      if (!labelPattern.test(text) || text.length > 80) continue;
       let el = node.parentElement;
       for (let i = 0; i < 4; i++) {
         if (!el || el === root) break;
@@ -501,8 +503,8 @@ async function universalFallbackFill(adults, children, childAges, profile) {
     return true;
   }
 
-  const adultStepper = findStepperNearLabel(container, /^adults?$/i);
-  const childStepper = findStepperNearLabel(container, /^children$|^child$/i);
+  const adultStepper = findStepperNearLabel(container, /\badults?\b|\badult passenger(s)?\b/i);
+  const childStepper = findStepperNearLabel(container, /\bchildren\b|\bchild\b|\bkids?\b|\bminor(s)?\b/i);
 
   async function fillStepper(stepper, targetCount, minimum = 0) {
     if (!stepper) return false;
