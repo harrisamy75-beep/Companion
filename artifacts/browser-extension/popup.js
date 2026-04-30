@@ -68,6 +68,29 @@ function renderProfile(profile) {
   document.getElementById("sync-time").textContent = formatSyncTime(_syncedAt);
 }
 
+function buildTestProfile() {
+  const now = new Date().toISOString();
+  return {
+    family: {
+      travelerCount: 4,
+      children: [
+        { name: "Test child 1", ageYears: 3 },
+        { name: "Test child 2", ageYears: 7 },
+      ],
+    },
+    preferences: {
+      travelStyleTags: ["family friendly", "walkable", "pool"],
+    },
+    autoFillPayload: {
+      adults: 2,
+      children: 2,
+      childAges: [3, 7],
+    },
+    _syncedAt: now,
+    _source: "local_test_profile",
+  };
+}
+
 async function loadProfile() {
   const result = await chrome.storage.local.get(STORAGE_KEY);
   return result[STORAGE_KEY] || null;
@@ -136,6 +159,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const openSettingsBtn = document.getElementById("open-settings");
   const keyInput = document.getElementById("key-input");
   const saveKeyBtn = document.getElementById("save-key");
+  const useTestProfileBtn = document.getElementById("use-test-profile");
   const clearKeyBtn = document.getElementById("clear-key");
   const keyStatusEl = document.getElementById("key-status");
 
@@ -183,6 +207,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       keyStatusEl.textContent = "Disconnected.";
       keyStatusEl.classList.remove("error");
     });
+  });
+
+  useTestProfileBtn.addEventListener("click", async () => {
+    useTestProfileBtn.disabled = true;
+    const original = useTestProfileBtn.textContent;
+    useTestProfileBtn.textContent = "Loading...";
+    const profile = buildTestProfile();
+    await chrome.storage.local.set({ [STORAGE_KEY]: profile });
+    cachedProfile = profile;
+    renderProfile(cachedProfile);
+    keyStatusEl.textContent = "Test profile ready: 2 adults, 2 children ages 3 and 7.";
+    keyStatusEl.classList.remove("error");
+    useTestProfileBtn.disabled = false;
+    useTestProfileBtn.textContent = original;
   });
 
   // Primary action: copy formatted payload to clipboard.
