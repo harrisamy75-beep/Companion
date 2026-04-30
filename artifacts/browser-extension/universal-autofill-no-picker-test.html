@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Companion Manual Fallback Test</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 32px; }
+      .result { margin-top: 20px; padding: 12px; background: #f6f6f6; border: 1px solid #ddd; white-space: pre-line; }
+    </style>
+  </head>
+  <body>
+    <h1>No Picker Test</h1>
+    <p>This page intentionally has no guest picker. The extension should show the manual panel.</p>
+    <div id="result" class="result">Waiting for test...</div>
+    <script>
+      window.chrome = { storage: { local: { async get() { return { tripprofile: { autoFillPayload: { adults: 2, children: 2, childAges: [3, 7] } } }; } } }, runtime: { onMessage: { addListener() {} } } };
+    </script>
+    <script src="./content.js"></script>
+    <script>
+      window.addEventListener("load", async () => {
+        const result = await attemptAutoFill({ manual: true });
+        const panel = document.querySelector("#tripprofile-floating-panel");
+        const passed = result?.mode === "manual" && result?.code === "NO_GUEST_PICKER" && !!panel;
+        document.querySelector("#result").textContent = `Result: ${passed ? "PASS" : "FAIL"}\nPanel shown: ${!!panel}\nFill response: ${JSON.stringify(result)}`;
+      });
+    </script>
+  </body>
+</html>

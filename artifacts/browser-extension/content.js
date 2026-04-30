@@ -22,29 +22,71 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 const API_BASE = "https://travelcompaniontool.replit.app/api";
 
+const FillMode = {
+  AUTOFILL: "autofill",
+  MANUAL: "manual",
+  NOOP: "noop",
+};
+
+function fillResult(ok, mode, code, message, details = {}) {
+  return { ok, mode, code, message, details };
+}
+
+function getAutoFillPayload(profile) {
+  const payload = profile?.autoFillPayload || {};
+  return {
+    adults: Number(payload.adults ?? 0),
+    children: Number(payload.children ?? 0),
+    childAges: Array.isArray(payload.childAges) ? payload.childAges : [],
+  };
+}
+
 // ─── ROUTER ────────────────────────────────────────────────────────────────
 // All site-specific fillers return { ok: boolean, mode: "autofill"|"manual"|"noop", code?: string }.
 // `autofill` = the form was actually filled. `manual` = a reference panel was shown but the user
 // still has to type. `noop` = nothing happened (unsupported page, missing trigger).
 function asResult(value, fallbackMode) {
   if (value && typeof value === "object" && "ok" in value) return value;
-  return { ok: !!value, mode: fallbackMode || "autofill" };
+  return fillResult(!!value, fallbackMode || FillMode.AUTOFILL, value ? "FILLED" : "NOT_FILLED");
+}
+
+const siteAdapters = [
+  {
+    id: "booking",
+    matches: (hostname) => hostname.includes("booking.com"),
+    fill: async ({ profile }) => {
+      console.log("[TripProfile] Booking.com - showing reference panel (auto-fill not supported)");
+      injectFloatingPanel(profile);
+      showToast("Booking.com auto-fill isn't supported - use the reference panel to fill manually");
+      return fillResult(true, FillMode.MANUAL, "BOOKING_REFERENCE_PANEL", "Booking.com requires manual fill from the reference panel.");
+    },
+  },
+  {
+    id: "tripadvisor",
+    matches: (hostname) => hostname.includes("tripadvisor.com"),
+    fill: async ({ adults, children, childAges }) => asResult(await tripAdvisorFill(adults, children, childAges)),
+  },
+  {
+    id: "expedia-hotels",
+    matches: (hostname) => hostname.includes("expedia.com") || hostname.includes("hotels.com"),
+    fill: async ({ adults, children, childAges, profile }) => asResult(await expediaFill(adults, children, childAges, profile)),
+  },
+];
+
+function getSiteAdapter(hostname) {
+  return siteAdapters.find((adapter) => adapter.matches(hostname)) || null;
 }
 
 async function universalFill(profile) {
-  const { adults, children, childAges } = profile.autoFillPayload;
+  const { adults, children, childAges } = getAutoFillPayload(profile);
   const hostname = window.location.hostname;
-  if (hostname.includes("booking.com")) {
-    // Booking.com renders the occupancy picker in a way content scripts cannot reach.
-    // Show the floating reference panel so the user can fill manually.
-    console.log("[TripProfile] Booking.com — showing reference panel (auto-fill not supported)");
-    injectFloatingPanel(profile);
-    showToast("Booking.com auto-fill isn't supported — use the reference panel to fill manually");
-    return { ok: true, mode: "manual", code: "BOOKING_REFERENCE_PANEL" };
+  const adapter = getSiteAdapter(hostname);
+  if (adapter) {
+    console.log("[TripProfile] Using site adapter:", adapter.id);
+    return adapter.fill({ profile, adults, children, childAges });
   }
-  if (hostname.includes("tripadvisor.com")) return asResult(await tripAdvisorFill(adults, children, childAges));
-  if (hostname.includes("expedia.com") || hostname.includes("hotels.com")) return asResult(await expediaFill(adults, children, childAges));
-  return asResult(await universalFallbackFill(adults, children, childAges));
+  console.log("[TripProfile] Using universal fallback");
+  return asResult(await universalFallbackFill(adults, children, childAges, profile));
 }
 
 // ─── TRIPADVISOR ───────────────────────────────────────────────────────────
@@ -366,7 +408,7 @@ async function expediaFill(adults, children, childAges) {
 // instead because the occupancy picker is unreachable from content scripts.
 
 // ─── UNIVERSAL FALLBACK ────────────────────────────────────────────────────
-async function universalFallbackFill(adults, children, childAges) {
+async function universalFallbackFill(adults, children, childAges, profile) {
   const triggerSelectors = [
     '[data-stid="open-room-picker"]','[data-testid="occupancy-config"]','[data-testid="travelers-field"]',
     'button[aria-label*="traveler" i]','button[aria-label*="guest" i]','button[aria-label*="passenger" i]',
@@ -384,7 +426,11 @@ async function universalFallbackFill(adults, children, childAges) {
   }
 
   const container = await findPickerContainerGeneric();
-  if (!container) { showToast("Open the guest picker first, then try again"); return false; }
+  if (!container) {
+    if (profile) injectFloatingPanel(profile);
+    showToast("Could not find the guest picker - use the reference panel to fill manually");
+    return fillResult(true, FillMode.MANUAL, "NO_GUEST_PICKER", "Could not find a guest picker on this page.");
+  }
 
   function normalizeText(value) {
     return (value || "").replace(/\s+/g, " ").trim().toLowerCase();
@@ -470,6 +516,7 @@ async function universalFallbackFill(adults, children, childAges) {
   const adultFilled = await fillNumberInput(/\badults?\b/, adults) || await fillStepper(adultStepper, adults, 1);
   const childFilled = await fillNumberInput(/\bchildren\b|\bchild\b|\bkids?\b/, children) || await fillStepper(childStepper, children, 0);
 
+  let ageSelectCount = 0;
   if (children > 0 && Array.isArray(childAges) && childAges.length > 0) {
     await sleep(1500);
     const allSelects = Array.from(document.querySelectorAll("select"));
@@ -481,6 +528,7 @@ async function universalFallbackFill(adults, children, childAges) {
     if (ageSelects.length === 0) {
       ageSelects = Array.from(document.querySelectorAll('[class*="child-age"] select,[data-stid*="age"] select,select[id*="age"],select[name*="age"]'));
     }
+    ageSelectCount = ageSelects.length;
     const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
     for (let i = 0; i < Math.min(ageSelects.length, childAges.length); i++) {
       if (childAges[i] === undefined) continue;
@@ -500,11 +548,23 @@ async function universalFallbackFill(adults, children, childAges) {
   if (closeButton) closeButton.click();
 
   const success = adultFilled || childFilled;
+  if (!success) {
+    if (profile) injectFloatingPanel(profile);
+    showToast("Could not auto-fill - use the profile card to fill manually");
+    return fillResult(true, FillMode.MANUAL, "NO_SUPPORTED_CONTROLS", "No supported adult or child controls were found.");
+  }
+  const needsManualAges = children > 0 && Array.isArray(childAges) && childAges.length > 0 && ageSelectCount === 0;
   showToast(success
     ? `Filled: ${adults} adults, ${children} children` + (Array.isArray(childAges) && childAges.length > 0 ? `, ages ${childAges.join(", ")}` : "")
     : "Could not auto-fill — use the profile card to fill manually"
   );
-  return success;
+  return fillResult(
+    true,
+    needsManualAges ? FillMode.MANUAL : FillMode.AUTOFILL,
+    needsManualAges ? "AGES_NEED_REVIEW" : "UNIVERSAL_FILLED",
+    needsManualAges ? "Adults and children were filled, but child age controls need review." : "Universal autofill completed.",
+    { adultFilled, childFilled, ageSelectCount }
+  );
 }
 
 async function findPickerContainerGeneric() {
@@ -566,7 +626,12 @@ function buildPanelLines(profile) {
   const childAges = Array.isArray(af.childAges) ? af.childAges : [];
   const partyLine = `${adults} adult${adults !== 1 ? "s" : ""}` + (children > 0 ? ` · ${children} child${children !== 1 ? "ren" : ""}` : "");
   const ageLine = childAges.length > 0 ? `Ages: ${childAges.join(", ")}` : null;
-  return { partyLine, ageLine };
+  const clipboardText = [
+    `Adults: ${adults}`,
+    `Children: ${children}`,
+    childAges.length > 0 ? `Child ages: ${childAges.join(", ")}` : null,
+  ].filter(Boolean).join("\n");
+  return { partyLine, ageLine, clipboardText };
 }
 
 function injectFloatingPanel(profile) {
@@ -604,6 +669,20 @@ function injectFloatingPanel(profile) {
     Object.assign(ageEl.style, { fontSize:"12.5px",color:"#5C5248",marginBottom:"10px" });
     body.appendChild(ageEl);
   }
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.textContent = "Copy counts";
+  Object.assign(copyBtn.style, { marginTop:"6px",width:"100%",height:"34px",border:"1px solid #6B2737",background:"#fff",color:"#6B2737",borderRadius:"4px",fontSize:"12px",fontWeight:"600",cursor:"pointer" });
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(data.clipboardText);
+      copyBtn.textContent = "Copied";
+    } catch {
+      copyBtn.textContent = data.clipboardText;
+    }
+  });
+  body.appendChild(copyBtn);
 
   const footer = document.createElement("div");
   footer.textContent = "Reference while you fill the form";
