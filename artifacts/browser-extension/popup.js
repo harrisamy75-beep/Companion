@@ -25,10 +25,12 @@ function buildClipboardPayload(profile) {
 }
 
 function renderProfile(profile) {
+  const sourceEl = document.getElementById("profile-source");
   if (!profile) {
     document.getElementById("traveler-count").textContent = "No profile yet";
     document.getElementById("children-detail").textContent = "";
-    document.getElementById("sync-time").textContent = "Connect, then tap Re-sync";
+    if (sourceEl) sourceEl.textContent = "";
+    document.getElementById("sync-time").textContent = "Use the test profile, or sync your real profile below.";
     return;
   }
 
@@ -40,6 +42,9 @@ function renderProfile(profile) {
   const childLines = family.children.map((c) => `${c.name} (${c.ageYears}y)`);
   document.getElementById("children-detail").textContent =
     childLines.length > 0 ? childLines.join(", ") : "No children added yet";
+  if (sourceEl) {
+    sourceEl.textContent = profile._source === "local_test_profile" ? "Test profile" : "Synced profile";
+  }
 
   const tagsEl = document.getElementById("style-tags");
   tagsEl.innerHTML = "";
@@ -156,6 +161,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const statusEl = document.getElementById("status");
   const copyStatusEl = document.getElementById("copy-status");
   const fillStatusEl = document.getElementById("fill-status");
+  const testStatusEl = document.getElementById("test-status");
   const openSettingsBtn = document.getElementById("open-settings");
   const keyInput = document.getElementById("key-input");
   const saveKeyBtn = document.getElementById("save-key");
@@ -217,8 +223,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await chrome.storage.local.set({ [STORAGE_KEY]: profile });
     cachedProfile = profile;
     renderProfile(cachedProfile);
-    keyStatusEl.textContent = "Test profile ready: 2 adults, 2 children ages 3 and 7.";
-    keyStatusEl.classList.remove("error");
+    flashStatus(testStatusEl, "Test profile ready: 2 adults, 2 children ages 3 and 7.", false, 5000);
     useTestProfileBtn.disabled = false;
     useTestProfileBtn.textContent = original;
   });
@@ -267,7 +272,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (lastErr) {
           flashStatus(
             fillStatusEl,
-            "This page isn't supported. Try Booking, Expedia, Hotels.com or TripAdvisor. [CS_NOT_INJECTED]",
+            "TripProfile needs a page refresh or site permission. Reload this page, then try again. [CS_NOT_INJECTED]",
             true,
             6000
           );

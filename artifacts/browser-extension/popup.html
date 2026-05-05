@@ -6,90 +6,59 @@
     <title>Companion</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { width: 340px; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; color: #1C1C1C; background: #FAFAF8; }
+      body { width: 340px; max-height: 600px; overflow: auto; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; color: #1C1C1C; background: #FAFAF8; }
 
       header { background: #6B2737; color: #fff; padding: 14px 16px 11px; }
       header h1 { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 400; font-size: 18px; }
       header p { font-size: 11px; opacity: 0.85; margin-top: 2px; }
 
       .section { padding: 12px 16px; border-bottom: 1px solid #E5E0D8; background: #fff; }
-      .section:last-of-type { border-bottom: none; }
-
       .label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: #A07840; margin-bottom: 5px; }
-      .value { font-size: 14px; font-weight: 600; color: #1C1C1C; }
-      .sub { font-size: 12px; color: #5C5248; margin-top: 2px; }
+      .value { font-size: 14px; font-weight: 700; color: #1C1C1C; }
+      .sub { font-size: 12px; color: #5C5248; margin-top: 2px; line-height: 1.4; }
       .help { font-size: 11px; color: #94A39B; font-style: italic; margin-top: 6px; line-height: 1.4; }
+      .profile-source { font-size: 11px; color: #94A39B; font-style: italic; margin-top: 3px; }
 
       .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
       .tag.empty { background: #FAFAF8; color: #94A39B; border: 1px solid #E5E0D8; padding: 2px 7px; font-size: 11px; font-style: italic; }
-
       .sync-time { font-size: 11px; color: #94A39B; padding: 8px 16px 4px; font-style: italic; background: #fff; }
-
       .actions { padding: 10px 16px 14px; display: flex; flex-direction: column; gap: 8px; background: #fff; }
+      .actions.compact { padding-top: 0; }
 
       button, a.btn {
         display: block; width: 100%; padding: 10px 12px;
-        font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+        font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
         cursor: pointer; text-align: center; text-decoration: none; border: none;
         transition: background 0.15s;
       }
-      button.primary, button#resync, button#save-key { background: #6B2737; color: #fff; }
-      button.primary:hover, button#resync:hover, button#save-key:hover { background: #5A1F2D; }
-      button.primary:disabled, button#resync:disabled, button#save-key:disabled { background: #B89098; cursor: not-allowed; }
-
-      button.gold {
-        background: #B8963E; color: #fff;
-      }
+      button.primary, button#save-key, button#resync { background: #6B2737; color: #fff; }
+      button.primary:hover, button#save-key:hover, button#resync:hover { background: #5A1F2D; }
+      button.primary:disabled, button#save-key:disabled, button#resync:disabled, button#use-test-profile:disabled { background: #B89098; cursor: not-allowed; }
+      button.gold { background: #B8963E; color: #fff; }
       button.gold:hover { background: #A07840; }
       button.gold:disabled { background: #D4BC85; cursor: not-allowed; }
-
-      button.ghost {
-        background: #F5F0E6; color: #1C1C1C; border: 1px solid #E5E0D8;
-      }
+      button.ghost { background: #F5F0E6; color: #1C1C1C; border: 1px solid #E5E0D8; }
       button.ghost:hover { background: #ECE4D4; }
 
-      a.btn { background: #F5F0E6; color: #1C1C1C; border: 1px solid #E5E0D8; }
-      a.btn:hover { background: #ECE4D4; }
-
-      #status, #key-status, #copy-status { font-size: 11px; color: #2D6A4F; text-align: center; min-height: 16px; font-style: italic; }
-      #status.error, #key-status.error, #copy-status.error { color: #6B2737; }
+      #status, #key-status, #copy-status, #fill-status, #test-status {
+        font-size: 11px; color: #2D6A4F; text-align: center; min-height: 16px; font-style: italic; line-height: 1.4;
+      }
+      #status.error, #key-status.error, #copy-status.error, #fill-status.error, #test-status.error { color: #6B2737; }
 
       input.key-input {
-        width: 100%;
-        padding: 9px 10px;
-        font-size: 12px;
+        width: 100%; padding: 9px 10px; font-size: 12px;
         font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-        border: 1px solid #E5E0D8;
-        background: #FAFAF8;
-        color: #1C1C1C;
+        border: 1px solid #E5E0D8; background: #FAFAF8; color: #1C1C1C;
       }
       input.key-input:focus { border-color: #6B2737; outline: none; }
 
-      .guide {
-        background: #FAFAF8;
-        padding: 12px 16px;
-        border-bottom: 1px solid #E5E0D8;
+      details.sync-settings { background: #FAFAF8; border-top: 1px solid #E5E0D8; }
+      details.sync-settings summary {
+        cursor: pointer; padding: 12px 16px; list-style: none;
+        font-size: 10px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.16em; color: #A07840;
       }
-      .guide-title {
-        font-size: 10px; font-weight: 600; text-transform: uppercase;
-        letter-spacing: 0.16em; color: #A07840; margin-bottom: 8px;
-      }
-      .guide-row {
-        font-size: 11.5px; color: #5C5248; line-height: 1.5; margin-bottom: 6px;
-      }
-      .guide-row strong {
-        color: #1C1C1C; font-weight: 600;
-      }
-      .guide-row em {
-        color: #94A39B; font-style: italic; font-size: 10.5px;
-      }
-      .guide-tagline {
-        font-family: 'Playfair Display', Georgia, serif;
-        font-style: italic; font-size: 12px; color: #6B2737;
-        margin-top: 8px; padding-top: 8px; border-top: 1px solid #E5E0D8;
-        line-height: 1.5;
-      }
-
+      details.sync-settings summary::-webkit-details-marker { display: none; }
       .hidden { display: none !important; }
     </style>
   </head>
@@ -99,11 +68,46 @@
       <p>Your family travel profile, everywhere.</p>
     </header>
 
-    <!-- ========== CONNECT FLOW (no key yet OR auth failed) ========== -->
-    <div class="section" id="connect-section">
-      <div class="label">Connect</div>
-      <div class="sub" id="connect-status">Not connected</div>
-      <div class="actions" style="padding: 12px 0 0;">
+    <div class="actions">
+      <button id="use-test-profile" class="ghost">Use test profile</button>
+      <div id="test-status"></div>
+    </div>
+
+    <div class="section">
+      <div class="label">Travelers</div>
+      <div class="value" id="traveler-count">No profile yet</div>
+      <div class="profile-source" id="profile-source"></div>
+      <div class="sub" id="children-detail"></div>
+    </div>
+
+    <div class="actions">
+      <button id="fill-page" class="gold">Fill this page</button>
+      <div id="fill-status"></div>
+    </div>
+
+    <div class="section">
+      <div class="label">Travel style</div>
+      <div class="tags" id="style-tags">
+        <span class="tag empty">Not set</span>
+      </div>
+    </div>
+
+    <div class="actions compact">
+      <button id="copy-payload" class="primary">Copy for booking</button>
+      <div id="copy-status"></div>
+      <button id="show-on-page" class="primary">Show profile on this page</button>
+      <div id="status"></div>
+    </div>
+
+    <div class="sync-time" id="sync-time"></div>
+
+    <details class="sync-settings" id="connect-section">
+      <summary>Sync real profile</summary>
+      <div class="section">
+        <div class="sub" id="connect-status">Not connected.</div>
+        <div class="help">Optional. Use this later to sync your real Companion profile from the dashboard.</div>
+      </div>
+      <div class="actions compact">
         <button id="open-settings" class="primary">Get my API key</button>
         <input
           id="key-input"
@@ -113,73 +117,12 @@
           autocomplete="off"
           spellcheck="false"
         />
-        <div class="help">Get your key from Companion Settings, then paste it here.</div>
         <button id="save-key" class="primary">Save &amp; Sync</button>
-        <button id="use-test-profile" class="ghost">Use test profile</button>
-        <div id="key-status"></div>
-        <button id="clear-key" class="primary hidden" style="background: #94A39B;">Disconnect</button>
-      </div>
-    </div>
-
-    <!-- ========== PROFILE VIEW ========== -->
-    <div id="profile-view">
-      <div class="section">
-        <div class="label">Travelers</div>
-        <div class="value" id="traveler-count">—</div>
-        <div class="sub" id="children-detail"></div>
-      </div>
-
-      <!-- Primary action: auto-fill guest picker (above the fold) -->
-      <div class="actions">
-        <button id="fill-page" class="gold">Fill this page</button>
-        <div id="fill-status"></div>
-      </div>
-
-      <div class="section">
-        <div class="label">Travel style</div>
-        <div class="tags" id="style-tags">
-          <span class="tag empty">Not set</span>
-        </div>
-      </div>
-
-      <!-- Secondary action: clipboard copy -->
-      <div class="actions" style="padding-top: 0;">
-        <button id="copy-payload" class="primary">Copy for booking</button>
-        <div id="copy-status"></div>
-      </div>
-
-      <!-- Floating reference card on page -->
-      <div class="actions" style="padding-top: 0;">
-        <button id="show-on-page" class="primary">Show profile on this page</button>
-        <div id="status"></div>
-      </div>
-
-      <!-- Quick Fill Guide -->
-      <div class="guide">
-        <div class="guide-title">Quick Fill Guide</div>
-        <div class="guide-row">
-          <strong>Booking.com:</strong> your profile is shown on screen — fill the guest picker manually using the counts shown.
-        </div>
-        <div class="guide-row">
-          <strong>Expedia, Hotels.com:</strong> open guest picker, paste counts from clipboard.
-        </div>
-        <div class="guide-row">
-          <strong>Airlines &amp; Airbnb:</strong> tap "Show profile on this page" for a floating reference card.
-        </div>
-        <div class="guide-tagline">
-          The real value: your profile is always one click away.
-        </div>
-      </div>
-
-      <div class="sync-time" id="sync-time"></div>
-
-      <div class="actions">
         <button id="resync" class="ghost" style="color: #5C5248;">Re-sync profile</button>
-        <a class="btn" id="dashboard-link" href="https://travelcompaniontool.replit.app/" target="_blank">
-          Open dashboard
-        </a>
+        <button id="clear-key" class="primary hidden" style="background: #94A39B;">Disconnect</button>
+        <div id="key-status"></div>
       </div>
-    </div>
+    </details>
 
     <script src="popup.js"></script>
   </body>
