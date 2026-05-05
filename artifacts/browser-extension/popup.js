@@ -272,7 +272,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (lastErr) {
           flashStatus(
             fillStatusEl,
-            "TripProfile needs a page refresh or site permission. Reload this page, then try again. [CS_NOT_INJECTED]",
+            "Companion needs a page refresh or site permission. Reload this page, then try again. [CS_NOT_INJECTED]",
             true,
             6000
           );
