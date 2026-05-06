@@ -149,6 +149,29 @@ async function copyToClipboard(text) {
   }
 }
 
+function sendPageMessage(tabId, message, callback) {
+  chrome.tabs.sendMessage(tabId, message, (response) => {
+    const firstError = chrome.runtime.lastError?.message;
+    if (!firstError) {
+      callback(response, null);
+      return;
+    }
+
+    chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] }, () => {
+      const injectError = chrome.runtime.lastError?.message;
+      if (injectError) {
+        callback(null, injectError);
+        return;
+      }
+
+      chrome.tabs.sendMessage(tabId, message, (retryResponse) => {
+        const retryError = chrome.runtime.lastError?.message;
+        callback(retryResponse, retryError || null);
+      });
+    });
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   let cachedProfile = await loadProfile();
   renderProfile(cachedProfile);
@@ -264,15 +287,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         fillBtn.textContent = original;
         return;
       }
-      chrome.tabs.sendMessage(tab.id, { type: "MANUAL_FILL" }, (response) => {
-        const lastErr = chrome.runtime.lastError?.message;
-        console.log("[TripProfile] sendMessage response:", response, "lastError:", lastErr);
+      sendPageMessage(tab.id, { type: "MANUAL_FILL" }, (response, lastErr) => {
+        console.log("[Companion] sendMessage response:", response, "lastError:", lastErr);
         fillBtn.disabled = false;
         fillBtn.textContent = original;
         if (lastErr) {
           flashStatus(
             fillStatusEl,
-            "Companion needs a page refresh or site permission. Reload this page, then try again. [CS_NOT_INJECTED]",
+            "Companion could not access this page. Try refreshing, then click Fill again. [CS_NOT_INJECTED]",
             true,
             6000
           );
@@ -316,13 +338,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         showOnPageBtn.textContent = originalLabel;
         return;
       }
-      chrome.tabs.sendMessage(tab.id, { type: "SHOW_PANEL" }, () => {
+      sendPageMessage(tab.id, { type: "SHOW_PANEL" }, (_response, lastErr) => {
         showOnPageBtn.disabled = false;
         showOnPageBtn.textContent = originalLabel;
-        if (chrome.runtime.lastError) {
+        if (lastErr) {
           flashStatus(
             statusEl,
-            "This page isn't supported. Try opening Booking, Expedia, an airline, or Airbnb.",
+            "Companion could not access this page. Try refreshing, then show the profile again.",
             true,
             4500
           );
