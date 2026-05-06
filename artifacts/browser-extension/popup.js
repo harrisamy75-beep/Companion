@@ -7,23 +7,6 @@ function formatSyncTime(isoString) {
   return "Last synced: " + d.toLocaleString();
 }
 
-function buildClipboardPayload(profile) {
-  if (!profile) return "";
-  const { autoFillPayload } = profile;
-  const adults = autoFillPayload?.adults ?? 0;
-  const children = autoFillPayload?.children ?? 0;
-  const childAges = Array.isArray(autoFillPayload?.childAges) ? autoFillPayload.childAges : [];
-
-  const lines = [];
-  lines.push(`Adults: ${adults}`);
-  lines.push(`Children: ${children}`);
-  if (childAges.length > 0) {
-    lines.push(`Child ages: ${childAges.join(", ")}`);
-  }
-
-  return lines.join("\n");
-}
-
 function renderProfile(profile) {
   const sourceEl = document.getElementById("profile-source");
   if (!profile) {
@@ -35,7 +18,6 @@ function renderProfile(profile) {
   }
 
   const { family, preferences, _syncedAt } = profile;
-
   document.getElementById("traveler-count").textContent =
     `${family.travelerCount} traveler${family.travelerCount !== 1 ? "s" : ""}`;
 
@@ -62,12 +44,6 @@ function renderProfile(profile) {
     span.style.cssText = "font-size: 13px; color: #1C1C1C; font-weight: 500; line-height: 1.4;";
     span.textContent = top3;
     tagsEl.appendChild(span);
-    if (tags.length > 3) {
-      const more = document.createElement("span");
-      more.style.cssText = "font-size: 11px; color: #5C5248; font-style: italic; margin-left: 6px;";
-      more.textContent = `+${tags.length - 3} more`;
-      tagsEl.appendChild(more);
-    }
   }
 
   document.getElementById("sync-time").textContent = formatSyncTime(_syncedAt);
@@ -106,7 +82,7 @@ async function loadConnectionState() {
   const statusEl = document.getElementById("connect-status");
   const clearBtn = document.getElementById("clear-key");
   if (key) {
-    const masked = key.slice(0, 8) + "…" + key.slice(-4);
+    const masked = key.slice(0, 8) + "..." + key.slice(-4);
     statusEl.textContent = `Connected (${masked})`;
     statusEl.style.color = "#2D6A4F";
     clearBtn.classList.remove("hidden");
@@ -124,29 +100,6 @@ function flashStatus(el, message, isError = false, ms = 3500) {
     el.textContent = "";
     el.classList.remove("error");
   }, ms);
-}
-
-async function copyToClipboard(text) {
-  // Prefer the modern API (works in popup since v3).
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch (err) {
-    // Fallback: hidden textarea + execCommand for older Chrome edge cases.
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand("copy");
-      ta.remove();
-      return ok;
-    } catch {
-      return false;
-    }
-  }
 }
 
 function sendPageMessage(tabId, message, callback) {
@@ -178,11 +131,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadConnectionState();
 
   const resyncBtn = document.getElementById("resync");
-  const showOnPageBtn = document.getElementById("show-on-page");
-  const copyBtn = document.getElementById("copy-payload");
   const fillBtn = document.getElementById("fill-page");
-  const statusEl = document.getElementById("status");
-  const copyStatusEl = document.getElementById("copy-status");
   const fillStatusEl = document.getElementById("fill-status");
   const testStatusEl = document.getElementById("test-status");
   const openSettingsBtn = document.getElementById("open-settings");
@@ -206,7 +155,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     saveKeyBtn.disabled = true;
-    saveKeyBtn.textContent = "Saving…";
+    saveKeyBtn.textContent = "Saving...";
     chrome.runtime.sendMessage({ type: "SET_KEY", key }, async (response) => {
       saveKeyBtn.disabled = false;
       saveKeyBtn.textContent = "Save & Sync";
@@ -221,10 +170,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         keyStatusEl.textContent = "Key should start with cpn_";
         keyStatusEl.classList.add("error");
       } else if (response?.error === "auth") {
-        keyStatusEl.textContent = "Key rejected — get a fresh one.";
+        keyStatusEl.textContent = "Key rejected - get a fresh one.";
         keyStatusEl.classList.add("error");
       } else {
-        keyStatusEl.textContent = "Couldn't save key — try again.";
+        keyStatusEl.textContent = "Couldn't save key - try again.";
         keyStatusEl.classList.add("error");
       }
     });
@@ -251,35 +200,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     useTestProfileBtn.textContent = original;
   });
 
-  // Primary action: copy formatted payload to clipboard.
-  copyBtn.addEventListener("click", async () => {
-    if (!cachedProfile) {
-      flashStatus(copyStatusEl, "Sync your profile first.", true);
-      return;
-    }
-    const text = buildClipboardPayload(cachedProfile);
-    if (!text) {
-      flashStatus(copyStatusEl, "Nothing to copy yet.", true);
-      return;
-    }
-    copyBtn.disabled = true;
-    const original = copyBtn.textContent;
-    copyBtn.textContent = "Copying…";
-    const ok = await copyToClipboard(text);
-    copyBtn.disabled = false;
-    copyBtn.textContent = original;
-    if (ok) {
-      flashStatus(copyStatusEl, "Copied! Paste into any booking form.", false, 4000);
-    } else {
-      flashStatus(copyStatusEl, "Couldn't copy — try again.", true);
-    }
-  });
-
-  // Auto-fill the open guest picker on the active tab.
   fillBtn.addEventListener("click", () => {
     fillBtn.disabled = true;
     const original = fillBtn.textContent;
-    fillBtn.textContent = "Filling…";
+    fillBtn.textContent = "Filling...";
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0];
       if (!tab || !tab.id) {
@@ -304,19 +228,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         const mode = response?.mode;
         const code = response?.code ? ` [${response.code}]` : "";
         if (ok && mode === "autofill") {
-          flashStatus(fillStatusEl, "Filled — review and confirm in the picker.", false, 4000);
+          flashStatus(fillStatusEl, "Filled - review and confirm in the picker.", false, 4000);
           setTimeout(() => window.close(), 600);
         } else if (ok && mode === "manual") {
           flashStatus(
             fillStatusEl,
-            "Reference panel shown on the page — fill the form using those values." + code,
+            "Reference panel shown on the page - fill the form using those values." + code,
             false,
             6000
           );
         } else {
           flashStatus(
             fillStatusEl,
-            "Couldn't fill automatically — finish in the picker manually." + code,
+            "Couldn't fill automatically - finish in the picker manually." + code,
             true,
             6000
           );
@@ -325,55 +249,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // Secondary action: inject floating reference panel on the active tab.
-  // Also asks the content script to attempt DOM auto-fill silently.
-  showOnPageBtn.addEventListener("click", () => {
-    showOnPageBtn.disabled = true;
-    const originalLabel = showOnPageBtn.textContent;
-    showOnPageBtn.textContent = "Loading…";
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const tab = tabs[0];
-      if (!tab || !tab.id) {
-        showOnPageBtn.disabled = false;
-        showOnPageBtn.textContent = originalLabel;
-        return;
-      }
-      sendPageMessage(tab.id, { type: "SHOW_PANEL" }, (_response, lastErr) => {
-        showOnPageBtn.disabled = false;
-        showOnPageBtn.textContent = originalLabel;
-        if (lastErr) {
-          flashStatus(
-            statusEl,
-            "Companion could not access this page. Try refreshing, then show the profile again.",
-            true,
-            4500
-          );
-          return;
-        }
-        window.close();
-      });
-    });
-  });
-
   resyncBtn.addEventListener("click", () => {
     resyncBtn.disabled = true;
-    resyncBtn.textContent = "Syncing…";
-    statusEl.textContent = "";
-    statusEl.classList.remove("error");
+    resyncBtn.textContent = "Syncing...";
+    keyStatusEl.textContent = "";
+    keyStatusEl.classList.remove("error");
 
     chrome.runtime.sendMessage({ type: "RESYNC" }, async (response) => {
       if (response?.ok) {
         cachedProfile = await loadProfile();
         renderProfile(cachedProfile);
-        flashStatus(statusEl, "Profile updated.", false, 3000);
+        flashStatus(keyStatusEl, "Profile updated.", false, 3000);
       } else if (response?.error === "no_key") {
-        flashStatus(statusEl, "Paste your API key above first.", true, 4000);
+        flashStatus(keyStatusEl, "Paste your API key above first.", true, 4000);
       } else if (response?.error === "auth") {
-        flashStatus(statusEl, "Key rejected — get a fresh one.", true, 4000);
+        flashStatus(keyStatusEl, "Key rejected - get a fresh one.", true, 4000);
       } else if (response?.error === "no_profile") {
-        flashStatus(statusEl, "No profile saved yet.", true, 4000);
+        flashStatus(keyStatusEl, "No profile saved yet.", true, 4000);
       } else {
-        flashStatus(statusEl, "Sync failed — check connection.", true, 4000);
+        flashStatus(keyStatusEl, "Sync failed - check connection.", true, 4000);
       }
       resyncBtn.disabled = false;
       resyncBtn.textContent = "Re-sync profile";

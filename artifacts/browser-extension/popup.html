@@ -40,10 +40,10 @@
       button.ghost { background: #F5F0E6; color: #1C1C1C; border: 1px solid #E5E0D8; }
       button.ghost:hover { background: #ECE4D4; }
 
-      #status, #key-status, #copy-status, #fill-status, #test-status {
+      #key-status, #fill-status, #test-status {
         font-size: 11px; color: #2D6A4F; text-align: center; min-height: 16px; font-style: italic; line-height: 1.4;
       }
-      #status.error, #key-status.error, #copy-status.error, #fill-status.error, #test-status.error { color: #6B2737; }
+      #key-status.error, #fill-status.error, #test-status.error { color: #6B2737; }
 
       input.key-input {
         width: 100%; padding: 9px 10px; font-size: 12px;
@@ -90,13 +90,6 @@
       <div class="tags" id="style-tags">
         <span class="tag empty">Not set</span>
       </div>
-    </div>
-
-    <div class="actions compact">
-      <button id="copy-payload" class="primary">Copy for booking</button>
-      <div id="copy-status"></div>
-      <button id="show-on-page" class="primary">Show profile on this page</button>
-      <div id="status"></div>
     </div>
 
     <div class="sync-time" id="sync-time"></div>
