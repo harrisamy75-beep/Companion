@@ -69,7 +69,16 @@ const siteAdapters = [
   {
     id: "expedia-hotels",
     matches: (hostname) => hostname.includes("expedia.com") || hostname.includes("hotels.com"),
-    fill: async ({ adults, children, childAges, profile }) => asResult(await expediaFill(adults, children, childAges, profile)),
+    fill: async ({ adults, children, childAges, profile }) => {
+      const universalResult = await universalFallbackFill(adults, children, childAges, profile);
+      if (
+        universalResult?.code !== "NO_SUPPORTED_CONTROLS" &&
+        universalResult?.code !== "NO_GUEST_PICKER"
+      ) {
+        return asResult(universalResult);
+      }
+      return asResult(await expediaFill(adults, children, childAges, profile));
+    },
   },
 ];
 
@@ -320,7 +329,7 @@ async function tripAdvisorFill(adults, children, childAges) {
 }
 
 // ─── EXPEDIA + HOTELS.COM ──────────────────────────────────────────────────
-async function expediaFill(adults, children, childAges) {
+async function expediaFill(adults, children, childAges, profile) {
   const trigger =
     document.querySelector('[data-stid="open-room-picker"]') ||
     document.querySelector('[data-stid="open-hotel-guest-picker"]') ||
@@ -354,7 +363,7 @@ async function expediaFill(adults, children, childAges) {
 
   console.log("[TripProfile] Expedia/Hotels buttons:", btns.map((b) => b.getAttribute("aria-label") || b.textContent.trim().slice(0, 15)));
 
-  if (btns.length < 4) return await universalFallbackFill(adults, children, childAges);
+  if (btns.length < 4) return await universalFallbackFill(adults, children, childAges, profile);
 
   // adultDec, adultInc, childDec, childInc
   for (let i = 0; i < 10; i++) { btns[0].click(); await sleep(80); }

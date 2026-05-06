@@ -1,11 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Companion",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Auto-fills your family profile on travel sites and filters reviews by relevance",
   "permissions": ["activeTab", "storage", "scripting", "tabs", "alarms", "cookies"],
   "host_permissions": [
+    "https://expedia.com/*",
     "https://*.expedia.com/*",
+    "https://hotels.com/*",
     "https://*.booking.com/*",
     "https://*.hotels.com/*",
     "https://*.airbnb.com/*",
@@ -40,7 +42,9 @@
   "content_scripts": [
     {
       "matches": [
+        "https://expedia.com/*",
         "https://*.expedia.com/*",
+        "https://hotels.com/*",
         "https://*.booking.com/*",
         "https://*.hotels.com/*",
         "https://*.airbnb.com/*",
