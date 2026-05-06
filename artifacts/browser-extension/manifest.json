@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Companion",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Auto-fills your family profile on travel sites and filters reviews by relevance",
   "permissions": ["activeTab", "storage", "scripting", "tabs", "alarms", "cookies"],
   "host_permissions": [
@@ -29,6 +29,7 @@
     "https://lufthansa.com/*",
     "https://*.lufthansa.com/*",
     "https://www.google.com/travel/*",
+    "https://travel.capitalone.com/*",
     "https://*.kayak.com/*",
     "https://*.priceline.com/*",
     "https://*.tripadvisor.com/*",
@@ -63,6 +64,7 @@
         "https://lufthansa.com/*",
         "https://*.lufthansa.com/*",
         "https://www.google.com/travel/*",
+        "https://travel.capitalone.com/*",
         "https://*.kayak.com/*",
         "https://*.priceline.com/*",
         "https://*.tripadvisor.com/*"
